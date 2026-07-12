@@ -1,0 +1,12 @@
+// It tells the TypeScript compiler (tsc) how to compile your code and what rules to follow.
+{
+    //Compile my code using these rules.
+    "compilerOptions": {
+        "strict": true,  //This enables all strict type-checking rules.
+        "esModuleInterop": true,  // This improves compatibility between CommonJS modules and ES Modules.
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,  // This makes sure you use the correct uppercase and lowercase letters in file names.
+        "resolveJsonModule": true  // This allows you to import JSON files directly.
+         
+    }
+}

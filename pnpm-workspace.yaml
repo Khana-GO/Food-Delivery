@@ -1,0 +1,5 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+#  It tells PNPM which folders are part of the workspace (monorepo).
