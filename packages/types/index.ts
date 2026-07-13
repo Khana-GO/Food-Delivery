@@ -15,7 +15,15 @@ export interface User {
 }
 
 
-export interface HealthCheckResponse{
-    status: string,
-    timestamp: Date, 
+export interface FoodItem {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+}
+
+export interface HealthCheckResponse {
+  status: string;
+  timestamp: Date | string;
+  data: FoodItem[];
 }

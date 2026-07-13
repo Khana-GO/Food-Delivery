@@ -6,16 +6,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
-  console.log('FRONTEND_URL:', configService.get<string>('FRONTEND_URL'));
 
   app.enableCors({
-    origin: configService.get<string>('FRONTEND_URL'),
+    origin: [
+      configService.get<string>('FRONTEND_URL_WEB'),
+      configService.get<string>('FRONTEND_URL_IP'),
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
 
-  app.setGlobalPrefix('api')  // app.setGlobalPrefix('api') tells NestJS to add the same prefix to every route in your application.
-  
+  app.setGlobalPrefix('api'); // app.setGlobalPrefix('api') tells NestJS to add the same prefix to every route in your application.
 
   const port = configService.get<number>('PORT') || 3000;
 
