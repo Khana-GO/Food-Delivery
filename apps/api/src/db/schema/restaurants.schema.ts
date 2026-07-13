@@ -17,9 +17,7 @@ export const restaurantsTable = pgTable('restaurants', {
     length: 255,
   }).notNull(),
 
-  address: varchar('address', {
-    length: 255,
-  }).notNull(),
+  address: text('address').notNull(),
 
   ownerId: uuid('owner_id')
     .notNull()
@@ -27,9 +25,9 @@ export const restaurantsTable = pgTable('restaurants', {
       onDelete: 'cascade',
     }),
 
-  description: varchar('description', {
-    length: 500,
-  }),
+    // cascade delete: if a user is deleted, all their restaurants will be deleted as well  
+
+  description: text('description'),
 
   imageUrl: text('image_url'),
 
