@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  FlatList,
   StyleSheet,
   Text,
   View,
@@ -8,146 +9,132 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../../lib/axios";
-import { HealthCheckResponse } from "@food_delivery/types";
+import { HealthCheckResponse, FoodItem } from "@food_delivery/types";
 
 const fetchHealth = async (): Promise<HealthCheckResponse> => {
-  const { data } = await api.get<HealthCheckResponse>("/health");
+  const { data } = await api.get("/health");
   return data;
 };
 
 export default function HomeScreen() {
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["health"],
     queryFn: fetchHealth,
-
-    // Production settings
-    retry: 2,
-    staleTime: 1000 * 60, // 1 minute
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnReconnect: true,
-    refetchOnWindowFocus: false,
   });
 
   if (isPending) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text style={styles.message}>Checking server status...</Text>
       </View>
     );
   }
 
   if (isError) {
-    console.error(error);
-
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>
-          Unable to connect to the server.
-        </Text>
-
-        <Text style={styles.errorSubtitle}>
-          {error instanceof Error
-            ? error.message
-            : "Something went wrong."}
-        </Text>
-
-        <Text style={styles.retry} onPress={() => refetch()}>
-          Tap to Retry
-        </Text>
+        <Text>{error.message}</Text>
+        <Text onPress={() => refetch()}>Retry</Text>
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>🍔 Food Delivery</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Status</Text>
-        <Text style={styles.value}>{data.status}</Text>
+  const renderItem = ({ item }: { item: FoodItem }) => (
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.price}>Rs. {item.price}</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Timestamp</Text>
-        <Text style={styles.value}>
-          {new Date(data.timestamp).toLocaleString()}
-        </Text>
-      </View>
+      <Text style={styles.category}>{item.category}</Text>
     </View>
+  );
+
+  return (
+    <FlatList
+      data={data.data}
+      keyExtractor={(item) => item.id.toString()}
+      renderItem={renderItem}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.content}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.title}>🍔 Food Delivery</Text>
+
+          <Text style={styles.status}>
+            Status: {data.status.toUpperCase()}
+          </Text>
+
+          <Text style={styles.time}>
+            {new Date(data.timestamp).toLocaleString()}
+          </Text>
+        </View>
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      ListFooterComponent={<View style={{ height: 20 }} />}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    paddingHorizontal: 24,
+  content: {
+    padding: 16,
   },
 
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
   },
 
-  heading: {
+  header: {
+    marginBottom: 20,
+  },
+
+  title: {
     fontSize: 30,
     fontWeight: "700",
-    marginBottom: 32,
-    textAlign: "center",
+  },
+
+  status: {
+    marginTop: 8,
+    color: "green",
+    fontWeight: "600",
+  },
+
+  time: {
+    color: "#666",
+    marginTop: 4,
   },
 
   card: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#fff",
+    padding: 16,
     borderRadius: 12,
-    padding: 18,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#eee",
+    elevation: 2,
   },
 
-  label: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 6,
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  value: {
-    fontSize: 20,
+  name: {
+    fontSize: 18,
     fontWeight: "600",
-    color: "#222",
   },
 
-  message: {
-    marginTop: 16,
+  price: {
     fontSize: 16,
-    color: "#555",
-  },
-
-  errorTitle: {
-    fontSize: 20,
     fontWeight: "700",
-    color: "#D32F2F",
-    textAlign: "center",
+    color: "#E53935",
   },
 
-  errorSubtitle: {
+  category: {
     marginTop: 8,
     color: "#666",
-    textAlign: "center",
-  },
-
-  retry: {
-    marginTop: 20,
-    color: "#1976D2",
-    fontWeight: "600",
-    fontSize: 16,
   },
 });

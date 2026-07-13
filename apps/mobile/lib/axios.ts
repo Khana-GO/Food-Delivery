@@ -1,12 +1,14 @@
-import axios from 'axios';
+import { Platform } from "react-native";
+import axios from "axios";
 
-console.log(process.env.BACKEND_API_URL);
+const baseURL =
+  Platform.OS === "web"
+    ? process.env.EXPO_PUBLIC_API_URL_WEB
+    : process.env.EXPO_PUBLIC_API_URL_MOBILE;
 
 export const api = axios.create({
-    baseURL: process.env.BACKEND_API_URL || 'http://localhost:3000/api',
-    // withCredentials: true,
-    headers:{
-        'Content-Type': 'application/json',
-    }
-
-})
+  baseURL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
