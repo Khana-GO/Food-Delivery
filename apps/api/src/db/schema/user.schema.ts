@@ -1,207 +1,63 @@
-
 import {
-  pgTable,     // Creates a PostgreSQL table
-  varchar,     // VARCHAR data type
-  pgEnum,      // Creates PostgreSQL ENUM
-  uuid,        // UUID data type
-  boolean,     // BOOLEAN data type
-  timestamp,   // TIMESTAMP data type
-} from "drizzle-orm/pg-core";
+  pgTable,
+  pgEnum,
+  uuid,
+  varchar,
+  boolean,
+  timestamp,
+  text,
+} from 'drizzle-orm/pg-core';
 
-
-// ---------------------------------------------------------
-// Create a PostgreSQL ENUM
-// ---------------------------------------------------------
-
-// This creates a database ENUM called user_role.
-//
-// PostgreSQL will create:
-//
-// CREATE TYPE user_role AS ENUM (
-//   'CUSTOMER',
-//   'RESTAURANT',
-//   'DRIVER'
-// );
-//
-// Instead of storing any random string,
-// only these three values are allowed.
-
-export const userRoleEnum = pgEnum("user_role", [
-  "CUSTOMER",
-  "RESTAURANT_OWNER",
-  "DELIVERY_PERSON",
+export const userRoleEnum = pgEnum('user_role', [
+  'CUSTOMER',
+  'RESTAURANT_OWNER',
+  'DRIVER',
+  'ADMIN',
 ]);
 
+export const usersTable = pgTable('users', {
+  id: uuid('id').defaultRandom().primaryKey(),
 
-// ---------------------------------------------------------
-// Create Users Table
-// ---------------------------------------------------------
-
-export const usersTable = pgTable("users", {
-
-  // ------------------------------------
-  // ID
-  // ------------------------------------
-
-  // UUID Primary Key
-  //
-  // Database column:
-  // id UUID PRIMARY KEY
-  //
-  // defaultRandom()
-  // automatically generates UUIDs like
-  //
-  // e3b0c442-98fc-4d0f-9c11-95c0d8b1c123
-
-  id: uuid("id")
-    .primaryKey()
-    .defaultRandom(),
-
-
-  // ------------------------------------
-  // First Name
-  // ------------------------------------
-
-  // Database column:
-  //
-  // first_name VARCHAR(255)
-
-  firstName: varchar("first_name", {
-    length: 255,
+  firstName: varchar('first_name', {
+    length: 100,
   }).notNull(),
 
-
-  // ------------------------------------
-  // Last Name
-  // ------------------------------------
-
-  lastName: varchar("last_name", {
-    length: 255,
+  lastName: varchar('last_name', {
+    length: 100,
   }).notNull(),
 
-
-  // ------------------------------------
-  // Email
-  // ------------------------------------
-
-  // unique()
-  //
-  // No two users can have the same email.
-
-  email: varchar("email", {
+  email: varchar('email', {
     length: 255,
   })
     .notNull()
     .unique(),
 
-
-  // ------------------------------------
-  // Password
-  // ------------------------------------
-
-  password: varchar("password", {
+  password: varchar('password', {
     length: 255,
   }).notNull(),
 
-
-  // ------------------------------------
-  // User Role
-  // ------------------------------------
-
-  // Uses the ENUM created above.
-  //
-  // Allowed values:
-  //
-  // CUSTOMER
-  // RESTAURANT_OWNER
-  // DELIVERY_PERSON
-  //
-  // Default:
-  // CUSTOMER
-
-  role: userRoleEnum()
-    .notNull()
-    .default("CUSTOMER"),
-
-
-  // ------------------------------------
-  // Push Notification Token
-  // ------------------------------------
-
-  // Used by mobile apps
-  //
-  // Firebase Cloud Messaging Token
-  //
-  // Example:
-  //
-  // dKJH87sdf78SDf...
-
-  pushToken: varchar("push_token", {
-    length: 255,
+  phone: varchar('phone', {
+    length: 20,
   }),
 
+  role: userRoleEnum().notNull().default('CUSTOMER'),
 
-  // ------------------------------------
-  // Online Status
-  // ------------------------------------
+  imageUrl: text('image_url'),
 
-  // true
-  // false
-  //
-  // Default:
-  // false
+  pushToken: text('push_token'),
 
-  isOnline: boolean("is_online")
-    .default(false),
+  isOnline: boolean('is_online').notNull().default(false),
 
+  isVerified: boolean('is_verified').notNull().default(false),
 
-  // ------------------------------------
-  // Created At
-  // ------------------------------------
+  verifiedAt: timestamp('verified_at'),
 
-  // Automatically stores
-  // current date and time.
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 
-  createdAt: timestamp("created_at")
-    .notNull()
-    .defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 
-
-  // ------------------------------------
-  // Updated At
-  // ------------------------------------
-
-  // Initially stores current time.
-  //
-  // Usually updated manually whenever
-  // the record changes.
-
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow(),
-
+  deletedAt: timestamp('deleted_at'),
 });
 
-
-// ---------------------------------------------------------
-// TypeScript Types
-// ---------------------------------------------------------
-
-// Represents data coming FROM the database.
-//
-// Example:
-//
-// const user = await db.select().from(usersTable);
-//
-// user will have this type.
-
-export type User = typeof usersTable.$inferSelect;
-
-
-// Represents data inserted INTO the database.
-//
-// Example:
-//
-// db.insert(usersTable).values(...)
-
-export type NewUser = typeof usersTable.$inferInsert;
+export type UsersTable = typeof usersTable.$inferSelect;
+export type NewUsersTable = typeof usersTable.$inferInsert;

@@ -5,18 +5,20 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient()
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AnimatedSplashOverlay />
-        <AppTabs />
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider value={useColorScheme() === "dark" ? DarkTheme : DefaultTheme}>
+          <AnimatedSplashOverlay />
+          <AppTabs />
+        </ThemeProvider>
+      </SafeAreaProvider>
     </QueryClientProvider>
   );
 }
