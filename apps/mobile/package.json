@@ -3,8 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@food_delivery/types": "workspace:*",
+    "@clerk/expo": "^3.7.6",
     "@expo/ui": "~57.0.4",
+    "@food_delivery/types": "workspace:*",
     "@tanstack/react-query": "^5.101.2",
     "axios": "^1.18.1",
     "expo": "~57.0.4",
@@ -15,6 +16,7 @@
     "expo-image": "~57.0.0",
     "expo-linking": "~57.0.2",
     "expo-router": "~57.0.4",
+    "expo-secure-store": "~57.0.1",
     "expo-splash-screen": "~57.0.2",
     "expo-status-bar": "~57.0.0",
     "expo-symbols": "~57.0.0",
