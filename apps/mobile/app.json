@@ -1,5 +1,6 @@
 {
   "expo": {
+
     "name": "mobile",
     "slug": "mobile",
     "version": "1.0.0",
@@ -10,6 +11,7 @@
     "ios": {
       "icon": "./assets/expo.icon"
     },
+  
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -33,7 +35,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-secure-store", "@clerk/expo"
     ],
     "experiments": {
       "typedRoutes": true,
