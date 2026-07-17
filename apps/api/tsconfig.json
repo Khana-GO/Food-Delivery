@@ -1,25 +1,40 @@
 {
-  "extends":"../../tsconfig.base.json",  // Start with all the settings from ../../tsconfig.base.json, then add or override the settings in this file.
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    
+    /*  Self-Contained Path Configs */
+    "rootDir": "./src",
+    
+    /* NestJS & Decorator Prerequisites */
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "incremental": true,
-    "skipLibCheck": true,
+    "emitDecoratorMetadata": true,
+    
+    /* Strict Type Checking Protocols */
+    "strict": true,
     "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Compilation Performance Engine */
+    "outDir": "./dist",
+    "sourceMap": true,
+    "declaration": true,
+    "incremental": true,
+    "removeComments": true,
+    
+    /* Module Resolution Safe Guards */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "resolvePackageJsonExports": true,
+    "skipLibCheck": true,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

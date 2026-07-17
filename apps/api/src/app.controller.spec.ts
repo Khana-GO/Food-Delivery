@@ -1,3 +1,6 @@
+/// <reference types="jest" />
+
+import { beforeEach, describe, expect, it } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -25,10 +28,13 @@ describe('AppController', () => {
     it('should return a healthy status payload', () => {
       const result = appController.health();
 
-      expect(result).toEqual({
-        status: 'ok',
-        timestamp: expect.any(Date),
-      });
+      expect(result).toEqual(
+        expect.objectContaining({
+          status: 'ok',
+          timestamp: expect.any(Date),
+          data: expect.any(Array),
+        }),
+      );
     });
   });
 });
