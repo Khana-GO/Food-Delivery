@@ -28,3 +28,12 @@ export interface HealthCheckResponse {
   timestamp: Date | string;
   data: FoodItem[];
 }
+
+
+export interface JwtPayload {
+  sub: string;   // Subject (user ID)
+  email: string;
+  role: UserRole;
+  // iat?: number; // Issued at time (optional)
+  // exp?: number; // Expiration time (optional)
+}
