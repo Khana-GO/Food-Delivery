@@ -10,7 +10,6 @@
     "ios": {
       "icon": "./assets/expo.icon"
     },
-  
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -34,8 +33,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
-     
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
