@@ -3,7 +3,6 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@clerk/expo": "^3.7.6",
     "@expo/ui": "~57.0.4",
     "@food_delivery/types": "workspace:*",
     "@tanstack/react-query": "^5.101.2",
