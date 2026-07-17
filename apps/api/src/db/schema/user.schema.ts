@@ -37,7 +37,7 @@ export const usersTable = pgTable('users', {
   }).notNull(),
 
   phone: varchar('phone', {
-    length: 20,
+    length: 10,
   }),
 
   role: userRoleEnum().notNull().default('CUSTOMER'),
