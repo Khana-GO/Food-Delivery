@@ -42,9 +42,13 @@ export const usersTable = pgTable('users', {
 
   role: userRoleEnum().notNull().default('CUSTOMER'),
 
-  imageUrl: text('image_url'),
+  imageUrl: varchar('image_url', {
+    length: 500,
+}),
 
   pushToken: text('push_token'),
+
+  lastLoginAt: timestamp('last_login_at'),
 
   isOnline: boolean('is_online').notNull().default(false),
 
