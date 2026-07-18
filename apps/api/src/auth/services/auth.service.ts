@@ -15,14 +15,16 @@ import { LoginUserDto } from '../dto/login.dto';
 import { RegisterUserDto } from '../dto/register.dto';
 import type { AuthResponse, AuthUserPayload } from '../interfaces/auth-response.interface';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import * as schema from '../../db/schema';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @Inject(DATABASE) private readonly db: any,
+    @Inject(DATABASE) private readonly db: NeonHttpDatabase<typeof schema>,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {} 
 
   async register(dto: RegisterUserDto): Promise<AuthResponse> {
     const existingUser = await this.db
@@ -68,6 +70,13 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    await this.db
+  .update(usersTable)
+  .set({
+    lastLoginAt: new Date(),
+  })
+  .where(eq(usersTable.id, user.id));
 
     return this.buildAuthResponse(user);
   }
