@@ -1,10 +1,14 @@
-export enum UserRole{
-    CUSTOMER = "CUSTOMER",
-    RESTAURANT_OWNER = "RESTAURANT_OWNER",
-    DRIVER = "DRIVER",
-    ADMIN = "ADMIN"
+// Keep this runtime export compatible with Node's TypeScript strip-only mode.
+// TypeScript enums require code generation, which that loader intentionally does
+// not perform for workspace packages loaded directly from their .ts entrypoint.
+export const UserRole = {
+  CUSTOMER: 'CUSTOMER',
+  RESTAURANT_OWNER: 'RESTAURANT_OWNER',
+  DRIVER: 'DRIVER',
+  ADMIN: 'ADMIN',
+} as const;
 
-}
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export interface User {
     id: string,
