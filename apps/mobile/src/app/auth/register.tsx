@@ -36,10 +36,34 @@ export default function RegisterScreen() {
   const handleSignUp = async () => {
     if (!validate()) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      const fullPhone = `+977${phone}`;
+      
+      const response = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          firstName: fullName || 'User',
+          lastName: ' ', // Empty for now as per UI
+          phone: fullPhone 
+        }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        setPhoneError(data.message || 'Registration failed');
+        setLoading(false);
+        return;
+      }
+
+      router.push({ pathname: '/auth/otp', params: { phone: fullPhone } } as any);
+    } catch (e) {
+      setPhoneError('Network error. Is the backend running?');
+    }
+    
     setLoading(false);
-    // Navigate to OTP screen for phone verification
-    router.push('/auth/otp' as any);
   };
 
   return (

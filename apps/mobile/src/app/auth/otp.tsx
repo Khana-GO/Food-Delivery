@@ -9,12 +9,15 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import Button from '@/components/ui/Button';
 
 export default function OTPScreen() {
+  const params = useLocalSearchParams();
+  const phone = (params.phone as string) || '';
+  
   const [otp, setOtp] = useState(['', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,12 +51,29 @@ export default function OTPScreen() {
     setError('');
     setLoading(true);
     
-    // Simulate API call to verify OTP
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      
+      const response = await fetch(`${apiUrl}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp: otpCode }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || 'Verification failed');
+        setLoading(false);
+        return;
+      }
+      
+      // On success, navigate to dashboard
+      router.replace('/(customer)' as any);
+    } catch (e) {
+      setError('Network error. Is the backend running?');
+    }
     
-    // On success, navigate to dashboard
-    router.replace('/(customer)' as any);
+    setLoading(false);
   };
 
   return (
@@ -73,7 +93,7 @@ export default function OTPScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Verify Phone</Text>
             <Text style={styles.subtitle}>
-              Code sent to <Text style={styles.boldText}>+977 9800000000</Text>
+              Code sent to <Text style={styles.boldText}>{phone || '+977 9800000000'}</Text>
             </Text>
           </View>
 

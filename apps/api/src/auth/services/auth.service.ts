@@ -1,67 +1,77 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
-import { MailService } from '../../mail/mail.service';
 import { UsersService } from '../../users/users.service';
-import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { LoginUserDto } from '../dto/login.dto';
 import { RegisterUserDto } from '../dto/register.dto';
-import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { VerifyOtpDto } from '../dto/verify-otp.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly mailService: MailService,
     private readonly configService: ConfigService,
   ) {}
 
   async register(dto: RegisterUserDto) {
-    const email = dto.email.trim().toLowerCase();
-    if (await this.usersService.findByEmail(email)) {
-      throw new BadRequestException('Email already registered');
+    const phone = dto.phone.trim();
+    if (await this.usersService.findByPhone(phone)) {
+      throw new BadRequestException('Phone number already registered');
     }
 
-    const token = this.generateToken();
     const user = await this.usersService.create({
       firstName: dto.firstName.trim(),
       lastName: dto.lastName.trim(),
-      email,
-      password: await bcrypt.hash(dto.password, this.saltRounds()),
-      phone: dto.phone?.trim(),
-      verificationToken: this.hashToken(token),
-      verificationTokenExpiry: this.expiryInHours(24),
+      phone,
       isVerified: false,
     });
 
-    await this.mailService.sendVerificationEmail(user.email, token);
-    return { message: 'Check your email to verify your account' };
-  }
+    const otp = this.generateOtp();
+    await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
+    
+    // Simulating SMS sending
+    this.logger.log(`\n\n========================\n[DEV] OTP for ${phone} is: ${otp}\n========================\n`);
 
-  async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.usersService.findByVerificationTokenHash(this.hashToken(dto.token));
-    if (!user || !user.verificationTokenExpiry || user.verificationTokenExpiry <= new Date()) {
-      throw new BadRequestException('Invalid or expired token');
-    }
-
-    await this.usersService.markAsVerified(user.id);
-    return { message: 'Email verified successfully' };
+    return { message: 'OTP sent to your phone' };
   }
 
   async login(dto: LoginUserDto) {
-    const user = await this.usersService.findByEmail(dto.email);
-    if (!user?.password || !(await bcrypt.compare(dto.password, user.password))) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    if (!user.isVerified) {
-      throw new UnauthorizedException('Please verify your email first');
+    const phone = dto.phone.trim();
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) {
+      throw new UnauthorizedException('Phone number not registered');
     }
 
+    const otp = this.generateOtp();
+    await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
+
+    // Simulating SMS sending
+    this.logger.log(`\n\n========================\n[DEV] OTP for ${phone} is: ${otp}\n========================\n`);
+
+    return { message: 'OTP sent to your phone' };
+  }
+
+  async verifyOtp(dto: VerifyOtpDto) {
+    const phone = dto.phone.trim();
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.otpCode !== dto.otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    if (!user.otpExpiry || user.otpExpiry <= new Date()) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    await this.usersService.verifyAndClearOtp(user.id);
     await this.usersService.recordLogin(user.id);
+
     return this.authResponse(user);
   }
 
@@ -77,39 +87,20 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.usersService.findByEmail(dto.email);
-    if (user) {
-      const token = this.generateToken();
-      await this.usersService.setResetToken(user.id, this.hashToken(token), this.expiryInHours(1));
-      await this.mailService.sendPasswordResetEmail(user.email, token);
-    }
-    return { message: 'If the email exists, a reset link has been sent' };
-  }
-
-  async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.usersService.findByResetTokenHash(this.hashToken(dto.token));
-    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry <= new Date()) {
-      throw new BadRequestException('Invalid or expired token');
-    }
-    await this.usersService.updatePassword(user.id, await bcrypt.hash(dto.newPassword, this.saltRounds()));
-    return { message: 'Password reset successfully' };
-  }
-
-  private authResponse(user: { id: string; email: string; role: string; firstName: string; lastName: string }) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+  private authResponse(user: { id: string; role: string; firstName: string; lastName: string; phone?: string | null }) {
+    const payload = { sub: user.id, phone: user.phone, role: user.role };
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') ?? '1h' } as never),
       refreshToken: this.jwtService.sign({ sub: user.id, type: 'refresh' }, { expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d' } as never),
-      user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
+      user: { id: user.id, phone: user.phone, role: user.role, firstName: user.firstName, lastName: user.lastName },
     };
   }
 
-  private generateToken() { return crypto.randomBytes(32).toString('hex'); }
-  private hashToken(token: string) { return crypto.createHash('sha256').update(token).digest('hex'); }
-  private expiryInHours(hours: number) { return new Date(Date.now() + hours * 60 * 60 * 1000); }
-  private saltRounds() {
-    const rounds = Number(this.configService.get<string>('SALT_ROUNDS') ?? 12);
-    return Number.isInteger(rounds) && rounds >= 10 && rounds <= 15 ? rounds : 12;
+  private generateOtp() {
+    return Math.floor(1000 + Math.random() * 9000).toString(); // 4 digit OTP
+  }
+
+  private expiryInMinutes(minutes: number) {
+    return new Date(Date.now() + minutes * 60 * 1000);
   }
 }

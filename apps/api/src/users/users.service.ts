@@ -12,21 +12,9 @@ export class UsersService {
     private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
 
-  async findByEmail(email: string) {
+  async findByPhone(phone: string) {
     return this.db.query.usersTable.findFirst({
-      where: eq(usersTable.email, email.trim().toLowerCase()),
-    });
-  }
-
-  async findByVerificationTokenHash(tokenHash: string) {
-    return this.db.query.usersTable.findFirst({
-      where: eq(usersTable.verificationToken, tokenHash),
-    });
-  }
-
-  async findByResetTokenHash(tokenHash: string) {
-    return this.db.query.usersTable.findFirst({
-      where: eq(usersTable.resetToken, tokenHash),
+      where: eq(usersTable.phone, phone.trim()),
     });
   }
 
@@ -39,34 +27,23 @@ export class UsersService {
     return newUser;
   }
 
-  async markAsVerified(userId: string) {
+  async setOtp(userId: string, otpCode: string, expiry: Date) {
+    await this.db.update(usersTable)
+      .set({
+        otpCode,
+        otpExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, userId));
+  }
+
+  async verifyAndClearOtp(userId: string) {
     await this.db.update(usersTable)
       .set({
         isVerified: true,
-        verificationToken: null,
-        verificationTokenExpiry: null,
+        otpCode: null,
+        otpExpiry: null,
         verifiedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(usersTable.id, userId));
-  }
-
-  async setResetToken(userId: string, tokenHash: string, expiry: Date) {
-    await this.db.update(usersTable)
-      .set({
-        resetToken: tokenHash,
-        resetTokenExpiry: expiry,
-        updatedAt: new Date(),
-      })
-      .where(eq(usersTable.id, userId));
-  }
-
-  async updatePassword(userId: string, hashedPassword: string) {
-    await this.db.update(usersTable)
-      .set({
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
         updatedAt: new Date(),
       })
       .where(eq(usersTable.id, userId));

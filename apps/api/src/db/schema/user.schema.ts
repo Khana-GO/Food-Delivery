@@ -29,17 +29,15 @@ export const usersTable = pgTable('users', {
 
   email: varchar('email', {
     length: 255,
-  })
-    .notNull()
-    .unique(),
+  }),
 
   password: varchar('password', {
     length: 255,
-  }).notNull(),
+  }),
 
   phone: varchar('phone', {
-    length: 10,
-  }),
+    length: 15,
+  }).notNull().unique(),
 
   role: userRoleEnum().notNull().default('CUSTOMER'),
 
@@ -54,11 +52,9 @@ export const usersTable = pgTable('users', {
   isOnline: boolean('is_online').notNull().default(false),
 
   isVerified: boolean('is_verified').notNull().default(false),
-  verificationToken: text('verification_token'),
-  verificationTokenExpiry: timestamp('verification_token_expires_at'),
-  resetToken: varchar('reset_token', { length: 255 }),
-  resetTokenExpiry: timestamp('reset_token_expiry'),
-
+  otpCode: varchar('otp_code', { length: 6 }),
+  otpExpiry: timestamp('otp_expiry'),
+  
   verifiedAt: timestamp('verified_at'),
 
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -66,10 +62,7 @@ export const usersTable = pgTable('users', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 
   deletedAt: timestamp('deleted_at'),
-  }, (table) => [
-    index('users_verification_token_idx').on(table.verificationToken),
-    index('users_reset_token_idx').on(table.resetToken),
-  ],
+  },
 );
 
 export type UsersTable = typeof usersTable.$inferSelect;
