@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/Text';
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, Image } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius } from '@/constants/theme';
@@ -9,33 +9,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// KhanaGo Logo Component replicating the design
 function KhanaGoLogo() {
   return (
     <View style={styles.logoWrapper}>
-      {/* Background Soft Glow */}
-      <View style={styles.glow} />
-
-      {/* Decorative Speed Lines */}
-      <View style={[styles.speedLine, styles.lineLeft1]} />
-      <View style={[styles.speedLine, styles.lineLeft2]} />
-      <View style={[styles.speedLine, styles.lineRight1]} />
-      <View style={[styles.speedLine, styles.lineRight2]} />
-
-      <View style={styles.logoBox}>
-        <View style={styles.iconAssembly}>
-          <Ionicons name="location" size={20} color="#FFF" style={styles.pinIcon} />
-          <View style={styles.steamRow}>
-            <Text style={styles.steamText}>S</Text>
-            <Text style={styles.steamText}>S</Text>
-            <Text style={styles.steamText}>S</Text>
-          </View>
-          <View style={styles.bowlWrapper}>
-            <View style={styles.bowlLine} />
-            <View style={styles.bowlBase} />
-          </View>
-        </View>
-      </View>
+      <Image 
+        source={require('../../assets/images/app_logo.png')} 
+        style={styles.realLogo} 
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -156,88 +137,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoWrapper: {
-    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    width: 200,
-    height: 200,
   },
-  glow: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(249, 115, 22, 0.08)',
-    transform: [{ scale: 1.5 }],
-  },
-  logoBox: {
-    width: 110,
-    height: 110,
-    borderRadius: 32,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 12,
-    zIndex: 10,
-  },
-  speedLine: {
-    position: 'absolute',
-    height: 4,
-    backgroundColor: '#FDBA74',
-    borderRadius: 2,
-    zIndex: 5,
-  },
-  lineLeft1: { width: 24, left: 10, top: 70 },
-  lineLeft2: { width: 14, left: 14, top: 82 },
-  lineRight1: { width: 18, right: 12, bottom: 82 },
-  lineRight2: { width: 12, right: 12, bottom: 70 },
-  iconAssembly: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 8,
-  },
-  pinIcon: {
-    marginBottom: -2,
-  },
-  steamRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginBottom: 4,
-  },
-  steamText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontStyle: 'italic',
-    transform: [{ scaleY: 1.5 }, { skewY: '-15deg' }],
-  },
-  bowlWrapper: {
-    alignItems: 'center',
-  },
-  bowlLine: {
-    width: 48,
-    height: 3,
-    backgroundColor: '#FFF',
-    borderRadius: 2,
-    marginBottom: 0,
-    transform: [{ rotate: '-10deg' }],
-    zIndex: 2,
-  },
-  bowlBase: {
-    width: 44,
-    height: 22,
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-    borderWidth: 3,
-    borderTopWidth: 0,
-    borderColor: '#FFF',
-    marginTop: -2,
-    backgroundColor: Colors.primary,
+  realLogo: {
+    width: 140,
+    height: 140,
   },
   appName: {
     fontSize: 34,

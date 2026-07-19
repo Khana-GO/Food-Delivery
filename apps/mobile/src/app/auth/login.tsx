@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native';
 import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/Text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import Input from '@/components/ui/Input';
@@ -94,7 +94,7 @@ export default function LoginScreen() {
 
             <Button 
               label="Continue" 
-              onPress={handleLogin} 
+              onPress={handleContinue} 
               loading={loading}
               fullWidth
               style={styles.loginBtn}
@@ -142,45 +142,31 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 15,
     color: Colors.textSecondary,
-  socialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    borderRadius: Radius.lg,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  socialIcon: { fontSize: 18, fontWeight: '700' },
-  socialText: { fontSize: 15, fontWeight: '600', color: Colors.textDark },
-  signupRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  signupPrompt: { fontSize: 15, color: Colors.textSecondary },
-  signupLink: { fontSize: 15, color: Colors.primary, fontWeight: '700' },
-  countryCodeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: 6,
-  },
-  countryFlagImg: {
-    width: 22,
-    height: 16,
-    marginRight: 6,
-    borderRadius: 2,
-    marginLeft: 4,
+  formContainer: {
+    marginTop: 20,
   },
   countryCode: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.textDark,
   },
-  verticalDivider: {
-    width: 1.5,
-    height: 24,
-    backgroundColor: '#E5E7EB',
-    marginLeft: 10,
-    borderRadius: 2,
+  loginBtn: {
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  footerText: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+  },
+  footerLink: {
+    fontSize: 15,
+    color: Colors.primary,
+    fontWeight: '700',
   },
 });
