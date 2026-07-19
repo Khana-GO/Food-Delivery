@@ -11,6 +11,7 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius } from '@/constants/theme';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -127,7 +128,7 @@ export default function OnboardingScreen() {
   const goNext = () => {
     if (current < SLIDES.length - 1) {
       const next = current + 1;
-      flatRef.current?.scrollToIndex({ index: next, animated: true });
+      flatRef.current?.scrollToOffset({ offset: next * width, animated: true });
       setCurrent(next);
     } else {
       router.replace('/auth/login' as any);
@@ -142,7 +143,7 @@ export default function OnboardingScreen() {
       <View style={styles.header}>
         <View style={styles.logoRow}>
           <View style={styles.logoSmall}>
-            <Text>🍜</Text>
+            <Ionicons name="fast-food-outline" size={20} color="#FFF" />
           </View>
           <Text style={styles.logoText}>KhanaGo</Text>
         </View>
@@ -182,8 +183,9 @@ export default function OnboardingScreen() {
 
         <TouchableOpacity style={styles.nextBtn} onPress={goNext} activeOpacity={0.85}>
           <Text style={styles.nextText}>
-            {current < SLIDES.length - 1 ? 'Next  →' : 'Get Started  →'}
+            {current < SLIDES.length - 1 ? 'Next' : 'Get Started'}
           </Text>
+          <Feather name="arrow-right" size={20} color="#FFF" style={{ marginLeft: 8 }} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -248,6 +250,8 @@ const styles = StyleSheet.create({
     paddingVertical: 17,
     borderRadius: Radius.full,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   nextText: { color: '#fff', fontSize: 17, fontWeight: '700' },
 });
