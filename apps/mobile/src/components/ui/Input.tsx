@@ -34,7 +34,7 @@ export default function Input({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
 
       <View style={[styles.inputRow, error ? styles.inputRowError : styles.inputRowNormal]}>
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
@@ -60,7 +60,7 @@ export default function Input({
         ) : null}
       </View>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
