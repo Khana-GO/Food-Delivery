@@ -77,6 +77,10 @@ export default function OTPScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Text style={styles.backIcon}>←</Text>
+      </TouchableOpacity>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -85,10 +89,6 @@ export default function OTPScreen() {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-
           <View style={styles.header}>
             <Text style={styles.title}>Verify Phone</Text>
             <Text style={styles.subtitle}>
@@ -125,8 +125,6 @@ export default function OTPScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.spacer} />
-
           <Button
             label="Verify"
             onPress={handleVerify}
@@ -142,15 +140,18 @@ export default function OTPScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.white },
-  container: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 20 },
+  container: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 20, justifyContent: 'center' },
   backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 24,
+    zIndex: 10,
     width: 40,
     height: 40,
     borderRadius: Radius.full,
     backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
   },
   backIcon: { fontSize: 24, color: Colors.textDark, marginTop: -4 },
   header: { marginBottom: 32 },
@@ -195,6 +196,5 @@ const styles = StyleSheet.create({
   },
   resendText: { fontSize: 15, color: Colors.textSecondary },
   resendLink: { fontSize: 15, color: Colors.primary, fontWeight: '700' },
-  spacer: { flex: 1, minHeight: 40 },
-  verifyBtn: { marginBottom: 20 },
+  verifyBtn: { marginTop: 24, marginBottom: 20 },
 });

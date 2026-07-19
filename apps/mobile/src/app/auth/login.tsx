@@ -58,18 +58,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.screen}>
-      {/* Solid Color Header */}
-      <View style={[styles.headerContainer, { backgroundColor: Colors.primary }]}>
-        <View style={[styles.headerOverlay, { paddingTop: Math.max(insets.top, 20) }]}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoEmoji}>🍔</Text>
-          </View>
-          <Text style={styles.headerTitle}>KhanaGo</Text>
-          <Text style={styles.headerSubtitle}>Craving something? We've got it.</Text>
-        </View>
-      </View>
-
+    <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -80,148 +69,79 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Overlapping Card */}
-          <View style={styles.formCard}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Enter your phone number to continue.</Text>
+          <View style={styles.headerContainer}>
+            <Image 
+              source={require('../../../assets/images/app_logo.png')} 
+              style={styles.logoBadge} 
+            />
+            <Text style={styles.headerTitle}>KhanaGo</Text>
+            <Text style={styles.headerSubtitle}>Welcome back! Please login to continue.</Text>
+          </View>
 
-            <View style={styles.fields}>
-              <Input
-                label="Mobile Number"
-                placeholder="9800000000"
-                value={phone}
-                onChangeText={setPhone}
-                error={phoneError}
-                keyboardType="phone-pad"
-                leftIcon={
-                  <View style={styles.countryCodeContainer}>
-                    <Image source={{ uri: 'https://flagcdn.com/w40/np.png' }} style={styles.countryFlagImg} resizeMode="contain" />
-                    <Text style={styles.countryCode}>+977</Text>
-                    <View style={styles.verticalDivider} />
-                  </View>
-                }
-              />
-            </View>
-
-            <Button
-              label="Continue"
-              onPress={handleContinue}
-              loading={loading}
-              fullWidth
-              style={styles.continueBtn}
+          <View style={styles.formContainer}>
+            <Input
+              label="Phone Number"
+              placeholder="e.g. 9800000000"
+              value={phone}
+              onChangeText={(text) => {
+                setPhone(text);
+                setPhoneError('');
+              }}
+              keyboardType="phone-pad"
+              error={phoneError}
+              leftIcon={<Text style={styles.countryCode}>+977</Text>}
             />
 
-            <View style={styles.dividerRow}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.divider} />
-            </View>
+            <Button 
+              label="Continue" 
+              onPress={handleLogin} 
+              loading={loading}
+              fullWidth
+              style={styles.loginBtn}
+            />
 
-            <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.socialText}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>🍎</Text>
-                <Text style={styles.socialText}>Apple</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.signupRow}>
-              <Text style={styles.signupPrompt}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace('/auth/register' as any)}>
-                <Text style={styles.signupLink}>Sign Up</Text>
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>New to KhanaGo? </Text>
+              <TouchableOpacity onPress={() => router.push('/auth/register' as any)}>
+                <Text style={styles.footerLink}>Sign up</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.white },
-  headerContainer: {
-    width: '100%',
-    height: HEADER_HEIGHT,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  headerImg: {
-    width: '100%',
-    height: '100%',
-  },
-  gradient: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 40,
-  },
-  logoBadge: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
-  logoEmoji: { fontSize: 24 },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 4,
-    fontWeight: '500',
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.white,
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingTop: HEADER_HEIGHT - 30, // Overlap effect
-  },
-  formCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
     paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 40,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px -10px 30px rgba(0,0,0,0.1)' as any,
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 20,
-      },
-    }),
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textDark, marginBottom: 8 },
-  subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 32, lineHeight: 22 },
-  fields: { gap: 8 },
-  continueBtn: { marginTop: 12, marginBottom: 24 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24 },
-  divider: { flex: 1, height: 1, backgroundColor: '#F3F4F6' },
-  dividerText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' },
-  socialRow: { flexDirection: 'row', gap: 16, marginBottom: 32 },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoBadge: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.textDark,
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: Colors.textSecondary,
   socialBtn: {
     flex: 1,
     flexDirection: 'row',

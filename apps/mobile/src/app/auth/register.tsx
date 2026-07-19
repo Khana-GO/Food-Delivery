@@ -72,11 +72,12 @@ export default function RegisterScreen() {
   return (
     <View style={styles.screen}>
       {/* Solid Color Header */}
-      <View style={[styles.headerContainer, { backgroundColor: Colors.primary }]}>
+      <View style={[styles.headerContainer, { backgroundColor: Colors.background }]}>
         <View style={[styles.headerOverlay, { paddingTop: Math.max(insets.top, 20) }]}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoEmoji}>🍔</Text>
-          </View>
+          <Image 
+            source={require('../../../assets/images/app_logo.png')} 
+            style={styles.logoBadge} 
+          />
           <Text style={styles.headerTitle}>KhanaGo</Text>
           <Text style={styles.headerSubtitle}>Craving something? We've got it.</Text>
         </View>
@@ -206,26 +207,20 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logoBadge: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    marginBottom: 16,
   },
-  logoEmoji: { fontSize: 24 },
   headerTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#fff',
+    color: Colors.textDark,
     letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
+    color: Colors.textSecondary,
     marginTop: 4,
     fontWeight: '500',
   },
