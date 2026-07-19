@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo/ui": "~57.0.4",
+    "@expo/vector-icons": "^15.1.1",
     "@food_delivery/types": "workspace:*",
     "@tanstack/react-query": "^5.101.2",
     "axios": "^1.18.1",

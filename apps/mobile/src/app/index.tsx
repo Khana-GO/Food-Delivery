@@ -19,7 +19,7 @@ function KhanaGoLogo() {
     <View style={styles.logoWrapper}>
       {/* Background Soft Glow */}
       <View style={styles.glow} />
-      
+
       {/* Decorative Speed Lines */}
       <View style={[styles.speedLine, styles.lineLeft1]} />
       <View style={[styles.speedLine, styles.lineLeft2]} />
@@ -28,16 +28,16 @@ function KhanaGoLogo() {
 
       <View style={styles.logoBox}>
         <View style={styles.iconAssembly}>
-           <Ionicons name="location" size={20} color="#FFF" style={styles.pinIcon} />
-           <View style={styles.steamRow}>
-              <Text style={styles.steamText}>S</Text>
-              <Text style={styles.steamText}>S</Text>
-              <Text style={styles.steamText}>S</Text>
-           </View>
-           <View style={styles.bowlWrapper}>
-             <View style={styles.bowlLine} />
-             <View style={styles.bowlBase} />
-           </View>
+          <Ionicons name="location" size={20} color="#FFF" style={styles.pinIcon} />
+          <View style={styles.steamRow}>
+            <Text style={styles.steamText}>S</Text>
+            <Text style={styles.steamText}>S</Text>
+            <Text style={styles.steamText}>S</Text>
+          </View>
+          <View style={styles.bowlWrapper}>
+            <View style={styles.bowlLine} />
+            <View style={styles.bowlBase} />
+          </View>
         </View>
       </View>
     </View>
