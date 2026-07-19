@@ -82,7 +82,7 @@ export default function RegisterScreen() {
 
             <Input
               label="Email or Phone Number"
-              placeholder="john@"
+              placeholder="john@gmail.com"
               value={email}
               onChangeText={setEmail}
               error={emailError}
