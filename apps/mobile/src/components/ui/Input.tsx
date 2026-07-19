@@ -31,18 +31,41 @@ export default function Input({
   ...props
 }: InputProps) {
   const [secureText, setSecureText] = useState(isPassword ?? false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Border color logic
+  let borderColor = Colors.border;
+  if (error) borderColor = Colors.error;
+  else if (isFocused) borderColor = Colors.primary;
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <View style={[styles.inputRow, { borderColor }]}>
+        {label ? (
+          <View style={styles.floatingLabelContainer}>
+            <Text style={[
+              styles.floatingLabel, 
+              { color: error ? Colors.error : (isFocused ? Colors.primary : Colors.textSecondary) }
+            ]}>
+              {label}
+            </Text>
+          </View>
+        ) : null}
 
-      <View style={[styles.inputRow, error ? styles.inputRowError : styles.inputRowNormal]}>
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
 
         <TextInput
           style={[styles.input, leftIcon ? styles.inputWithLeft : null]}
           placeholderTextColor={Colors.textLight}
           secureTextEntry={secureText}
+          onFocus={(e) => {
+            setIsFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            props.onBlur?.(e);
+          }}
           {...props}
         />
 
@@ -68,12 +91,7 @@ export default function Input({
 const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.md,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textDark,
-    marginBottom: 6,
+    marginTop: 10, // give space for floating label
   },
   inputRow: {
     flexDirection: 'row',
@@ -81,16 +99,25 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1.5,
     backgroundColor: Colors.white,
+    position: 'relative',
   },
-  inputRowNormal: {
-    borderColor: Colors.border,
+  floatingLabelContainer: {
+    position: 'absolute',
+    top: -10,
+    left: 14,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 6,
+    zIndex: 10,
   },
-  inputRowError: {
-    borderColor: Colors.error,
+  floatingLabel: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   iconLeft: {
     paddingLeft: 14,
     paddingRight: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconRight: {
     paddingRight: 14,
@@ -102,6 +129,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textDark,
     paddingHorizontal: 14,
+    fontWeight: '500',
   },
   inputWithLeft: {
     paddingLeft: 4,

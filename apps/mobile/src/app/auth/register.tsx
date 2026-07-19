@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,20 +17,18 @@ import Button from '@/components/ui/Button';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
     let valid = true;
-    if (!email.includes('@')) {
-      setEmailError('Please enter a valid email address.');
+    if (phone.length < 7) {
+      setPhoneError('Please enter a valid phone number.');
       valid = false;
     } else {
-      setEmailError('');
+      setPhoneError('');
     }
     return valid;
   };
@@ -39,7 +38,8 @@ export default function RegisterScreen() {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 800));
     setLoading(false);
-    router.replace('/(customer)' as any);
+    // Navigate to OTP screen for phone verification
+    router.push('/auth/otp' as any);
   };
 
   return (
@@ -81,33 +81,19 @@ export default function RegisterScreen() {
             />
 
             <Input
-              label="Email or Phone Number"
-              placeholder="john@gmail.com"
-              value={email}
-              onChangeText={setEmail}
-              error={emailError}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon={<Text style={styles.icon}>✉️</Text>}
-              rightIcon={emailError ? <Text style={styles.icon}>⚠️</Text> : undefined}
-            />
-
-            <Input
-              label="Password"
-              placeholder="Create a password"
-              value={password}
-              onChangeText={setPassword}
-              isPassword
-              leftIcon={<Text style={styles.icon}>🔒</Text>}
-            />
-
-            <Input
-              label="Confirm Password"
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              isPassword
-              leftIcon={<Text style={styles.icon}>🔒</Text>}
+              label="Mobile Number"
+              placeholder="9800000000"
+              value={phone}
+              onChangeText={setPhone}
+              error={phoneError}
+              keyboardType="phone-pad"
+              leftIcon={
+                <View style={styles.countryCodeContainer}>
+                  <Image source={{ uri: 'https://flagcdn.com/w40/np.png' }} style={styles.countryFlagImg} resizeMode="contain" />
+                  <Text style={styles.countryCode}>+977</Text>
+                  <View style={styles.verticalDivider} />
+                </View>
+              }
             />
           </View>
 
@@ -129,7 +115,7 @@ export default function RegisterScreen() {
           </TouchableOpacity>
 
           <Button
-            label="Sign Up"
+            label="Continue"
             onPress={handleSignUp}
             loading={loading}
             disabled={!agreed}
@@ -228,4 +214,29 @@ const styles = StyleSheet.create({
   loginRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   loginPrompt: { fontSize: 14, color: Colors.textSecondary },
   loginLink: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
+  countryCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 4,
+  },
+  countryFlagImg: {
+    width: 20,
+    height: 14,
+    marginRight: 6,
+    borderRadius: 2,
+    marginLeft: 4,
+    resizeMode: 'contain',
+  },
+  countryCode: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: Colors.textDark,
+  },
+  verticalDivider: {
+    width: 2,
+    height: 24,
+    backgroundColor: '#E5E7EB', // light gray
+    marginLeft: 10,
+    borderRadius: 2,
+  },
 });

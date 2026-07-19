@@ -7,40 +7,38 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
-  const { login, user } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
     let valid = true;
-    if (!email.includes('@')) {
-      setEmailError('Please enter a valid email address.');
+    if (phone.length < 7) {
+      setPhoneError('Please enter a valid phone number.');
       valid = false;
     } else {
-      setEmailError('');
+      setPhoneError('');
     }
     return valid;
   };
 
-  const handleLogin = async () => {
+  const handleContinue = async () => {
     if (!validate()) return;
     setLoading(true);
-    // Simulate API call
+    // Simulate API call to send OTP
     await new Promise((r) => setTimeout(r, 800));
     setLoading(false);
-    // Navigate to customer dashboard
-    router.replace('/(customer)' as any);
+    // Navigate to OTP screen
+    router.push('/auth/otp' as any);
   };
 
   return (
@@ -69,44 +67,32 @@ export default function LoginScreen() {
           {/* Form */}
           <View style={styles.form}>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue ordering your favourites.</Text>
+            <Text style={styles.subtitle}>Enter your phone number to continue.</Text>
 
             <View style={styles.fields}>
               <Input
-                label="Email or Phone Number"
-                placeholder="john@gmail.com"
-                value={email}
-                onChangeText={setEmail}
-                error={emailError}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                leftIcon={<Text style={styles.fieldIcon}>✉️</Text>}
-                rightIcon={emailError ? <Text style={styles.errorIcon}>⚠️</Text> : undefined}
+                label="Mobile Number"
+                placeholder="9800000000"
+                value={phone}
+                onChangeText={setPhone}
+                error={phoneError}
+                keyboardType="phone-pad"
+                leftIcon={
+                  <View style={styles.countryCodeContainer}>
+                    <Image source={{ uri: 'https://flagcdn.com/w40/np.png' }} style={styles.countryFlagImg} resizeMode="contain" />
+                    <Text style={styles.countryCode}>+977</Text>
+                    <View style={styles.verticalDivider} />
+                  </View>
+                }
               />
-
-              <Input
-                label="Password"
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={setPassword}
-                isPassword
-                leftIcon={<Text style={styles.fieldIcon}>🔒</Text>}
-              />
-
-              <View style={styles.rememberRow}>
-                <Text style={styles.rememberText}>Remember me</Text>
-                <TouchableOpacity>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             <Button
-              label="Log In"
-              onPress={handleLogin}
+              label="Continue"
+              onPress={handleContinue}
               loading={loading}
               fullWidth
-              style={styles.loginBtn}
+              style={styles.continueBtn}
             />
 
             <View style={styles.dividerRow}>
@@ -166,18 +152,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', color: Colors.textDark, marginBottom: 6 },
   subtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 24 },
   fields: { gap: 4, marginBottom: 8 },
-  fieldIcon: { fontSize: 16 },
-  errorIcon: { fontSize: 16 },
-  rememberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  rememberText: { fontSize: 13, color: Colors.textSecondary },
-  forgotText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  loginBtn: { marginTop: 12, marginBottom: 20 },
+  continueBtn: { marginTop: 12, marginBottom: 20 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   divider: { flex: 1, height: 1, backgroundColor: Colors.border },
   dividerText: { fontSize: 13, color: Colors.textSecondary },
@@ -199,4 +174,29 @@ const styles = StyleSheet.create({
   signupRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   signupPrompt: { fontSize: 14, color: Colors.textSecondary },
   signupLink: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
+  countryCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 4,
+  },
+  countryFlagImg: {
+    width: 20,
+    height: 14,
+    marginRight: 6,
+    borderRadius: 2,
+    marginLeft: 4,
+    resizeMode: 'contain',
+  },
+  countryCode: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: Colors.textDark,
+  },
+  verticalDivider: {
+    width: 2,
+    height: 24,
+    backgroundColor: '#E5E7EB', // light gray
+    marginLeft: 10,
+    borderRadius: 2,
+  },
 });
