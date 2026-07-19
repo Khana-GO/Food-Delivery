@@ -74,7 +74,7 @@ export default function LoginScreen() {
             <View style={styles.fields}>
               <Input
                 label="Email or Phone Number"
-                placeholder="john@"
+                placeholder="john@gmail.com"
                 value={email}
                 onChangeText={setEmail}
                 error={emailError}

@@ -45,9 +45,9 @@ export const restaurantsTable = pgTable('restaurants', {
 
   postalCode: varchar('postal_code', { length: 20 }),
 
-  latitude: doublePrecision('latitude'),
+  latitude: doublePrecision('latitude').notNull(),
 
-  longitude: doublePrecision('longitude'),
+  longitude: doublePrecision('longitude').notNull(),
 
   cuisineType: varchar('cuisine_type', {
     length: 100,

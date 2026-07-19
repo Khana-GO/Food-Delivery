@@ -6,6 +6,7 @@ import {
   boolean,
   timestamp,
   text,
+  index,
 } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', [
@@ -42,13 +43,21 @@ export const usersTable = pgTable('users', {
 
   role: userRoleEnum().notNull().default('CUSTOMER'),
 
-  imageUrl: text('image_url'),
+  imageUrl: varchar('image_url', {
+    length: 500,
+  }),
 
   pushToken: text('push_token'),
+
+  lastLoginAt: timestamp('last_login_at'),
 
   isOnline: boolean('is_online').notNull().default(false),
 
   isVerified: boolean('is_verified').notNull().default(false),
+  verificationToken: text('verification_token'),
+  verificationTokenExpiry: timestamp('verification_token_expires_at'),
+  resetToken: varchar('reset_token', { length: 255 }),
+  resetTokenExpiry: timestamp('reset_token_expiry'),
 
   verifiedAt: timestamp('verified_at'),
 
@@ -57,7 +66,11 @@ export const usersTable = pgTable('users', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 
   deletedAt: timestamp('deleted_at'),
-});
+  }, (table) => [
+    index('users_verification_token_idx').on(table.verificationToken),
+    index('users_reset_token_idx').on(table.resetToken),
+  ],
+);
 
 export type UsersTable = typeof usersTable.$inferSelect;
 export type NewUsersTable = typeof usersTable.$inferInsert;
