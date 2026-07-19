@@ -1,249 +1,310 @@
-import React from "react";
-import { api } from "../../lib/axios";
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  StatusBar,
-  RefreshControl,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+  Animated,
+  Dimensions,
+} from 'react-native';
+import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors, Radius } from '@/constants/theme';
+import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface FoodItem {
-  id: number;
-  name: string;
-  price: number;
-  category: string;
-}
+const { width } = Dimensions.get('window');
 
-interface HealthCheckResponse {
-  status: string;
-  timestamp: string;
-  data: FoodItem[];
-}
+// KhanaGo Logo Component replicating the design
+function KhanaGoLogo() {
+  return (
+    <View style={styles.logoWrapper}>
+      {/* Background Soft Glow */}
+      <View style={styles.glow} />
 
-// Fetch function
-const fetchMenu = async (): Promise<FoodItem[]> => {
-  const { data } = await api.get<HealthCheckResponse>("/health");
+      {/* Decorative Speed Lines */}
+      <View style={[styles.speedLine, styles.lineLeft1]} />
+      <View style={[styles.speedLine, styles.lineLeft2]} />
+      <View style={[styles.speedLine, styles.lineRight1]} />
+      <View style={[styles.speedLine, styles.lineRight2]} />
 
-  if (!Array.isArray(data.data)) {
-    throw new Error("Invalid server response.");
-  }
-
-  return data.data;
-};
-
-export default function MenuScreen() {
-  const {
-    data: menuItems = [],
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isRefetching,
-  } = useQuery({
-    queryKey: ["menu"],
-    queryFn: fetchMenu,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    retry: 2,
-  });
-
-  const renderFoodItem = ({ item }: { item: FoodItem }) => (
-    <View style={styles.card}>
-      <View style={styles.cardInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
-
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
+      <View style={styles.logoBox}>
+        <View style={styles.iconAssembly}>
+          <Ionicons name="location" size={20} color="#FFF" style={styles.pinIcon} />
+          <View style={styles.steamRow}>
+            <Text style={styles.steamText}>S</Text>
+            <Text style={styles.steamText}>S</Text>
+            <Text style={styles.steamText}>S</Text>
+          </View>
+          <View style={styles.bowlWrapper}>
+            <View style={styles.bowlLine} />
+            <View style={styles.bowlBase} />
+          </View>
         </View>
-      </View>
-
-      <View style={styles.cardAction}>
-        <Text style={styles.itemPrice}>Rs. {item.price}</Text>
-
-        <TouchableOpacity style={styles.addButton}>
-          <Text style={styles.addButtonText}>Add</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
+}
 
-  if (isLoading) {
-    return (
-      <View style={styles.centeredState}>
-        <ActivityIndicator size="large" color="#ef4444" />
-        <Text style={styles.loadingText}>Loading menu...</Text>
-      </View>
-    );
-  }
+function LoadingDots() {
+  const fade1 = useRef(new Animated.Value(0.3)).current;
+  const fade2 = useRef(new Animated.Value(0.3)).current;
+  const fade3 = useRef(new Animated.Value(0.3)).current;
 
-  if (isError) {
-    return (
-      <View style={styles.centeredState}>
-        <Text style={styles.errorText}>
-          {(error as Error).message}
-        </Text>
+  useEffect(() => {
+    const animate = (anim: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.delay(400),
+        ])
+      );
 
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => refetch()}
-        >
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+    Animated.parallel([
+      animate(fade1, 0),
+      animate(fade2, 200),
+      animate(fade3, 400),
+    ]).start();
+  }, []);
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      <StatusBar barStyle="dark-content" />
+    <View style={styles.dotsRow}>
+      <Animated.View style={[styles.dot, { opacity: fade1 }]} />
+      <Animated.View style={[styles.dot, { opacity: fade2 }]} />
+      <Animated.View style={[styles.dot, { opacity: fade3 }]} />
+    </View>
+  );
+}
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Our Menu</Text>
-        <Text style={styles.headerSubtitle}>
-          {menuItems.length} items available
+export default function SplashPage() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, tension: 40, friction: 7, useNativeDriver: true }),
+    ]).start();
+
+    // Progress bar animation
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 2500,
+      useNativeDriver: false,
+    }).start();
+
+    // Auto-navigate after 2.5s
+    const timer = setTimeout(async () => {
+      try {
+        const hasSeen = await AsyncStorage.getItem('hasSeenOnboarding');
+        if (hasSeen === 'true') {
+          router.replace('/auth/login' as any);
+        } else {
+          router.replace('/onboarding' as any);
+        }
+      } catch (e) {
+        router.replace('/onboarding' as any);
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '60%'], // Fills to about 60% before navigating
+  });
+
+  return (
+    <View style={styles.screen}>
+      <Animated.View
+        style={[styles.centerContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
+      >
+        <KhanaGoLogo />
+
+        <Text style={styles.appName}>
+          <Text style={styles.appNameBlack}>Khana</Text>
+          <Text style={styles.appNameOrange}>Go</Text>
         </Text>
-      </View>
 
-      <FlatList
-        data={menuItems}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderFoodItem}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            colors={["#ef4444"]}
-            tintColor="#ef4444"
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.centeredState}>
-            <Text style={styles.loadingText}>
-              No menu items available.
-            </Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
+        <Text style={styles.tagline}>Delicious Food, Delivered Fast.</Text>
+      </Animated.View>
+
+      <View style={styles.bottom}>
+        <LoadingDots />
+        <Text style={styles.loadingText}>Loading your cravings...</Text>
+
+        <View style={styles.tagStrip}>
+          <Feather name="shield" size={12} color="#94A3B8" />
+          <Text style={styles.tagStripText}>Fresh · Reliable · Premium</Text>
+        </View>
+
+        <View style={styles.progressBarBg}>
+          <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeContainer: {
+  screen: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: '#FFFFFF',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+  centerContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
+  logoWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    width: 200,
+    height: 200,
   },
-  headerSubtitle: {
+  glow: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(249, 115, 22, 0.08)',
+    transform: [{ scale: 1.5 }],
+  },
+  logoBox: {
+    width: 110,
+    height: 110,
+    borderRadius: 32,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 12,
+    zIndex: 10,
+  },
+  speedLine: {
+    position: 'absolute',
+    height: 4,
+    backgroundColor: '#FDBA74',
+    borderRadius: 2,
+    zIndex: 5,
+  },
+  lineLeft1: { width: 24, left: 10, top: 70 },
+  lineLeft2: { width: 14, left: 14, top: 82 },
+  lineRight1: { width: 18, right: 12, bottom: 82 },
+  lineRight2: { width: 12, right: 12, bottom: 70 },
+  iconAssembly: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+  },
+  pinIcon: {
+    marginBottom: -2,
+  },
+  steamRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 4,
+  },
+  steamText: {
+    color: '#FFF',
     fontSize: 14,
-    color: "#6b7280",
-    marginTop: 4,
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+    transform: [{ scaleY: 1.5 }, { skewY: '-15deg' }],
   },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 32,
+  bowlWrapper: {
+    alignItems: 'center',
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 3,
+  bowlLine: {
+    width: 48,
+    height: 3,
+    backgroundColor: '#FFF',
+    borderRadius: 2,
+    marginBottom: 0,
+    transform: [{ rotate: '-10deg' }],
+    zIndex: 2,
   },
-  cardInfo: {
-    marginBottom: 12,
+  bowlBase: {
+    width: 44,
+    height: 22,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    borderWidth: 3,
+    borderTopWidth: 0,
+    borderColor: '#FFF',
+    marginTop: -2,
+    backgroundColor: Colors.primary,
   },
-  itemName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 8,
+  appName: {
+    fontSize: 34,
+    letterSpacing: -0.5,
+    marginBottom: 10,
   },
-  categoryBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#f3f4f6",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  appNameBlack: {
+    color: '#1E293B',
+    fontWeight: '900',
   },
-  categoryText: {
-    fontSize: 12,
-    color: "#374151",
-    fontWeight: "500",
+  appNameOrange: {
+    color: Colors.primary,
+    fontWeight: '900',
   },
-  cardAction: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  tagline: {
+    fontSize: 15,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#ef4444",
+  bottom: {
+    alignItems: 'center',
+    paddingBottom: 40,
+    width: '100%',
   },
-  addButton: {
-    backgroundColor: "#ef4444",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
   },
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  centeredState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6b7280",
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 24,
+    fontWeight: '500',
   },
-  errorText: {
+  tagStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 16,
-    fontSize: 16,
-    color: "#dc2626",
-    textAlign: "center",
   },
-  retryButton: {
-    backgroundColor: "#ef4444",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+  tagStripText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  progressBarBg: {
+    width: 160,
+    height: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
 });
