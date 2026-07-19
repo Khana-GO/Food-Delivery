@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Radius, Spacing, Shadow } from '@/constants/theme';
 import Badge from '@/components/ui/Badge';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 const CARD_W = (width - 48) / 2;
@@ -202,6 +203,14 @@ function SectionHeader({
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
+  const { user } = useAuth();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -209,7 +218,7 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.greeting}>Good Afternoon, Anish 👋</Text>
+            <Text style={styles.greeting}>{getGreeting()}, {user?.firstName || 'User'} 👋</Text>
             <TouchableOpacity style={styles.locationRow}>
               <Text style={styles.locationPin}>📍</Text>
               <Text style={styles.locationText}>Kathmandu, Baneshwor</Text>

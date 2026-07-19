@@ -38,15 +38,22 @@ export default function RegisterScreen() {
     setLoading(true);
     
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      const apiUrl = Platform.OS === 'web' 
+        ? process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:3000/api'
+        : process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      
       const fullPhone = `+977${phone}`;
+      
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || 'User';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'NA';
       
       const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          firstName: fullName || 'User',
-          lastName: ' ', // Empty for now as per UI
+          firstName,
+          lastName,
           phone: fullPhone 
         }),
       });
@@ -249,7 +256,6 @@ const styles = StyleSheet.create({
     marginRight: 6,
     borderRadius: 2,
     marginLeft: 4,
-    resizeMode: 'contain',
   },
   countryCode: {
     fontSize: 17,

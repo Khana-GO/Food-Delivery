@@ -35,7 +35,10 @@ export default function LoginScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      const apiUrl = Platform.OS === 'web' 
+        ? process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:3000/api'
+        : process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      
       const fullPhone = `+977${phone}`;
       
       const response = await fetch(`${apiUrl}/auth/login`, {
@@ -154,11 +157,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 4px 10px rgba(0,0,0,0.3)' as any,
+      },
+      default: {
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 6,
+      },
+    }),
   },
   logoEmoji: { fontSize: 30 },
   appName: { fontSize: 26, marginBottom: 4 },
@@ -202,7 +212,6 @@ const styles = StyleSheet.create({
     marginRight: 6,
     borderRadius: 2,
     marginLeft: 4,
-    resizeMode: 'contain',
   },
   countryCode: {
     fontSize: 17,

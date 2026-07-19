@@ -13,10 +13,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import Button from '@/components/ui/Button';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OTPScreen() {
   const params = useLocalSearchParams();
   const phone = (params.phone as string) || '';
+  const { login } = useAuth();
   
   const [otp, setOtp] = useState(['', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -52,7 +54,9 @@ export default function OTPScreen() {
     setLoading(true);
     
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
+      const apiUrl = Platform.OS === 'web' 
+        ? process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:3000/api'
+        : process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
       
       const response = await fetch(`${apiUrl}/auth/verify-otp`, {
         method: 'POST',
@@ -66,6 +70,9 @@ export default function OTPScreen() {
         setLoading(false);
         return;
       }
+      
+      // Save the user data to context
+      login(data.user);
       
       // On success, navigate to dashboard
       router.replace('/(customer)' as any);

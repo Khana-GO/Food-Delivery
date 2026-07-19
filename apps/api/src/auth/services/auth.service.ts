@@ -32,7 +32,6 @@ export class AuthService {
     const otp = this.generateOtp();
     await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
     
-    // Simulating SMS sending
     this.logger.log(`\n\n========================\n[DEV] OTP for ${phone} is: ${otp}\n========================\n`);
 
     return { message: 'OTP sent to your phone' };
@@ -48,7 +47,6 @@ export class AuthService {
     const otp = this.generateOtp();
     await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
 
-    // Simulating SMS sending
     this.logger.log(`\n\n========================\n[DEV] OTP for ${phone} is: ${otp}\n========================\n`);
 
     return { message: 'OTP sent to your phone' };
@@ -61,12 +59,13 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    // CHECKER: Verify if OTP matches and isn't expired
     if (user.otpCode !== dto.otp) {
-      throw new BadRequestException('Invalid OTP');
+      throw new BadRequestException('Invalid OTP code. Please check and try again.');
     }
 
     if (!user.otpExpiry || user.otpExpiry <= new Date()) {
-      throw new BadRequestException('OTP has expired');
+      throw new BadRequestException('OTP has expired. Please request a new one.');
     }
 
     await this.usersService.verifyAndClearOtp(user.id);
