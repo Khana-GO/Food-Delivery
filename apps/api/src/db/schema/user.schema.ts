@@ -1,3 +1,4 @@
+import { integer } from 'drizzle-orm/pg-core';
 import {
   pgTable,
   pgEnum,
@@ -58,6 +59,13 @@ export const usersTable = pgTable('users', {
   verificationTokenExpiry: timestamp('verification_token_expires_at'),
   resetToken: varchar('reset_token', { length: 255 }),
   resetTokenExpiry: timestamp('reset_token_expiry'),
+
+
+  verificationAttempts: integer('verification_attempts').notNull().default(0),
+verificationLastSentAt: timestamp('verification_last_sent_at'),
+
+resetAttempts: integer('reset_attempts').notNull().default(0),
+resetLastSentAt: timestamp('reset_last_sent_at'),
 
   verifiedAt: timestamp('verified_at'),
 

@@ -19,29 +19,26 @@ export class MailService {
     });
   }
 
-  async sendVerificationEmail(email: string, token: string) {
-    await this.sendTokenEmail(email, token, 'verify-email', 'Verify Your Email', 'verify your email');
-  }
+async sendVerificationCode(email: string, code: string) {
+  await this.sendCodeEmail(email, code, 'Verify Your Email', 'verify your email');
+}
 
-  async sendPasswordResetEmail(email: string, token: string) {
-    await this.sendTokenEmail(email, token, 'reset-password', 'Reset Your Password', 'reset your password');
-  }
+async sendPasswordResetCode(email: string, code: string) {
+  await this.sendCodeEmail(email, code, 'Reset Your Password', 'reset your password');
+}
 
-  private async sendTokenEmail(email: string, token: string, path: string, subject: string, action: string) {
-    const baseUrl = this.configService.get<string>('FRONTEND_URL_WEB');
-    const from = this.configService.get<string>('MAIL_FROM');
-    if (!baseUrl || !from) {
-      this.logger.error('Email is not configured');
-      throw new InternalServerErrorException('Email service is unavailable');
-    }
-    const url = new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
-    url.searchParams.set('token', token);
-    await this.transporter.sendMail({
-      from,
-      to: email,
-      subject,
-      text: `Use this link to ${action}: ${url.toString()}`,
-      html: `<p>Click <a href="${url.toString()}">here</a> to ${action}.</p>`,
-    });
+private async sendCodeEmail(email: string, code: string, subject: string, action: string) {
+  const from = this.configService.get<string>('MAIL_FROM');
+  if (!from) {
+    this.logger.error('Email is not configured');
+    throw new InternalServerErrorException('Email service is unavailable');
   }
+  await this.transporter.sendMail({
+    from,
+    to: email,
+    subject,
+    text: `Your code to ${action} is: ${code}\nThis code expires in 10 minutes.`,
+    html: `<p>Your code to ${action} is:</p><h2 style="letter-spacing:4px">${code}</h2><p>This code expires in 10 minutes.</p>`,
+  });
+}
 }

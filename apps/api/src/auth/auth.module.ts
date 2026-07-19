@@ -7,11 +7,13 @@ import { RefreshController } from './controllers/refresh.controller';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthService } from './services/auth.service';
+import { SessionsModule } from '../sessions/session.module';
 
 @Module({
   imports: [
     UsersModule,
     MailModule,
+    SessionsModule
   ],
   controllers: [AuthController, RefreshController, ProtectedController],
   providers: [AuthService, JwtAuthGuard, RolesGuard],
