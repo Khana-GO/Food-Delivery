@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius } from '@/constants/theme';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -125,17 +126,24 @@ export default function OnboardingScreen() {
   const [current, setCurrent] = useState(0);
   const flatRef = useRef<FlatList>(null);
 
+  const finishOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    } catch (e) {}
+    router.replace('/auth/login' as any);
+  };
+
   const goNext = () => {
     if (current < SLIDES.length - 1) {
       const next = current + 1;
       flatRef.current?.scrollToOffset({ offset: next * width, animated: true });
       setCurrent(next);
     } else {
-      router.replace('/auth/login' as any);
+      finishOnboarding();
     }
   };
 
-  const skip = () => router.replace('/auth/login' as any);
+  const skip = () => finishOnboarding();
 
   return (
     <SafeAreaView style={styles.screen}>

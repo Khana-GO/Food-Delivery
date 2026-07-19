@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius } from '@/constants/theme';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -96,8 +97,17 @@ export default function SplashPage() {
     }).start();
 
     // Auto-navigate after 2.5s
-    const timer = setTimeout(() => {
-      router.replace('/onboarding' as any);
+    const timer = setTimeout(async () => {
+      try {
+        const hasSeen = await AsyncStorage.getItem('hasSeenOnboarding');
+        if (hasSeen === 'true') {
+          router.replace('/auth/login' as any);
+        } else {
+          router.replace('/onboarding' as any);
+        }
+      } catch (e) {
+        router.replace('/onboarding' as any);
+      }
     }, 2500);
 
     return () => clearTimeout(timer);
