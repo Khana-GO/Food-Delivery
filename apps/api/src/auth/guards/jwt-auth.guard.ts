@@ -29,19 +29,20 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid bearer token');
     }
 
+    let payload: JwtPayload;
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
-
-      if (payload.type === 'refresh') {
-        throw new UnauthorizedException('Refresh tokens cannot access protected routes');
-      }
-
-      request.user = payload;
-      return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
+
+    if (payload.type === 'refresh') {
+      throw new UnauthorizedException('Refresh tokens cannot access protected routes');
+    }
+
+    request.user = payload;
+    return true;
   }
 }
