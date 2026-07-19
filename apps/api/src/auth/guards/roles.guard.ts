@@ -2,6 +2,7 @@ import { UserRole } from '@food_delivery/types';
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -43,6 +44,7 @@ export class RolesGuard implements CanActivate {
     // Check whether the user's role is one of the allowed roles
     // true  -> Access granted
     // false -> Access denied (403 Forbidden)
+    if (!user?.role) throw new ForbiddenException('Insufficient permissions');
     return requiredRoles.includes(user.role as UserRole);
   }
 }

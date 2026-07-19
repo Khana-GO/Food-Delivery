@@ -15,6 +15,20 @@
       "when": 1784393921981,
       "tag": "0001_fat_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784440000000,
+      "tag": "0002_auth_token_hashes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784439881299,
+      "tag": "0003_numerous_dormammu",
+      "breakpoints": true
     }
   ]
 }
