@@ -165,6 +165,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@expo-google-fonts/poppins':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo/ui':
         specifier: ~57.0.4
         version: 57.0.6(@babel/core@7.29.7)(@types/react@19.2.17)(expo@57.0.6)(react-dom@19.2.3(react@19.2.3))(react-native-worklets@0.10.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
@@ -1351,6 +1354,9 @@ packages:
 
   '@expo-google-fonts/material-symbols@0.4.40':
     resolution: {integrity: sha512-UehORuVy7riqirvjLumVzmVvh6qGTJ2ndP2y4/y0uiSDNBA3kpILNGvvOo26qd56bECjHu1nn5Q9at6O5PjyDA==}
+
+  '@expo-google-fonts/poppins@0.4.1':
+    resolution: {integrity: sha512-LiX5oEryJqDt3UmWwr4oqf11hGMz/JEffkkNcZ3UtGwyoMFzXmBmTwcrAWrEttxypxmLNmPykDg+CY2VjKve9A==}
 
   '@expo/cli@57.0.8':
     resolution: {integrity: sha512-RzE6o39O6Ual4nw1LbUyrIMY5VzQlW4CbOyoww/RhKclMRVItnfkLi89cVKQoPFw+5EKW2KKC6LLtA4or7Trwg==}
@@ -9523,6 +9529,8 @@ snapshots:
 
   '@expo-google-fonts/material-symbols@0.4.40': {}
 
+  '@expo-google-fonts/poppins@0.4.1': {}
+
   '@expo/cli@57.0.8(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.5)(expo-constants@57.0.5)(expo-font@57.0.1)(expo-router@57.0.6)(expo@57.0.6)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)':
     dependencies:
       '@expo/code-signing-certificates': 0.0.6
@@ -9644,7 +9652,7 @@ snapshots:
   '@expo/devcert@1.2.1':
     dependencies:
       '@expo/sudo-prompt': 9.3.2
-      debug: 3.2.7(supports-color@5.5.0)
+      debug: 3.2.7
     transitivePeerDependencies:
       - supports-color
 
@@ -10817,9 +10825,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -12173,7 +12179,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       compressible: 2.0.18
-      debug: 2.6.9(supports-color@5.5.0)
+      debug: 2.6.9
       negotiator: 0.6.4
       on-headers: 1.1.0
       safe-buffer: 5.2.1
@@ -12223,7 +12229,7 @@ snapshots:
 
   connect@3.7.0:
     dependencies:
-      debug: 2.6.9(supports-color@5.5.0)
+      debug: 2.6.9
       finalhandler: 1.1.2
       parseurl: 1.3.3
       utils-merge: 1.0.1
@@ -12441,11 +12447,19 @@ snapshots:
     optionalDependencies:
       supports-color: 1.2.0
 
+  debug@2.6.9:
+    dependencies:
+      ms: 2.0.0
+
   debug@2.6.9(supports-color@5.5.0):
     dependencies:
       ms: 2.0.0
     optionalDependencies:
       supports-color: 5.5.0
+
+  debug@3.2.7:
+    dependencies:
+      ms: 2.1.3
 
   debug@3.2.7(supports-color@5.5.0):
     dependencies:
@@ -13405,7 +13419,7 @@ snapshots:
 
   finalhandler@1.1.2:
     dependencies:
-      debug: 2.6.9(supports-color@5.5.0)
+      debug: 2.6.9
       encodeurl: 1.0.2
       escape-html: 1.0.3
       on-finished: 2.3.0
@@ -14783,7 +14797,7 @@ snapshots:
 
   lighthouse-logger@1.4.2:
     dependencies:
-      debug: 2.6.9(supports-color@5.5.0)
+      debug: 2.6.9
       marky: 1.3.0
     transitivePeerDependencies:
       - supports-color
@@ -17211,7 +17225,7 @@ snapshots:
 
   send@0.19.2:
     dependencies:
-      debug: 2.6.9(supports-color@5.5.0)
+      debug: 2.6.9
       depd: 2.0.0
       destroy: 1.2.0
       encodeurl: 2.0.0

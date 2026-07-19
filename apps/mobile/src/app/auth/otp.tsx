@@ -1,14 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  TextInput,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Spacing } from '@/constants/theme';
@@ -108,7 +100,7 @@ export default function OTPScreen() {
             {otp.map((digit, index) => (
               <TextInput
                 key={index}
-                ref={(ref) => (inputs.current[index] = ref)}
+                ref={(ref) => { inputs.current[index] = ref; }}
                 style={[
                   styles.otpInput,
                   digit ? styles.otpInputFilled : null,

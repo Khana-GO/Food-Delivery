@@ -1,13 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import {
-  View,
-  TextInput,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  TextInputProps,
-  ViewStyle,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 
 interface InputProps extends TextInputProps {
@@ -34,7 +27,7 @@ export default function Input({
   const [isFocused, setIsFocused] = useState(false);
 
   // Border color logic
-  let borderColor = Colors.border;
+  let borderColor: string = Colors.border;
   if (error) borderColor = Colors.error;
   else if (isFocused) borderColor = Colors.primary;
 

@@ -1,14 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  Image,
-} from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Radius, Spacing, Shadow } from '@/constants/theme';

@@ -5,6 +5,16 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { useFonts } from 'expo-font';
+import {
+  Poppins_300Light,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  Poppins_900Black,
+} from '@expo-google-fonts/poppins';
 
 // Keep the splash screen visible while fonts/assets load
 SplashScreen.preventAutoHideAsync();
@@ -22,9 +32,25 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  const [fontsLoaded, fontError] = useFonts({
+    Poppins_300Light,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+    Poppins_900Black,
+  });
+
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

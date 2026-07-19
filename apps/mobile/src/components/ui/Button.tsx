@@ -1,12 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { TouchableOpacity, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'danger';

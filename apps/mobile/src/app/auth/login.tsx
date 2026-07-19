@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from '@/components/ui/Text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
+const { width, height } = Dimensions.get('window');
+const HEADER_HEIGHT = height * 0.35;
+
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,30 +58,30 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={styles.screen}>
+      {/* Solid Color Header */}
+      <View style={[styles.headerContainer, { backgroundColor: Colors.primary }]}>
+        <View style={[styles.headerOverlay, { paddingTop: Math.max(insets.top, 20) }]}>
+          <View style={styles.logoBadge}>
+            <Text style={styles.logoEmoji}>🍔</Text>
+          </View>
+          <Text style={styles.headerTitle}>KhanaGo</Text>
+          <Text style={styles.headerSubtitle}>Craving something? We've got it.</Text>
+        </View>
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoEmoji}>🍜</Text>
-            </View>
-            <Text style={styles.appName}>
-              <Text style={styles.appNameBlack}>Khana</Text>
-              <Text style={styles.appNameOrange}>Go</Text>
-            </Text>
-            <Text style={styles.appTagline}>Delicious Food, Delivered Fast.</Text>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
+          {/* Overlapping Card */}
+          <View style={styles.formCard}>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Enter your phone number to continue.</Text>
 
@@ -117,7 +113,7 @@ export default function LoginScreen() {
 
             <View style={styles.dividerRow}>
               <View style={styles.divider} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={styles.dividerText}>OR</Text>
               <View style={styles.divider} />
             </View>
 
@@ -141,87 +137,129 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.white },
-  container: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
-  logoSection: { alignItems: 'center', paddingTop: 32, paddingBottom: 28 },
-  logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
+  headerContainer: {
+    width: '100%',
+    height: HEADER_HEIGHT,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  headerImg: {
+    width: '100%',
+    height: '100%',
+  },
+  gradient: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    paddingBottom: 40,
+  },
+  logoBadge: {
+    width: 50,
+    height: 50,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  logoEmoji: { fontSize: 24 },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingTop: HEADER_HEIGHT - 30, // Overlap effect
+  },
+  formCard: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 36,
+    paddingBottom: 40,
     ...Platform.select({
       web: {
-        boxShadow: '0px 4px 10px rgba(0,0,0,0.3)' as any,
+        boxShadow: '0px -10px 30px rgba(0,0,0,0.1)' as any,
       },
       default: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 20,
       },
     }),
   },
-  logoEmoji: { fontSize: 30 },
-  appName: { fontSize: 26, marginBottom: 4 },
-  appNameBlack: { color: Colors.textDark, fontWeight: '800' },
-  appNameOrange: { color: Colors.primary, fontWeight: '800' },
-  appTagline: { fontSize: 14, color: Colors.textSecondary },
-  form: {},
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textDark, marginBottom: 6 },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 24 },
-  fields: { gap: 4, marginBottom: 8 },
-  continueBtn: { marginTop: 12, marginBottom: 20 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  divider: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerText: { fontSize: 13, color: Colors.textSecondary },
-  socialRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  title: { fontSize: 26, fontWeight: '800', color: Colors.textDark, marginBottom: 8 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 32, lineHeight: 22 },
+  fields: { gap: 8 },
+  continueBtn: { marginTop: 12, marginBottom: 24 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24 },
+  divider: { flex: 1, height: 1, backgroundColor: '#F3F4F6' },
+  dividerText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' },
+  socialRow: { flexDirection: 'row', gap: 16, marginBottom: 32 },
   socialBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
+    gap: 10,
+    paddingVertical: 14,
     borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  socialIcon: { fontSize: 16, fontWeight: '700' },
-  socialText: { fontSize: 14, fontWeight: '600', color: Colors.textDark },
+  socialIcon: { fontSize: 18, fontWeight: '700' },
+  socialText: { fontSize: 15, fontWeight: '600', color: Colors.textDark },
   signupRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  signupPrompt: { fontSize: 14, color: Colors.textSecondary },
-  signupLink: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
+  signupPrompt: { fontSize: 15, color: Colors.textSecondary },
+  signupLink: { fontSize: 15, color: Colors.primary, fontWeight: '700' },
   countryCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 4,
+    paddingRight: 6,
   },
   countryFlagImg: {
-    width: 20,
-    height: 14,
+    width: 22,
+    height: 16,
     marginRight: 6,
     borderRadius: 2,
     marginLeft: 4,
   },
   countryCode: {
-    fontSize: 17,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     color: Colors.textDark,
   },
   verticalDivider: {
-    width: 2,
+    width: 1.5,
     height: 24,
-    backgroundColor: '#E5E7EB', // light gray
+    backgroundColor: '#E5E7EB',
     marginLeft: 10,
     borderRadius: 2,
   },
