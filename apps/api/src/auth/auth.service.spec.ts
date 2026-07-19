@@ -1,77 +1,38 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+
 import { AuthService } from './services/auth.service';
+import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
 
 describe('AuthService', () => {
-  let service: AuthService;
-  let mockDb: any;
-  let mockConfigService: Partial<ConfigService>;
-  let mockJwtService: Partial<JwtService>;
+  it('creates a user with a hashed verification token and sends only the raw token by email', async () => {
+    const create = jest.fn(async () => ({ id: 'user-1', email: 'john@example.com' }));
 
-  beforeEach(() => {
-    mockDb = {
-      select: jest.fn(),
-      insert: jest.fn(),
-    };
+    const sendVerificationEmail = jest.fn(async () => undefined);
 
-    mockConfigService = {
-      get: jest.fn((key: string) => {
-        if (key === 'JWT_SECRET') return 'test-secret';
-        if (key === 'JWT_EXPIRES_IN') return '1h';
-        if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
-        return undefined;
-      }),
-    };
+    const findByEmail = jest.fn(async () => undefined);
 
-    mockJwtService = {
-      sign: jest.fn(() => 'signed-token'),
-    };
+    const users = {
+      findByEmail,
+      create,
+    } as unknown as UsersService;
+    const mail = { sendVerificationEmail } as unknown as MailService;
+    const config = { get: jest.fn((key: string) => (key === 'SALT_ROUNDS' ? '10' : undefined)) } as unknown as ConfigService;
+    const service = new AuthService(users, {} as JwtService, mail, config);
 
-    service = new AuthService(
-      mockDb,
-      mockConfigService as ConfigService,
-      mockJwtService as JwtService,
-    );
-  });
+    await service.register({ firstName: 'John', lastName: 'Doe', email: 'John@Example.com', password: 'StrongPass123' });
 
-  it('registers a new user and returns a sanitized profile', async () => {
-    mockDb.select.mockReturnValue({
-      from: () => ({
-        where: () => ({
-          limit: () => Promise.resolve([]),
-        }),
-      }),
-    });
+    const createCall = create.mock.calls[0] as unknown as [Record<string, unknown>] | undefined;
+    const createdUser = createCall?.[0] as { email: string; verificationToken: string } | undefined;
+    const emailCall = sendVerificationEmail.mock.calls[0] as unknown as [string, string] | undefined;
 
-    mockDb.insert.mockReturnValue({
-      values: () => ({
-        returning: () =>
-          Promise.resolve([
-            {
-              id: 'user-1',
-              firstName: 'John',
-              lastName: 'Doe',
-              email: 'john@example.com',
-              password: 'hashed-password',
-              role: 'CUSTOMER',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            },
-          ]),
-      }),
-    });
-
-    const result = await service.register({
-      firstName: 'John',
-      lastName: 'Doe',
+    expect(createdUser).toEqual(expect.objectContaining({
       email: 'john@example.com',
-      password: 'StrongPass123',
-    });
-
-    expect(result.user.email).toBe('john@example.com');
-    // expect(result.user.password).toBeUndefined();
-    expect(result.user.id).toBe('user-1');
-    expect(result.accessToken).toBeDefined();
+      verificationToken: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }));
+    expect(emailCall?.[1]).toEqual(expect.stringMatching(/^[a-f0-9]{64}$/));
+    expect(createdUser?.verificationToken).not.toBe(emailCall?.[1]);
   });
 });
