@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { RegisterUserDto } from '../dto/register.dto';
@@ -10,6 +10,7 @@ import { ResendVerificationDto } from '../dto/resend-verification-code.dto';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
+import { LogoutDto } from '../dto/logout.dto';
 
 
 @Throttle({ default: { limit: 5, ttl: 60_000 } })  // 5 request in per minute from single ip
@@ -56,14 +57,29 @@ export class AuthController {
     return this.authService.resendVerificationCode(dto.email);
   }
 
+// logout for single device
+@Post('logout')
+@ApiOperation({ summary: 'Logout current device/session' })
+async logout(@Body() dto: LogoutDto, @Req() req: { headers?: Record<string, string | undefined> } | string | undefined) {
+  const authorizationHeader = typeof req === 'string' ? req : req?.headers?.authorization;
+  const refreshToken = dto?.refreshToken || this.extractBearerToken(authorizationHeader);
+  return this.authService.logout(refreshToken);
+}
 
-
-@UseGuards(JwtAuthGuard) // requires valid access token — proves it's really the account owner
+@UseGuards(JwtAuthGuard)
 @Post('logout-all')
 @ApiOperation({ summary: 'Logout from all devices' })
-async logoutAllDevices(@CurrentUser() user: { id: string }) {
-  console.log(user)
-  return this.authService.logoutAllDevices(user.id);
+async logoutAllDevices(@CurrentUser() user: { sub: string }) {
+  return this.authService.logoutAllDevices(user.sub); // ← sub, not id
+}
+
+private extractBearerToken(authorization?: string): string {
+  if (!authorization) {
+    return '';
+  }
+
+  const [type, token] = authorization.split(' ');
+  return type === 'Bearer' && token ? token : '';
 }
 
 }

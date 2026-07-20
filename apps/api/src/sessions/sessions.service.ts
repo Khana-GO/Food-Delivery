@@ -19,11 +19,17 @@ export class SessionsService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  async create(userId: string, refreshToken: string, expiresAt: Date, meta?: { userAgent?: string; ipAddress?: string }) {
-    // console.log(userId, refreshToken, meta)
+  async create(
+    userId: string,
+    refreshToken: string,
+    expiresAt: Date,
+    meta?: { userAgent?: string; ipAddress?: string },
+    sessionId?: string,
+  ) {
     const [session] = await this.db
       .insert(sessionsTable)
       .values({
+        id: sessionId,
         userId,
         refreshTokenHash: this.hashToken(refreshToken),
         userAgent: meta?.userAgent,
@@ -48,10 +54,26 @@ export class SessionsService {
   }
 
   async revoke(sessionId: string) {
-    await this.db.delete(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    const removed = await this.db
+      .delete(sessionsTable)
+      .where(eq(sessionsTable.id, sessionId))
+      .returning();
+    return removed.length;
+  }
+
+  async revokeByToken(refreshToken: string) {
+    const removed = await this.db
+      .delete(sessionsTable)
+      .where(eq(sessionsTable.refreshTokenHash, this.hashToken(refreshToken)))
+      .returning();
+    return removed.length;
   }
 
   async revokeAllForUser(userId: string) {
-    await this.db.delete(sessionsTable).where(eq(sessionsTable.userId, userId));
+    const removed = await this.db
+      .delete(sessionsTable)
+      .where(eq(sessionsTable.userId, userId))
+      .returning();
+    return removed.length;
   }
 }
