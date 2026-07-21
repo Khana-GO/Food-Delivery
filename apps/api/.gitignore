@@ -35,13 +35,19 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# dotenv environment variable files and secrets
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.p12
+*.p8
+secrets.json
+firebase-adminsdk.json
+google-services.json
+GoogleService-Info.plist
 # temp directory
 .temp
 .tmp

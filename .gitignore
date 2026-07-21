@@ -1,4 +1,18 @@
 node_modules/
 dist/
-.env
 .expo/
+
+# --- Secrets & Keys ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.p12
+*.p8
+secrets.json
+firebase-adminsdk.json
+google-services.json
+GoogleService-Info.plist
+# ----------------------
