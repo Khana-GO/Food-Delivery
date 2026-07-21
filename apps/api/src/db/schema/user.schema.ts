@@ -41,6 +41,8 @@ export const usersTable = pgTable('users', {
 
   role: userRoleEnum().notNull().default('CUSTOMER'),
 
+  roles: text('roles').array(),
+
   imageUrl: varchar('image_url', {
     length: 500,
   }),

@@ -1,11 +1,11 @@
-# Food Delivery App
+# Food Delivery Multi-Role Platform
 
-A full-stack Food Delivery application built using a modern TypeScript monorepo architecture.
+A complete cross-platform Food Delivery application built using a modern TypeScript monorepo architecture, supporting four distinct roles (Customer, Restaurant Owner, Delivery Partner, Admin) within a single unified app.
 
 The project consists of:
 
-* **Mobile App** – Built with Expo and React Native.
-* **Backend API** – Built with NestJS.
+* **Mobile App** – Built with Expo and React Native (Expo Router, Zustand, React Query, NativeWind, Reanimated).
+* **Backend API** – Built with NestJS (PostgreSQL, Drizzle ORM, JWT Authentication).
 * **Shared Package** – Common TypeScript types shared between the frontend and backend.
 
 ---
@@ -60,13 +60,16 @@ food_delivery/
 
 # Features
 
-* Modern Monorepo Architecture
+* **Multi-Role Authentication & Navigation** (Customer, Restaurant Owner, Driver, Admin)
+* **PostgreSQL + Drizzle ORM** Database Backend
+* **JWT & OTP-Based Security** with Role-Based Access Control (RBAC)
+* **API Documentation** via Swagger (`/docs`)
+* **Modern Monorepo Architecture** (pnpm Workspaces)
 * Shared TypeScript Types
 * REST API
-* Cross-platform Mobile App
+* Cross-platform Mobile App with Material Design 3 and Reanimated Skeletons
 * Type-safe Development
 * Modular Folder Structure
-* Scalable Project Setup
 
 ---
 
@@ -233,18 +236,14 @@ Additional environment variables can be added as the project grows.
 
 # Future Improvements
 
-* PostgreSQL
-* Drizzle/Prisma ORM
-* Authentication (JWT)
-* Role-Based Access Control
-* File Uploads
-* Payment Integration
+* Live Order Tracking (Google Maps Integration)
+* File Uploads (AWS S3 / Cloudinary)
+* Payment Integration (Stripe, Khalti, eSewa)
 * Push Notifications
-* Admin Dashboard
+* Advanced AI Chat Support
 * Docker Support
 * CI/CD Pipeline
 * Unit & Integration Testing
-* API Documentation (Swagger)
 
 ---
 
@@ -282,7 +281,7 @@ This project is licensed under the MIT License.
 # Author
 
 Developed by 
-**Shushil Bhusal**
-**Ashok Rimal**
-**Rohit Shrestha**
+**Shushil Bhusal**,
+**Ashok Rimal**,
+**Rohit Shrestha**,
 **Shishir Pandey**

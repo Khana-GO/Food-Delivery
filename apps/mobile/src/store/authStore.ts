@@ -12,12 +12,14 @@ export interface AuthUser {
   role: AuthRole;
   imageUrl?: string;
   isVerified: boolean;
+  availableRoles?: AuthRole[];
 }
 
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  role: AuthRole | null;
+  activeRole: AuthRole | null;
+  availableRoles: AuthRole[];
   token: string | null;
   login: (user: AuthUser, token?: string) => void;
   logout: () => void;
@@ -30,17 +32,19 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      role: null,
+      activeRole: null,
+      availableRoles: [],
       token: null,
       login: (user, token) => set((state) => ({ 
         user, 
-        role: user.role, 
+        activeRole: user.role,
+        availableRoles: user.availableRoles || [user.role],
         isAuthenticated: true,
         token: token ?? state.token
       })),
-      logout: () => set({ user: null, role: null, isAuthenticated: false, token: null }),
+      logout: () => set({ user: null, activeRole: null, availableRoles: [], isAuthenticated: false, token: null }),
       setToken: (token) => set({ token }),
-      switchRole: (role) => set((state) => ({ role, user: state.user ? { ...state.user, role } : null })),
+      switchRole: (role) => set((state) => ({ activeRole: role })),
     }),
     {
       name: 'auth-storage',

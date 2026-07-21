@@ -14,6 +14,7 @@ import { AddressModule } from './address/address.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
+import { HomeModule } from './home/home.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AdminModule } from './admin/admin.module';
     ReviewsModule,
     NotificationsModule,
     AdminModule,
+    HomeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

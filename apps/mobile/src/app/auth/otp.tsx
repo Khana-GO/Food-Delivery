@@ -61,7 +61,16 @@ export default function OTPScreen() {
       }
       
       login(data.user);
-      router.replace('/(customer)' as any);
+      const activeRole = data.user.role;
+      if (activeRole === 'RESTAURANT_OWNER') {
+        router.replace('/(restaurant)' as any);
+      } else if (activeRole === 'DRIVER') {
+        router.replace('/(driver)' as any);
+      } else if (activeRole === 'ADMIN') {
+        router.replace('/(admin)' as any);
+      } else {
+        router.replace('/(customer)' as any);
+      }
     } catch (e) {
       setError('Network error. Is the backend running?');
     }

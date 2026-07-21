@@ -86,12 +86,12 @@ export class AuthService {
     }
   }
 
-  private authResponse(user: { id: string; role: string; firstName: string; lastName: string; phone?: string | null }) {
-    const payload = { sub: user.id, phone: user.phone, role: user.role };
+  private authResponse(user: { id: string; role: string; roles?: string[] | null; firstName: string; lastName: string; phone?: string | null }) {
+    const payload = { sub: user.id, phone: user.phone, role: user.role, roles: user.roles || [user.role] };
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') ?? '1h' } as never),
       refreshToken: this.jwtService.sign({ sub: user.id, type: 'refresh' }, { expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d' } as never),
-      user: { id: user.id, phone: user.phone, role: user.role, firstName: user.firstName, lastName: user.lastName },
+      user: { id: user.id, phone: user.phone, role: user.role, availableRoles: user.roles || [user.role], firstName: user.firstName, lastName: user.lastName },
     };
   }
 

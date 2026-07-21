@@ -6,6 +6,7 @@ import { Text } from '@/components/ui/Text';
 import { Colors } from '@/constants/theme';
 import { useAuthStore, AuthRole } from '@/store/authStore';
 import { useProfile } from '@/api/users';
+import { RoleSwitcher } from '@/components/common/RoleSwitcher';
 
 const SETTINGS_MENU = [
   { id: '1', title: 'Edit Profile', icon: '👤', href: '/(customer)/edit-profile' },
@@ -144,21 +145,8 @@ export default function ProfileScreen() {
         
         <Text className="text-center text-slate-400 text-xs mb-8">KhanaGo v2.4.1</Text>
 
-        {/* Dev Role Switcher */}
-        <View className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
-          <Text className="text-sm font-bold text-amber-700 mb-3">🛠️ Dev: Switch Role Views</Text>
-          <View className="flex-row gap-2">
-             <TouchableOpacity className="flex-1 bg-amber-500 py-2 rounded-lg items-center" onPress={() => handleDevRoleSwitch('DRIVER')}>
-                <Text className="text-white text-xs font-bold">Driver</Text>
-             </TouchableOpacity>
-             <TouchableOpacity className="flex-1 bg-amber-500 py-2 rounded-lg items-center" onPress={() => handleDevRoleSwitch('RESTAURANT_OWNER')}>
-                <Text className="text-white text-xs font-bold">Restaurant</Text>
-             </TouchableOpacity>
-             <TouchableOpacity className="flex-1 bg-amber-500 py-2 rounded-lg items-center" onPress={() => handleDevRoleSwitch('ADMIN')}>
-                <Text className="text-white text-xs font-bold">Admin</Text>
-             </TouchableOpacity>
-          </View>
-        </View>
+        {/* Actual Role Switcher */}
+        <RoleSwitcher />
 
       </ScrollView>
     </SafeAreaView>

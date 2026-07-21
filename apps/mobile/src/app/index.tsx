@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius } from '@/constants/theme';
 import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '@/store/authStore';
 
 const { width } = Dimensions.get('window');
 
@@ -75,6 +76,20 @@ export default function SplashPage() {
     // Auto-navigate after 2.5s
     const timer = setTimeout(async () => {
       try {
+        const authState = useAuthStore.getState();
+        if (authState.isAuthenticated && authState.activeRole) {
+          if (authState.activeRole === 'RESTAURANT_OWNER') {
+            router.replace('/(restaurant)' as any);
+          } else if (authState.activeRole === 'DRIVER') {
+            router.replace('/(driver)' as any);
+          } else if (authState.activeRole === 'ADMIN') {
+            router.replace('/(admin)' as any);
+          } else {
+            router.replace('/(customer)' as any);
+          }
+          return;
+        }
+
         const hasSeen = await AsyncStorage.getItem('hasSeenOnboarding');
         if (hasSeen === 'true') {
           router.replace('/auth/login' as any);
