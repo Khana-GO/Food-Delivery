@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RestaurantController } from './restaurant.controller';
 import { RestaurantService } from './restaurant.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // adjust path
 
 describe('RestaurantController', () => {
   let controller: RestaurantController;
@@ -9,7 +10,10 @@ describe('RestaurantController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RestaurantController],
       providers: [RestaurantService],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<RestaurantController>(RestaurantController);
   });
