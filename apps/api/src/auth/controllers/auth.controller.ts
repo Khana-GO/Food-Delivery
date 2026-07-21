@@ -1,5 +1,5 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { RegisterUserDto } from '../dto/register.dto';
 import { LoginUserDto } from '../dto/login.dto';
@@ -11,6 +11,7 @@ import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { LogoutDto } from '../dto/logout.dto';
+import type { JwtPayload } from '../interfaces/jwt-payload.interface';
 
 
 @Throttle({ default: { limit: 5, ttl: 60_000 } })  // 5 request in per minute from single ip
@@ -49,6 +50,23 @@ export class AuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
+
+
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Get('me')
+    @ApiOperation({ summary: 'Get current authenticated user profile' })
+    @ApiResponse({ status: 200, description: 'Authenticated user profile' })
+    getMe(@CurrentUser() user: JwtPayload) {
+      return {
+        message: 'Authenticated successfully',
+        user,
+    };
+  }
+
+
+  
 
   @Throttle({ default: { limit: 3, ttl: 60_000 } }) // stricter: sends an email
   @Post('resend-verification-code')
