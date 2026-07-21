@@ -1,13 +1,36 @@
 import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { useAdminDashboard } from '@/api/admin';
 
 export default function AdminDashboardScreen() {
+  const { data: metrics, isLoading, isError } = useAdminDashboard();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: 'red' }}>Failed to load dashboard.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
@@ -36,7 +59,7 @@ export default function AdminDashboardScreen() {
                  <View style={styles.trendBadge}><Text style={styles.trendPos}>+12%</Text></View>
               </View>
               <Text style={styles.statLabel}>Total Orders</Text>
-              <Text style={styles.statValue}>12.4K</Text>
+              <Text style={styles.statValue}>{metrics?.totalOrders || 0}</Text>
            </View>
 
            <View style={styles.statCard}>
@@ -45,7 +68,7 @@ export default function AdminDashboardScreen() {
                  <View style={styles.trendBadge}><Text style={styles.trendPos}>+4%</Text></View>
               </View>
               <Text style={styles.statLabel}>Active Restaurants</Text>
-              <Text style={styles.statValue}>248</Text>
+              <Text style={styles.statValue}>{metrics?.activeRestaurants || 0}</Text>
            </View>
 
            <View style={styles.statCard}>
@@ -54,7 +77,7 @@ export default function AdminDashboardScreen() {
                  <View style={[styles.trendBadge, { backgroundColor: '#FEE2E2' }]}><Text style={styles.trendNeg}>-2%</Text></View>
               </View>
               <Text style={styles.statLabel}>Total Drivers</Text>
-              <Text style={styles.statValue}>86</Text>
+              <Text style={styles.statValue}>{metrics?.totalDrivers || 0}</Text>
            </View>
 
            <View style={styles.statCard}>
@@ -63,7 +86,7 @@ export default function AdminDashboardScreen() {
                  <View style={styles.trendBadge}><Text style={styles.trendPos}>+18%</Text></View>
               </View>
               <Text style={styles.statLabel}>Revenue Today</Text>
-              <Text style={styles.statValue}>Rs. 1.8L</Text>
+              <Text style={styles.statValue}>Rs. {metrics?.revenueToday || 0}</Text>
            </View>
         </ScrollView>
 

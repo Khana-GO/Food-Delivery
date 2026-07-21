@@ -22,9 +22,23 @@ export class UsersService {
     return this.db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
   }
 
+  async findAll() {
+    return this.db.query.usersTable.findMany({
+      orderBy: (users, { desc }) => [desc(users.createdAt)],
+    });
+  }
+
   async create(data: NewUsersTable) {
     const [newUser] = await this.db.insert(usersTable).values(data).returning();
     return newUser;
+  }
+
+  async update(id: string, data: Partial<NewUsersTable>) {
+    const [updatedUser] = await this.db.update(usersTable)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(usersTable.id, id))
+      .returning();
+    return updatedUser;
   }
 
   async setOtp(userId: string, otpCode: string, expiry: Date) {

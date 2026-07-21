@@ -1,28 +1,30 @@
-import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors, Radius, Shadow } from '@/constants/theme';
-import { useAuth, AuthRole } from '@/contexts/AuthContext';
+import { Text } from '@/components/ui/Text';
+import { Colors } from '@/constants/theme';
+import { useAuthStore, AuthRole } from '@/store/authStore';
+import { useProfile } from '@/api/users';
+
+const SETTINGS_MENU = [
+  { id: '1', title: 'Edit Profile', icon: '👤', href: '/(customer)/edit-profile' },
+  { id: '2', title: 'My Addresses', icon: '📍', href: '/(customer)/addresses' },
+  { id: '3', title: 'Payment Methods', icon: '💳', href: null },
+  { id: '4', title: 'Order History', icon: '🧾', href: '/(customer)/orders' },
+  { id: '5', title: 'Favorites', icon: '🤍', href: null },
+  { id: '6', title: 'Notifications Settings', icon: '🔔', href: null },
+  { id: '7', title: 'Become a Driver', icon: '🚚', href: '/(customer)/become-driver' },
+  { id: '8', title: 'Help & Support', icon: '❓', href: '/(customer)/chat' },
+  { id: '9', title: 'Refer & Earn', icon: '🎁', href: null },
+  { id: '10', title: 'Privacy Policy', icon: '🛡️', href: null },
+  { id: '11', title: 'Terms of Service', icon: '📄', href: null },
+];
 
 export default function ProfileScreen() {
-  const { user, logout, switchRole } = useAuth();
+  const { logout, switchRole } = useAuthStore();
+  const { data: userProfile, isLoading, isError } = useProfile();
   const [isDarkMode, setIsDarkMode] = useState(false);
-
-  const SETTINGS_MENU = [
-    { id: '1', title: 'Edit Profile', icon: '👤', href: null },
-    { id: '2', title: 'My Addresses', icon: '📍', href: null },
-    { id: '3', title: 'Payment Methods', icon: '💳', href: null },
-    { id: '4', title: 'Order History', icon: '🧾', href: null },
-    { id: '5', title: 'Favorites', icon: '🤍', href: null },
-    { id: '6', title: 'Notifications Settings', icon: '🔔', href: null },
-    { id: '7', title: 'Become a Driver', icon: '🚚', href: '/(customer)/become-driver' },
-    { id: '8', title: 'Help & Support', icon: '❓', href: '/(customer)/chat' },
-    { id: '9', title: 'Refer & Earn', icon: '🎁', href: null },
-    { id: '10', title: 'Privacy Policy', icon: '🛡️', href: null },
-    { id: '11', title: 'Terms of Service', icon: '📄', href: null },
-  ];
 
   const handleLogout = () => {
     logout();
@@ -37,74 +39,93 @@ export default function ProfileScreen() {
     if (newRole === 'ADMIN') router.replace('/(admin)' as any);
   };
 
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (isError || !userProfile) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center p-4">
+        <Text className="text-red-500 font-bold mb-4 text-center">Failed to load profile data.</Text>
+        <TouchableOpacity className="px-6 py-2 bg-primary rounded-full" onPress={handleLogout}>
+          <Text className="text-white font-bold">Log Out</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
+    <SafeAreaView className="flex-1 bg-slate-50">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="p-4 pb-12">
         
         {/* Profile Header */}
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarEmoji}>👤</Text>
+        <View className="flex-row items-center mb-6">
+          <View className="relative mr-4">
+            <View className="w-20 h-20 rounded-full bg-slate-200 items-center justify-center border border-slate-300">
+              <Text className="text-4xl">👤</Text>
             </View>
-            <TouchableOpacity style={styles.cameraBtn}>
-              <Text style={styles.cameraIcon}>📷</Text>
+            <TouchableOpacity className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary items-center justify-center border-2 border-white">
+              <Text className="text-xs">📷</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.info}>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{user?.firstName} {user?.lastName}</Text>
-              {user?.isVerified && (
-                <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedText}>Verified</Text>
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2 mb-1">
+              <Text className="text-lg font-extrabold text-slate-800">{userProfile.firstName} {userProfile.lastName}</Text>
+              {userProfile.isVerified && (
+                <View className="bg-green-100 px-2 py-0.5 rounded-full border border-green-300">
+                  <Text className="text-green-600 text-[10px] font-bold">Verified</Text>
                 </View>
               )}
             </View>
-            <Text style={styles.email}>{user?.email}</Text>
-            <Text style={styles.phone}>{user?.phone}</Text>
+            <Text className="text-sm text-slate-500 mb-0.5">{userProfile.email}</Text>
+            <Text className="text-sm text-slate-500">{userProfile.phone || 'No phone added'}</Text>
           </View>
         </View>
 
         {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Orders</Text>
-            <Text style={styles.statValue}>128</Text>
+        <View className="flex-row gap-3 mb-6">
+          <View className="flex-1 bg-white rounded-2xl p-3 border border-slate-100 shadow-sm items-center">
+            <Text className="text-xs text-slate-500 mb-1 text-center min-h-[28px]">Total Orders</Text>
+            <Text className="text-lg font-extrabold text-slate-800">128</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Favorite Restaurants</Text>
-            <Text style={styles.statValue}>14</Text>
+          <View className="flex-1 bg-white rounded-2xl p-3 border border-slate-100 shadow-sm items-center">
+            <Text className="text-xs text-slate-500 mb-1 text-center min-h-[28px]">Favorite Restaurants</Text>
+            <Text className="text-lg font-extrabold text-slate-800">14</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Loyalty Points</Text>
-            <Text style={styles.statValuePoint}>2,450</Text>
+          <View className="flex-1 bg-white rounded-2xl p-3 border border-slate-100 shadow-sm items-center">
+            <Text className="text-xs text-slate-500 mb-1 text-center min-h-[28px]">Loyalty Points</Text>
+            <Text className="text-lg font-extrabold text-primary">2,450</Text>
           </View>
         </View>
 
         {/* Menu Items */}
-        <View style={styles.menuGroup}>
+        <View className="gap-3 mb-3">
           {SETTINGS_MENU.map((item) => (
             <TouchableOpacity 
               key={item.id} 
-              style={styles.menuItem}
+              className="flex-row items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm"
               onPress={() => item.href && router.push(item.href as any)}
             >
-              <View style={styles.menuIconBg}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+              <View className="w-10 h-10 rounded-xl bg-slate-50 items-center justify-center mr-3">
+                <Text className="text-lg">{item.icon}</Text>
               </View>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuArrow}>›</Text>
+              <Text className="flex-1 text-sm font-bold text-slate-800">{item.title}</Text>
+              <Text className="text-xl text-slate-300">›</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.menuItemSingle}>
-          <View style={styles.menuIconBg}>
-            <Text style={styles.menuIcon}>🌙</Text>
+        <View className="flex-row items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm mb-6">
+          <View className="w-10 h-10 rounded-xl bg-slate-50 items-center justify-center mr-3">
+            <Text className="text-lg">🌙</Text>
           </View>
-          <View style={styles.menuTextCol}>
-            <Text style={styles.menuTitle}>Dark Mode</Text>
-            <Text style={styles.menuSub}>Switch appearance</Text>
+          <View className="flex-1">
+            <Text className="text-sm font-bold text-slate-800">Dark Mode</Text>
+            <Text className="text-xs text-slate-500 mt-0.5">Switch appearance</Text>
           </View>
           <Switch 
             value={isDarkMode} 
@@ -113,25 +134,28 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Log Out</Text>
+        <TouchableOpacity 
+          className="flex-row items-center justify-center p-4 rounded-2xl bg-red-50 mb-4 gap-2 border border-red-100"
+          onPress={handleLogout}
+        >
+          <Text className="text-base">🚪</Text>
+          <Text className="text-red-500 text-sm font-bold">Log Out</Text>
         </TouchableOpacity>
         
-        <Text style={styles.version}>KhanaGo v2.4.1</Text>
+        <Text className="text-center text-slate-400 text-xs mb-8">KhanaGo v2.4.1</Text>
 
         {/* Dev Role Switcher */}
-        <View style={styles.devSection}>
-          <Text style={styles.devTitle}>🛠️ Dev: Switch Role Views</Text>
-          <View style={styles.devRow}>
-             <TouchableOpacity style={styles.devBtn} onPress={() => handleDevRoleSwitch('DRIVER')}>
-                <Text style={styles.devBtnText}>Driver</Text>
+        <View className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+          <Text className="text-sm font-bold text-amber-700 mb-3">🛠️ Dev: Switch Role Views</Text>
+          <View className="flex-row gap-2">
+             <TouchableOpacity className="flex-1 bg-amber-500 py-2 rounded-lg items-center" onPress={() => handleDevRoleSwitch('DRIVER')}>
+                <Text className="text-white text-xs font-bold">Driver</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={styles.devBtn} onPress={() => handleDevRoleSwitch('RESTAURANT_OWNER')}>
-                <Text style={styles.devBtnText}>Restaurant</Text>
+             <TouchableOpacity className="flex-1 bg-amber-500 py-2 rounded-lg items-center" onPress={() => handleDevRoleSwitch('RESTAURANT_OWNER')}>
+                <Text className="text-white text-xs font-bold">Restaurant</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={styles.devBtn} onPress={() => handleDevRoleSwitch('ADMIN')}>
-                <Text style={styles.devBtnText}>Admin</Text>
+             <TouchableOpacity className="flex-1 bg-amber-500 py-2 rounded-lg items-center" onPress={() => handleDevRoleSwitch('ADMIN')}>
+                <Text className="text-white text-xs font-bold">Admin</Text>
              </TouchableOpacity>
           </View>
         </View>
@@ -140,114 +164,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.white },
-  container: { padding: 16, paddingBottom: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  avatarContainer: { position: 'relative', marginRight: 16 },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.backgroundAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  avatarEmoji: { fontSize: 40 },
-  cameraBtn: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  cameraIcon: { fontSize: 12 },
-  info: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  name: { fontSize: 18, fontWeight: '800', color: Colors.textDark },
-  verifiedBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-  },
-  verifiedText: { color: '#16A34A', fontSize: 10, fontWeight: '600' },
-  email: { fontSize: 13, color: Colors.textSecondary, marginBottom: 2 },
-  phone: { fontSize: 13, color: Colors.textSecondary },
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    ...Shadow.sm,
-  },
-  statLabel: { fontSize: 11, color: Colors.textSecondary, marginBottom: 8, minHeight: 28 },
-  statValue: { fontSize: 18, fontWeight: '800', color: Colors.textDark },
-  statValuePoint: { fontSize: 18, fontWeight: '800', color: Colors.primary },
-  menuGroup: { gap: 12, marginBottom: 12 },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    padding: 12,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  menuItemSingle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    padding: 12,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    marginBottom: 24,
-  },
-  menuIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.backgroundAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  menuIcon: { fontSize: 18 },
-  menuTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textDark },
-  menuArrow: { fontSize: 20, color: Colors.textLight },
-  menuTextCol: { flex: 1 },
-  menuSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: Radius.xl,
-    backgroundColor: Colors.errorLight,
-    gap: 8,
-    marginBottom: 16,
-  },
-  logoutIcon: { fontSize: 16 },
-  logoutText: { color: Colors.error, fontSize: 15, fontWeight: '700' },
-  version: { textAlign: 'center', color: Colors.textLight, fontSize: 12, marginBottom: 32 },
-  devSection: { backgroundColor: '#FEF3C7', padding: 16, borderRadius: Radius.lg },
-  devTitle: { fontSize: 13, fontWeight: '700', color: '#B45309', marginBottom: 12 },
-  devRow: { flexDirection: 'row', gap: 8 },
-  devBtn: { flex: 1, backgroundColor: '#F59E0B', paddingVertical: 8, borderRadius: Radius.sm, alignItems: 'center' },
-  devBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-});

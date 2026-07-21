@@ -1,149 +1,164 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native';
+import { View, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { router } from 'expo-router';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/Text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
-const { width, height } = Dimensions.get('window');
-const HEADER_HEIGHT = height * 0.35;
+const registerSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required'),
+  phone: z.string().min(10, 'Valid 10-digit phone number is required'),
+  agreed: z.boolean().refine(val => val === true, {
+    message: 'You must agree to the terms',
+  }),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterScreen() {
-  const insets = useSafeAreaInsets();
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [phoneError, setPhoneError] = useState('');
-  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
-  const validate = () => {
-    let valid = true;
-    if (phone.length < 7) {
-      setPhoneError('Please enter a valid phone number.');
-      valid = false;
-    } else {
-      setPhoneError('');
+  const { control, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      fullName: '',
+      phone: '',
+      agreed: false,
     }
-    return valid;
-  };
+  });
 
-  const handleSignUp = async () => {
-    if (!validate()) return;
+  const onSubmit = async (data: RegisterFormValues) => {
     setLoading(true);
-    
+    setApiError('');
     try {
       const apiUrl = Platform.OS === 'web' 
         ? process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:3000/api'
         : process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
       
-      const fullPhone = `+977${phone}`;
-      
-      const nameParts = fullName.trim().split(' ');
+      const fullPhone = `+977${data.phone}`;
+      const nameParts = data.fullName.trim().split(' ');
       const firstName = nameParts[0] || 'User';
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'NA';
       
       const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          firstName,
-          lastName,
-          phone: fullPhone 
-        }),
+        body: JSON.stringify({ firstName, lastName, phone: fullPhone }),
       });
       
-      const data = await response.json();
+      const result = await response.json();
       if (!response.ok) {
-        setPhoneError(data.message || 'Registration failed');
+        setApiError(result.message || 'Registration failed');
         setLoading(false);
         return;
       }
 
       router.push({ pathname: '/auth/otp', params: { phone: fullPhone } } as any);
     } catch (e) {
-      setPhoneError('Network error. Is the backend running?');
+      setApiError('Network error. Is the backend running?');
     }
-    
     setLoading(false);
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-white">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+        className="flex-1"
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerClassName="flex-grow px-6 py-10 justify-center"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View style={styles.headerContainer}>
+          <View className="items-center mb-10">
             <Image 
               source={require('../../../assets/images/app_logo.png')} 
-              style={styles.logoBadge} 
+              style={{ width: 96, height: 96, marginBottom: 16 }}
+              resizeMode="contain"
             />
-            <Text style={styles.headerTitle}>KhanaGo</Text>
-            <Text style={styles.headerSubtitle}>Join KhanaGo and discover your next favorite meal.</Text>
+            <Text className="text-3xl font-extrabold text-slate-800 mb-2">KhanaGo</Text>
+            <Text className="text-[15px] text-slate-500 text-center">Join KhanaGo and discover your next favorite meal.</Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <View style={styles.fields}>
-              <Input
-                label="Full Name"
-                placeholder="Anish Shrestha"
-                value={fullName}
-                onChangeText={setFullName}
-                leftIcon={<Text style={styles.icon}>👤</Text>}
+          <View className="w-full">
+            {apiError ? <Text className="text-red-500 text-sm mb-4 text-center">{apiError}</Text> : null}
+
+            <View className="gap-4">
+              <Controller
+                control={control}
+                name="fullName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    label="Full Name"
+                    placeholder="Anish Shrestha"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    error={errors.fullName?.message}
+                    leftIcon={<Text className="text-base">👤</Text>}
+                  />
+                )}
               />
 
-              <Input
-                label="Mobile Number"
-                placeholder="9800000000"
-                value={phone}
-                onChangeText={(text) => {
-                  setPhone(text);
-                  setPhoneError('');
-                }}
-                error={phoneError}
-                keyboardType="phone-pad"
-                leftIcon={<Text style={styles.countryCode}>+977</Text>}
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    label="Mobile Number"
+                    placeholder="9800000000"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    error={errors.phone?.message}
+                    keyboardType="phone-pad"
+                    leftIcon={<Text className="text-base text-slate-500 font-medium mr-2">+977</Text>}
+                  />
+                )}
               />
             </View>
 
-            {/* Terms */}
-            <TouchableOpacity
-              style={styles.termsRow}
-              onPress={() => setAgreed(!agreed)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
-                {agreed && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text style={styles.termsText}>
-                I agree to the{' '}
-                <Text style={styles.termsLink}>Terms</Text>
-                &nbsp;&amp;&nbsp;
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-              </Text>
-            </TouchableOpacity>
+            <Controller
+              control={control}
+              name="agreed"
+              render={({ field: { onChange, value } }) => (
+                <View className="mt-2 mb-6">
+                  <TouchableOpacity
+                    className="flex-row items-center gap-3 my-2"
+                    onPress={() => onChange(!value)}
+                    activeOpacity={0.7}
+                  >
+                    <View className={`w-6 h-6 rounded-md border-2 items-center justify-center ${value ? 'bg-primary border-primary' : 'border-slate-300'}`}>
+                      {value && <Text className="text-white text-xs font-bold">✓</Text>}
+                    </View>
+                    <Text className="text-sm text-slate-500 flex-1">
+                      I agree to the <Text className="text-slate-800 font-bold">Terms</Text> &amp; <Text className="text-slate-800 font-bold">Privacy Policy</Text>
+                    </Text>
+                  </TouchableOpacity>
+                  {errors.agreed?.message && <Text className="text-red-500 text-xs ml-9">{errors.agreed.message}</Text>}
+                </View>
+              )}
+            />
 
             <Button
               label="Sign Up"
-              onPress={handleSignUp}
+              onPress={handleSubmit(onSubmit)}
               loading={loading}
-              disabled={!agreed}
               fullWidth
-              style={styles.signUpBtn}
+              style={{ marginTop: 8, marginBottom: 24 }}
             />
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
+            <View className="flex-row justify-center items-center">
+              <Text className="text-slate-500 text-[15px]">Already have an account? </Text>
               <TouchableOpacity onPress={() => router.replace('/auth/login' as any)}>
-                <Text style={styles.footerLink}>Log In</Text>
+                <Text className="text-primary font-bold text-[15px]">Log In</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -152,86 +167,3 @@ export default function RegisterScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoBadge: {
-    width: 100,
-    height: 100,
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.textDark,
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  formContainer: {
-    width: '100%',
-  },
-  fields: {
-    gap: 16,
-  },
-  icon: { fontSize: 16 },
-  countryCode: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-    marginRight: 8,
-  },
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 20,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  checkmark: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  termsText: { fontSize: 14, color: Colors.textSecondary, flex: 1 },
-  termsLink: { color: Colors.textDark, fontWeight: '700' },
-  signUpBtn: {
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: Colors.textSecondary,
-    fontSize: 15,
-  },
-  footerLink: {
-    color: Colors.primary,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-});

@@ -1,41 +1,40 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native';
+import { View, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, TextInput } from 'react-native';
 import { router } from 'expo-router';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/Text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import { Colors } from '@/constants/theme';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Ionicons } from '@expo/vector-icons';
 
-const { width, height } = Dimensions.get('window');
-const HEADER_HEIGHT = height * 0.35;
+const loginSchema = z.object({
+  phone: z.string().min(10, 'Valid 10-digit phone number is required'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
-  const insets = useSafeAreaInsets();
-  const [phone, setPhone] = useState('');
-  const [phoneError, setPhoneError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
-  const validate = () => {
-    let valid = true;
-    if (phone.length < 7) {
-      setPhoneError('Please enter a valid phone number.');
-      valid = false;
-    } else {
-      setPhoneError('');
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      phone: '',
     }
-    return valid;
-  };
+  });
 
-  const handleContinue = async () => {
-    if (!validate()) return;
+  const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
+    setApiError('');
     try {
       const apiUrl = Platform.OS === 'web' 
         ? process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:3000/api'
         : process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
       
-      const fullPhone = `+977${phone}`;
+      const fullPhone = `+977${data.phone}`;
       
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
@@ -43,130 +42,126 @@ export default function LoginScreen() {
         body: JSON.stringify({ phone: fullPhone }),
       });
       
-      const data = await response.json();
+      const result = await response.json();
       if (!response.ok) {
-        setPhoneError(data.message || 'Login failed');
+        setApiError(result.message || 'Login failed');
         setLoading(false);
         return;
       }
 
       router.push({ pathname: '/auth/otp', params: { phone: fullPhone } } as any);
     } catch (e) {
-      setPhoneError('Network error. Is the backend running?');
+      setApiError('Network error. Is the backend running?');
     }
     setLoading(false);
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-white">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+        className="flex-1"
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerClassName="flex-grow px-6 py-8"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View style={styles.headerContainer}>
-            <Image 
-              source={require('../../../assets/images/app_logo.png')} 
-              style={styles.logoBadge} 
+          {/* Logo Section */}
+          <View className="items-center mt-2 mb-10">
+            <Image
+              source={require('../../../assets/images/app_logo.png')}
+              style={{ width: 96, height: 96, marginBottom: 16 }}
+              resizeMode="contain"
             />
-            <Text style={styles.headerTitle}>KhanaGo</Text>
-            <Text style={styles.headerSubtitle}>Welcome back! Please login to continue.</Text>
+            <View className="flex-row items-center justify-center">
+              <Text className="text-[26px] font-extrabold text-[#1E293B]">Khana</Text>
+              <Text className="text-[26px] font-extrabold text-[#FF8A00] ml-1">Go</Text>
+            </View>
+            <Text className="text-[14px] text-[#64748B] mt-1">Delicious Food, Delivered Fast.</Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <Input
-              label="Phone Number"
-              placeholder="e.g. 9800000000"
-              value={phone}
-              onChangeText={(text) => {
-                setPhone(text);
-                setPhoneError('');
-              }}
-              keyboardType="phone-pad"
-              error={phoneError}
-              leftIcon={<Text style={styles.countryCode}>+977</Text>}
-            />
+          {/* Welcome Text Section */}
+          <View className="mb-8">
+            <Text className="text-[32px] font-extrabold text-[#1E293B] mb-2 leading-[40px]">Welcome Back</Text>
+            <Text className="text-[15px] text-[#64748B]">Sign in to continue ordering your favourites.</Text>
+          </View>
 
-            <Button 
-              label="Continue" 
-              onPress={handleContinue} 
-              loading={loading}
-              fullWidth
-              style={styles.loginBtn}
-            />
+          <View className="w-full">
+            {apiError ? <Text className="text-red-500 text-sm mb-4">{apiError}</Text> : null}
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>New to KhanaGo? </Text>
-              <TouchableOpacity onPress={() => router.push('/auth/register' as any)}>
-                <Text style={styles.footerLink}>Sign up</Text>
+            {/* Phone Input */}
+            <View className="mb-8">
+              <Text className="text-[13px] font-bold text-[#475569] mb-2">Phone Number</Text>
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View className={`flex-row items-center border-[1.5px] rounded-2xl px-4 h-14 ${errors.phone ? 'border-red-500 bg-white' : 'border-[#E2E8F0] bg-white'}`}>
+                    <Ionicons name="call-outline" size={20} color={errors.phone ? '#EF4444' : '#64748B'} style={{ marginRight: 10 }} />
+                    <Text className="text-[15px] font-semibold text-[#1E293B] mr-2">+977</Text>
+                    <TextInput
+                      className="flex-1 text-[15px] text-[#1E293B] h-full"
+                      placeholder="9800000000"
+                      placeholderTextColor="#94A3B8"
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                      keyboardType="phone-pad"
+                      autoCapitalize="none"
+                    />
+                    {errors.phone && (
+                      <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
+                    )}
+                  </View>
+                )}
+              />
+              {errors.phone && <Text className="text-[#EF4444] text-[12px] mt-1.5 ml-1">{errors.phone.message}</Text>}
+            </View>
+
+            {/* Log In Button */}
+            <TouchableOpacity 
+              className="bg-[#FF8A00] h-14 rounded-2xl items-center justify-center shadow-sm mb-8"
+              onPress={handleSubmit(onSubmit)}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-[16px] font-bold">
+                {loading ? 'Sending OTP...' : 'Continue'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View className="flex-row items-center mb-8">
+              <View className="flex-1 h-[1px] bg-[#E2E8F0]" />
+              <Text className="px-4 text-[13px] text-[#64748B]">or continue with</Text>
+              <View className="flex-1 h-[1px] bg-[#E2E8F0]" />
+            </View>
+
+            {/* Social Buttons */}
+            <View className="flex-row justify-between gap-4 mb-8">
+              <TouchableOpacity className="flex-1 h-[52px] rounded-2xl border-[1px] border-[#E2E8F0] bg-white flex-row items-center justify-center">
+                <Ionicons name="logo-google" size={18} color="#1E293B" style={{ marginRight: 8 }} />
+                <Text className="text-[15px] font-bold text-[#1E293B]">Google</Text>
+              </TouchableOpacity>
+              <TouchableOpacity className="flex-1 h-[52px] rounded-2xl border-[1px] border-[#E2E8F0] bg-white flex-row items-center justify-center">
+                <Ionicons name="logo-apple" size={18} color="#1E293B" style={{ marginRight: 8 }} />
+                <Text className="text-[15px] font-bold text-[#1E293B]">Apple</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Sign Up Link */}
+            <View className="flex-row justify-center pb-6">
+              <Text className="text-[#64748B] text-[15px]">Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/auth/register' as any)}>
+                <Text className="text-[#FF8A00] font-bold text-[15px]">Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoBadge: {
-    width: 100,
-    height: 100,
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.textDark,
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-  },
-  formContainer: {
-    marginTop: 20,
-  },
-  countryCode: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textDark,
-  },
-  loginBtn: {
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  footerText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-  },
-  footerLink: {
-    fontSize: 15,
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-});

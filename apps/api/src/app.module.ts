@@ -8,6 +8,12 @@ import { DbModule } from './db/database.module';
 import { AuthModule } from './auth/auth.module';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { UsersModule } from './users/users.module';
+import { MenuModule } from './menu/menu.module';
+import { OrderModule } from './order/order.module';
+import { AddressModule } from './address/address.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -30,6 +36,12 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     RestaurantModule,
     UsersModule,
+    MenuModule,
+    OrderModule,
+    AddressModule,
+    ReviewsModule,
+    NotificationsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,88 +1,80 @@
 import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors, Radius, Shadow } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
+import { useNotifications, useMarkNotificationRead, useDeleteNotification } from '@/api/notifications';
 
 const TABS = ['All', 'Orders', 'Offers', 'System'];
 
-const NOTIFICATIONS = [
-  {
-    id: '1',
-    type: 'order',
-    title: 'Order out for delivery',
-    message: 'Your Himalayan Kitchen order is on the way and should arrive in 8 minutes.',
-    time: '2 min ago',
-    read: false,
-    emoji: '🥡',
-    bg: '#FFEDD5',
-  },
-  {
-    id: '2',
-    type: 'offer',
-    title: 'Weekend momo deal',
-    message: 'Get 20% off on selected momo combos above Rs. 500.',
-    time: '18 min ago',
-    read: false,
-    emoji: '🏷️',
-    bg: '#FEF3C7',
-  },
-  {
-    id: '3',
-    type: 'system',
-    title: 'Payment update required',
-    message: 'Your saved card needs verification before the next order can be placed.',
-    time: '1 hr ago',
-    read: false,
-    emoji: '⚠️',
-    bg: '#FEE2E2',
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'System maintenance tonight',
-    message: 'A short maintenance window is scheduled from 1:00 AM to 1:30 AM.',
-    time: 'Yesterday',
-    read: true,
-    emoji: '🔔',
-    bg: '#F3F4F6',
-  },
-];
-
 export default function NotificationsScreen() {
   const [activeTab, setActiveTab] = useState('All');
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const { data: notifications = [], isLoading, isError, refetch, isFetching } = useNotifications();
+  const { mutate: markAsRead } = useMarkNotificationRead();
+  const { mutate: deleteNotification } = useDeleteNotification();
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleMarkAllRead = () => {
+    notifications.forEach(n => {
+      if (!n.isRead) markAsRead(n.id);
+    });
   };
 
   const filtered = activeTab === 'All' 
     ? notifications 
     : notifications.filter(n => n.type === activeTab.toLowerCase() || (activeTab === 'Orders' && n.type === 'order'));
 
+  const getEmoji = (type: string) => {
+    switch (type) {
+      case 'order': return '🥡';
+      case 'promotion':
+      case 'offer': return '🏷️';
+      case 'payment': return '💳';
+      case 'system':
+      default: return '🔔';
+    }
+  };
+
+  const getBgColor = (type: string) => {
+    switch (type) {
+      case 'order': return 'bg-orange-100';
+      case 'promotion':
+      case 'offer': return 'bg-amber-100';
+      case 'payment': return 'bg-red-100';
+      case 'system':
+      default: return 'bg-slate-100';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+    <SafeAreaView className="flex-1 bg-slate-50">
+      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-slate-200">
+        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center mr-3">
+          <Text className="text-lg">←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity onPress={markAllRead}>
-          <Text style={styles.markReadText}>Mark all as read</Text>
+        <Text className="flex-1 text-lg font-extrabold text-slate-800">Notifications</Text>
+        <TouchableOpacity onPress={handleMarkAllRead}>
+          <Text className="text-primary text-sm font-bold">Mark all read</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.tabsWrapper}>
-        <View style={styles.tabsContainer}>
+      <View className="bg-white px-4 pb-3 border-b border-slate-200">
+        <View className="flex-row bg-slate-50 rounded-lg p-1 border border-slate-200">
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              className={`flex-1 items-center py-2 rounded-md ${activeTab === tab ? 'bg-primary' : 'bg-transparent'}`}
               onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              <Text className={`text-xs font-bold ${activeTab === tab ? 'text-white' : 'text-slate-500'}`}>
                 {tab}
               </Text>
             </TouchableOpacity>
@@ -90,150 +82,56 @@ export default function NotificationsScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
-        <TouchableOpacity style={styles.refreshBar}>
-          <Text style={styles.refreshIcon}>🔄</Text>
-          <Text style={styles.refreshText}>Pull to refresh</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="p-4 pb-10">
+        <TouchableOpacity 
+          className="flex-row items-center justify-center bg-white rounded-full py-2.5 mb-4 border border-slate-200 border-dashed gap-2"
+          onPress={() => refetch()}
+        >
+          <Text className="text-sm">🔄</Text>
+          <Text className="text-sm font-medium text-slate-500">{isFetching ? 'Refreshing...' : 'Pull to refresh'}</Text>
         </TouchableOpacity>
 
+        {isError && (
+          <Text className="text-red-500 text-center font-bold mb-4">Failed to load notifications.</Text>
+        )}
+
         {filtered.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={[styles.iconBg, { backgroundColor: item.bg }]}>
-              <Text style={styles.iconEmoji}>{item.emoji}</Text>
+          <TouchableOpacity 
+            key={item.id} 
+            className={`flex-row bg-white rounded-2xl p-4 mb-3 shadow-sm border ${!item.isRead ? 'border-primary/20 bg-orange-50/30' : 'border-slate-100'}`}
+            onPress={() => !item.isRead && markAsRead(item.id)}
+          >
+            <View className={`w-12 h-12 rounded-xl items-center justify-center mr-3 ${getBgColor(item.type)}`}>
+              <Text className="text-2xl">{getEmoji(item.type)}</Text>
             </View>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardMessage}>{item.message}</Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardTime}>{item.time}</Text>
-                {item.id === '1' && (
-                   <View style={styles.swipeHint}>
-                     <Text style={styles.swipeText}>Swipe to delete</Text>
-                   </View>
-                )}
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-slate-800 mb-1">{item.title}</Text>
+              <Text className="text-xs text-slate-500 leading-5 mb-2">{item.message}</Text>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-[10px] text-slate-400">
+                  {new Date(item.createdAt).toLocaleString()}
+                </Text>
+                <TouchableOpacity onPress={() => deleteNotification(item.id)} className="bg-slate-100 px-2 py-1 rounded">
+                  <Text className="text-[10px] text-red-500 font-bold">Delete</Text>
+                </TouchableOpacity>
               </View>
             </View>
-            {!item.read && <View style={styles.unreadDot} />}
-          </View>
+            {!item.isRead && <View className="w-2 h-2 rounded-full bg-primary absolute top-4 right-4" />}
+          </TouchableOpacity>
         ))}
 
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconBg}>
-            <Text style={styles.emptyEmoji}>🔕</Text>
+        {filtered.length === 0 && !isError && (
+          <View className="items-center p-8 mt-5 bg-white rounded-2xl border border-slate-200 border-dashed">
+            <View className="w-16 h-16 rounded-full bg-orange-100 items-center justify-center mb-4">
+              <Text className="text-3xl">🔕</Text>
+            </View>
+            <Text className="text-base font-bold text-slate-800 mb-2">You're all caught up!</Text>
+            <Text className="text-xs text-slate-500 text-center leading-5">
+              No new notifications right now. Check back later for order updates, offers, and alerts.
+            </Text>
           </View>
-          <Text style={styles.emptyTitle}>You're all caught up!</Text>
-          <Text style={styles.emptyText}>
-            No new notifications right now. Check back later for order updates, offers, and alerts.
-          </Text>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.white,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.backgroundAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: { fontSize: 18 },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.textDark },
-  markReadText: { color: Colors.primary, fontSize: 13, fontWeight: '600' },
-  tabsWrapper: { backgroundColor: Colors.white, paddingHorizontal: 16, paddingBottom: 12 },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: Radius.md },
-  tabActive: { backgroundColor: Colors.primary },
-  tabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  tabTextActive: { color: '#fff' },
-  list: { padding: 16, paddingBottom: 40 },
-  refreshBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.full,
-    paddingVertical: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderStyle: 'dashed',
-    gap: 8,
-  },
-  refreshIcon: { color: Colors.textSecondary, fontSize: 14 },
-  refreshText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '500' },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    padding: 16,
-    marginBottom: 12,
-    ...Shadow.sm,
-  },
-  iconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  iconEmoji: { fontSize: 24 },
-  cardContent: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: Colors.textDark, marginBottom: 4 },
-  cardMessage: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18, marginBottom: 8 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTime: { fontSize: 12, color: Colors.textLight },
-  swipeHint: { backgroundColor: Colors.backgroundAlt, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.sm },
-  swipeText: { fontSize: 10, color: Colors.textSecondary },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    position: 'absolute',
-    top: 16,
-    right: 16,
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 32,
-    marginTop: 20,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderStyle: 'dashed',
-  },
-  emptyIconBg: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFEDD5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyEmoji: { fontSize: 28 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: Colors.textDark, marginBottom: 8 },
-  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-});

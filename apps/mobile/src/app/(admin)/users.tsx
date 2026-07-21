@@ -54,17 +54,22 @@ const USERS = [
   },
 ];
 
-const TABS = ['All', 'Customers', 'Drivers', 'Restaurants'];
+import { useAllUsers } from '@/api/users';
+
+const TABS = ['All', 'CUSTOMER', 'DRIVER', 'RESTAURANT_OWNER'];
 
 export default function ManageUsersScreen() {
   const [activeTab, setActiveTab] = useState('All');
   const [searchText, setSearchText] = useState('');
+  
+  const { data: users, isLoading } = useAllUsers();
 
-  const filtered = USERS.filter(u => {
-    if (activeTab !== 'All' && u.role !== (activeTab === 'Restaurants' ? 'Restaurant' : activeTab.slice(0, -1))) {
+  const filtered = (users || []).filter((u: any) => {
+    if (activeTab !== 'All' && u.role !== activeTab) {
       return false;
     }
-    if (searchText && !u.name.toLowerCase().includes(searchText.toLowerCase())) {
+    const fullName = `${u.firstName} ${u.lastName}`;
+    if (searchText && !fullName.toLowerCase().includes(searchText.toLowerCase()) && !u.email?.toLowerCase().includes(searchText.toLowerCase())) {
       return false;
     }
     return true;
@@ -111,32 +116,29 @@ export default function ManageUsersScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
-         {filtered.map(u => (
+         {filtered.map((u: any) => (
             <View key={u.id} style={styles.card}>
                <View style={styles.cardRow}>
-                  <View style={[styles.avatarBg, { backgroundColor: u.bg }]}>
-                     <Text style={styles.avatarEmoji}>{u.avatar}</Text>
+                  <View style={[styles.avatarBg, { backgroundColor: '#E0F2FE' }]}>
+                     <Text style={styles.avatarEmoji}>{u.role === 'DRIVER' ? '👨‍✈️' : u.role === 'RESTAURANT_OWNER' ? '👩‍🍳' : '👨'}</Text>
                   </View>
                   <View style={styles.userInfo}>
                      <View style={styles.nameRow}>
-                        <Text style={styles.userName}>{u.name}</Text>
+                        <Text style={styles.userName}>{u.firstName} {u.lastName}</Text>
                         <Badge 
-                          label={u.status} 
-                          variant={
-                            u.status === 'Active' ? 'success' : 
-                            u.status === 'Pending' ? 'warning' : 'error'
-                          } 
+                          label={u.isVerified ? 'Verified' : 'Pending'} 
+                          variant={u.isVerified ? 'success' : 'warning'} 
                         />
                      </View>
-                     <Text style={styles.userEmail}>{u.email}</Text>
+                     <Text style={styles.userEmail}>{u.email || u.phone}</Text>
                      
                      <View style={styles.metaRow}>
                         <View style={styles.metaPill}>
                            <Text style={styles.metaPillText}>{u.role}</Text>
                         </View>
-                        <Text style={styles.metaText}>Joined {u.joinDate}</Text>
+                        <Text style={styles.metaText}>Joined {new Date(u.createdAt).toLocaleDateString()}</Text>
                         <Text style={styles.metaDot}>•</Text>
-                        <Text style={styles.metaText}>{u.orders} orders</Text>
+                        <Text style={styles.metaText}>0 orders</Text>
                      </View>
                   </View>
                </View>

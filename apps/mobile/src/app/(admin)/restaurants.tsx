@@ -8,55 +8,26 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 
-const RESTAURANTS = [
-  {
-    id: '1',
-    name: 'Himalayan Kitchen',
-    categories: ['Nepali', 'Momos', 'Thali'],
-    rating: 4.8,
-    location: 'Baneshwor',
-    status: 'Active',
-    isOpen: true,
-    tags: ['Momos', 'Thali', 'Delivery'],
-    emoji: '🥟',
-    bg: '#FFEDD5',
-  },
-  {
-    id: '2',
-    name: 'Spice Route',
-    categories: ['Indian', 'Biryani', 'Grill'],
-    rating: 4.5,
-    location: 'New Road',
-    status: 'Suspended',
-    isOpen: false,
-    tags: ['Biryani', 'Tandoor', 'Pickup'],
-    emoji: '🍛',
-    bg: '#FEE2E2',
-  },
-  {
-    id: '3',
-    name: 'Momo House',
-    categories: ['Fast Food', 'Snacks', 'Tea'],
-    rating: 4.7,
-    location: 'Patan',
-    status: 'Active',
-    isOpen: true,
-    tags: ['Momos', 'Snacks', 'Dine-in'],
-    emoji: '☕',
-    bg: '#FEF3C7',
-  },
-];
+import { useRestaurants } from '@/api/restaurants';
 
 export default function ManageRestaurantsScreen() {
   const [searchText, setSearchText] = useState('');
-  const [restaurants, setRestaurants] = useState(RESTAURANTS);
   const [showToast, setShowToast] = useState(false);
+  
+  const { data: apiRestaurants, isLoading } = useRestaurants();
 
   const toggleStatus = (id: string, val: boolean) => {
-    setRestaurants(prev => prev.map(r => r.id === id ? { ...r, isOpen: val } : r));
+    // API call would go here to update status
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
+  
+  const filtered = (apiRestaurants || []).filter((r: any) => {
+    if (searchText && !r.name.toLowerCase().includes(searchText.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -85,29 +56,29 @@ export default function ManageRestaurantsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
-         {restaurants.map(r => (
+         {filtered.map((r: any) => (
             <View key={r.id} style={styles.card}>
                <View style={styles.cardHeaderRow}>
-                  <View style={[styles.cardImg, { backgroundColor: r.bg }]}>
-                     <Text style={styles.cardEmoji}>{r.emoji}</Text>
+                  <View style={[styles.cardImg, { backgroundColor: '#FFEDD5' }]}>
+                     <Text style={styles.cardEmoji}>{r.emoji || '🏪'}</Text>
                   </View>
                   <View style={styles.cardInfo}>
                      <View style={styles.nameRow}>
                         <Text style={styles.cardName}>{r.name}</Text>
-                        <Badge label={r.status} variant={r.status === 'Active' ? 'success' : 'warning'} />
+                        <Badge label={r.isOpen ? 'Active' : 'Suspended'} variant={r.isOpen ? 'success' : 'warning'} />
                      </View>
-                     <Text style={styles.cardCat}>{r.categories.join(' • ')}</Text>
+                     <Text style={styles.cardCat}>{r.cuisineType || 'Restaurant'}</Text>
                      <View style={styles.metaRow}>
-                        <Text style={styles.ratingText}>⭐ {r.rating}</Text>
-                        <Text style={styles.locText}>📍 {r.location}</Text>
+                        <Text style={styles.ratingText}>⭐ {r.averageRating || 'New'}</Text>
+                        <Text style={styles.locText}>📍 {r.city || 'Location'}</Text>
                      </View>
                   </View>
                </View>
 
                <View style={styles.tagsRow}>
-                  {r.tags.map(tag => (
+                  {r.tags ? JSON.parse(r.tags).map((tag: string) => (
                      <View key={tag} style={styles.tag}><Text style={styles.tagText}>{tag}</Text></View>
-                  ))}
+                  )) : null}
                </View>
 
                <View style={styles.statusToggleRow}>

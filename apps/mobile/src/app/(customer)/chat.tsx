@@ -1,20 +1,97 @@
 import { Text } from '@/components/ui/Text';
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors, Radius, Shadow } from '@/constants/theme';
+import { Colors, Radius } from '@/constants/theme';
+import { useAuthStore } from '@/store/authStore';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const MESSAGES = [
-  { id: '1', type: 'agent', text: 'Hi Anish! How can I help you with your order today?', time: '9:41 AM' },
-  { id: '2', type: 'user', text: 'My momo order is late. Can you check it?', time: '9:42 AM' },
-  { id: '3', type: 'agent', text: 'I’m checking your recent order now. It’s currently on the way and the rider is 6 minutes away.', time: '9:42 AM' },
-  { id: '4', type: 'user', text: 'Great, thanks. What if it arrives cold?', time: '9:43 AM' },
-  { id: '5', type: 'agent', text: 'If anything looks off, I can help with a refund, replacement, or connect you to a human agent right away.', time: '9:43 AM' },
-];
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '');
 
 export default function ChatScreen() {
+  const { user } = useAuthStore();
   const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [chatSession, setChatSession] = useState<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  const [messages, setMessages] = useState([
+    { 
+      id: '1', 
+      type: 'agent', 
+      text: `Hi ${user?.firstName || 'there'} how can I help you?`, 
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+    }
+  ]);
+
+  useEffect(() => {
+    // Initialize the Chat Session on mount
+    try {
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        systemInstruction: `You are the customer support AI for Foodie Nepal.
+Rules:
+- Be polite and concise.
+- Answer only questions related to the food delivery app.
+- If the user asks about an order, request the order ID.
+- If the issue requires staff intervention, tell the user that a support agent will contact them.
+- Never invent order information.`,
+      });
+
+      const chat = model.startChat({
+        history: [],
+      });
+      setChatSession(chat);
+    } catch (e) {
+      console.error('Failed to initialize Gemini chat session', e);
+    }
+  }, []);
+
+  const handleSend = async () => {
+    if (!inputText.trim() || !chatSession) return;
+    
+    const userText = inputText.trim();
+    const newUserMsg = {
+      id: Date.now().toString(),
+      type: 'user',
+      text: userText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setMessages(prev => [...prev, newUserMsg]);
+    setInputText('');
+    setIsTyping(true);
+    
+    // Auto scroll
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const result = await chatSession.sendMessage(userText);
+      const aiResponseText = result.response.text();
+      
+      const newAiMsg = {
+        id: (Date.now() + 1).toString(),
+        type: 'agent',
+        text: aiResponseText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, newAiMsg]);
+    } catch (error) {
+      const errorMsg = {
+        id: (Date.now() + 1).toString(),
+        type: 'agent',
+        text: "I'm having trouble connecting to my brain right now. Please check if the API key is configured correctly in the .env file.",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errorMsg]);
+      console.error("Gemini Error:", error);
+    } finally {
+      setIsTyping(false);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -44,8 +121,13 @@ export default function ChatScreen() {
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.chatArea} showsVerticalScrollIndicator={false}>
-          {MESSAGES.map(msg => (
+        <ScrollView 
+          ref={scrollViewRef}
+          contentContainerStyle={styles.chatArea} 
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        >
+          {messages.map(msg => (
             <View 
               key={msg.id} 
               style={[
@@ -72,23 +154,13 @@ export default function ChatScreen() {
             </View>
           ))}
 
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionChip}>
-              <Text style={styles.actionText}>Track my order</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionChip}>
-              <Text style={styles.actionText}>Cancel order</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Prompt item */}
-          <View style={[styles.bubbleWrapper, styles.wrapperLeft]}>
-             <View style={styles.bubbleAgent}>
-                <Text style={styles.textAgent}>start a support request?</Text>
-             </View>
-             <Text style={styles.timeText}>9:44 AM</Text>
-          </View>
+          {isTyping && (
+            <View style={[styles.bubbleWrapper, styles.wrapperLeft]}>
+              <View style={[styles.bubble, styles.bubbleAgent, { paddingHorizontal: 16, paddingVertical: 12 }]}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+              </View>
+            </View>
+          )}
 
           <View style={{ height: 20 }} />
         </ScrollView>
@@ -105,8 +177,10 @@ export default function ChatScreen() {
               placeholderTextColor={Colors.textLight}
               value={inputText}
               onChangeText={setInputText}
+              onSubmitEditing={handleSend}
+              editable={!isTyping}
             />
-            <TouchableOpacity style={styles.sendBtn}>
+            <TouchableOpacity style={styles.sendBtn} onPress={handleSend} disabled={isTyping || !inputText.trim()}>
               <Text style={styles.sendIcon}>➤</Text>
             </TouchableOpacity>
           </View>

@@ -9,16 +9,17 @@ import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 
 @Controller('restaurant')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
 export class RestaurantController {
   constructor(private readonly restaurantService: RestaurantService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
   create(@Body() createRestaurantDto: CreateRestaurantDto) {
     return this.restaurantService.create(createRestaurantDto);
   }
 
   @Get()
+  // Accessible to anyone with a valid JWT
   findAll() {
     return this.restaurantService.findAll();
   }
@@ -29,11 +30,13 @@ export class RestaurantController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRestaurantDto: UpdateRestaurantDto) {
     return this.restaurantService.update(id, updateRestaurantDto);
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.restaurantService.remove(id);
   }

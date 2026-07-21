@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { withNativeWind } = require('nativewind/metro');
 const path = require('path');
 
 // 1. Find your project root and the workspace root
@@ -17,8 +18,6 @@ config.resolver.nodeModulesPaths = [
 ];
 
 // 4. Block Metro from crawling nested, redundant .pnpm symlink tracks
-config.resolver.blockList = [
-  new RegExp(`${workspaceRoot.replace(/\\/g, '/')}\/node_modules\/\.pnpm\/.*`),
-];
+// Removing blockList as it breaks pnpm module resolution for symlinks like react-native-css-interop
 
-module.exports = config;
+module.exports = withNativeWind(config, { input: './src/global.css' });

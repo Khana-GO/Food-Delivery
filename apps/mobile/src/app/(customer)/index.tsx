@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Radius, Spacing, Shadow } from '@/constants/theme';
 import Badge from '@/components/ui/Badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 
 const { width } = Dimensions.get('window');
 const CARD_W = (width - 48) / 2;
@@ -195,7 +195,7 @@ function SectionHeader({
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   const getGreeting = () => {
     const hour = new Date().getHours();

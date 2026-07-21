@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Shadow } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 
 export default function DriverDashboardScreen() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [isOnline, setIsOnline] = useState(true);
 
   return (
