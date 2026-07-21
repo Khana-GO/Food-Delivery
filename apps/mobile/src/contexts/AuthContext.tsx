@@ -1,103 +1,400 @@
-import React, { createContext, useContext, useState } from 'react';
-import { UserRole } from '@food_delivery/types';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
-export type AuthRole = 'CUSTOMER' | 'DRIVER' | 'RESTAURANT_OWNER' | 'ADMIN' | null;
+import { api } from "../../lib/axios";
 
-export interface AuthUser {
-  id: string;
+import {
+  saveAccessToken,
+  saveRefreshToken,
+  getAccessToken,
+  deleteTokens,
+} from "../../lib/secure-storage";
+
+import { User, UserRole } from "@food_delivery/types";
+
+
+// ===============================
+// Types
+// ===============================
+
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+}
+
+
+interface RegisterData {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  role: AuthRole;
-  imageUrl?: string;
-  isVerified: boolean;
+  phone: string;
+  password: string;
 }
+
 
 interface AuthContextType {
-  user: AuthUser | null;
+
+  // Current logged-in user
+  user: User | null;
+
+
+  // Used while checking existing login session
+  loading: boolean;
+
+
+  // Quickly check authentication status
   isAuthenticated: boolean;
-  role: AuthRole;
-  login: (user: AuthUser) => void;
-  logout: () => void;
-  switchRole: (role: AuthRole) => void; // Dev helper for demo
+
+
+  // Current user's role
+  role: UserRole | null;
+
+
+  // Authentication actions
+  login: (data: LoginResponse) => Promise<void>;
+
+  logout: () => Promise<void>;
+
+  register: (
+    data: RegisterData
+  ) => Promise<void>;
+
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
 
-// Mock user data for demo
-const MOCK_USERS: Record<NonNullable<AuthRole>, AuthUser> = {
-  CUSTOMER: {
-    id: '1',
-    firstName: 'Anish',
-    lastName: 'Shrestha',
-    email: 'anish.shrestha@email.com',
-    phone: '+977 9841 234 567',
-    role: 'CUSTOMER',
-    isVerified: true,
-  },
-  DRIVER: {
-    id: '2',
-    firstName: 'Rajesh',
-    lastName: 'Tamang',
-    email: 'rajesh.tamang@email.com',
-    phone: '+977 9812 345 678',
-    role: 'DRIVER',
-    isVerified: true,
-  },
-  RESTAURANT_OWNER: {
-    id: '3',
-    firstName: 'Himalayan',
-    lastName: 'Spice Kitchen',
-    email: 'owner@himalayan.com',
-    phone: '+977 9841 111 222',
-    role: 'RESTAURANT_OWNER',
-    isVerified: true,
-  },
-  ADMIN: {
-    id: '4',
-    firstName: 'Admin',
-    lastName: 'Dashboard',
-    email: 'admin@khanago.com',
-    phone: '+977 9800 000 000',
-    role: 'ADMIN',
-    isVerified: true,
-  },
-};
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(MOCK_USERS.CUSTOMER);
+// ===============================
+// Create Context
+// ===============================
 
-  const login = (authUser: AuthUser) => setUser(authUser);
+const AuthContext =
+  createContext<AuthContextType | null>(null);
 
-  const logout = () => setUser(null);
 
-  const switchRole = (role: AuthRole) => {
-    if (role && MOCK_USERS[role]) {
-      setUser(MOCK_USERS[role]);
-    } else {
-      setUser(null);
+
+
+// ===============================
+// Auth Provider
+//
+// This component wraps the whole app.
+// Every screen inside this provider can access:
+//
+// user
+// login()
+// logout()
+// role
+//
+// using useAuth()
+// ===============================
+
+
+export function AuthProvider(
+{
+ children
+}:{
+ children: React.ReactNode;
+}){
+
+
+ const [user,setUser] =
+ useState<User | null>(null);
+
+
+ const [loading,setLoading] =
+ useState(true);
+
+
+
+ // ===================================
+ // Runs once when application starts
+ //
+ // Purpose:
+ // Check if user already logged in.
+ //
+ // Example:
+ //
+ // User closes app yesterday
+ // Opens today
+ //
+ // We check SecureStore
+ // If token exists:
+ // restore user session
+ // ===================================
+
+ useEffect(()=>{
+
+   restoreSession();
+
+ },[]);
+
+
+
+ const restoreSession = async()=>{
+
+   try{
+
+
+    const token =
+      await getAccessToken();
+
+
+
+    // No token means user never logged in
+    if(!token){
+
+      setLoading(false);
+
+      return;
     }
-  };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        role: user?.role ?? null,
-        login,
-        logout,
-        switchRole,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+
+
+    // Token exists,
+    // ask backend for current user
+
+    const response =
+      await api.get("/auth/me");
+
+
+
+    setUser(
+      response.data.user
+    );
+
+
+
+   }
+   catch(error){
+
+     // Token expired or invalid
+
+     await deleteTokens();
+
+     setUser(null);
+
+   }
+   finally{
+
+     setLoading(false);
+
+   }
+
+ };
+
+
+
+
+
+ // ===================================
+ // LOGIN
+ //
+ // Backend returns:
+ //
+ // {
+ //   accessToken,
+ //   refreshToken,
+ //   user
+ // }
+ //
+ // We:
+ //
+ // 1. Save tokens securely
+ // 2. Store user in memory
+ //
+ // ===================================
+
+
+ const login = async(
+ data:LoginResponse
+ )=>{
+
+
+   await saveAccessToken(
+     data.accessToken
+   );
+
+
+   await saveRefreshToken(
+     data.refreshToken
+   );
+
+
+
+   setUser(
+     data.user
+   );
+
+ };
+
+
+
+
+
+ // ===================================
+ // LOGOUT
+ //
+ // Remove:
+ //
+ // 1. Secure tokens
+ // 2. Current user state
+ //
+ // ===================================
+
+
+ const logout = async()=>{
+
+
+   try{
+
+
+    await deleteTokens();
+
+
+    setUser(null);
+
+
+   }
+   catch(error){
+
+    console.log(
+      "Logout error",
+      error
+    );
+
+   }
+
+ };
+
+
+
+
+
+ // ===================================
+ // REGISTER
+ //
+ // Usually:
+ //
+ // Call backend register API
+ // Then login automatically
+ //
+ // ===================================
+
+
+ const register = async(
+ data:RegisterData
+ )=>{
+
+
+   const response =
+   await api.post(
+     "/auth/register",
+     data
+   );
+
+
+
+   const loginData =
+   response.data;
+
+
+
+   await login(
+     loginData
+   );
+
+
+ };
+
+
+
+
+
+ return (
+
+<AuthContext.Provider
+
+ value={{
+
+   user,
+
+
+   loading,
+
+
+   isAuthenticated:
+      !!user,
+
+
+   role:
+      user?.role ?? null,
+
+
+   login,
+
+
+   logout,
+
+
+   register,
+
+
+ }}
+
+>
+
+
+ {children}
+
+
+</AuthContext.Provider>
+
+ );
+
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
+
+
+
+
+// ===================================
+// Custom Hook
+//
+// Instead of:
+// useContext(AuthContext)
+//
+// We use:
+// useAuth()
+//
+// Example:
+//
+// const {user,logout}=useAuth();
+//
+// ===================================
+
+
+export function useAuth(){
+
+
+ const context =
+ useContext(
+   AuthContext
+ );
+
+
+ if(!context){
+
+   throw new Error(
+    "useAuth must be used inside AuthProvider"
+   );
+
+ }
+
+
+ return context;
+
 }
