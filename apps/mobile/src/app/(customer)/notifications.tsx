@@ -15,14 +15,14 @@ export default function NotificationsScreen() {
   const { mutate: deleteNotification } = useDeleteNotification();
 
   const handleMarkAllRead = () => {
-    notifications.forEach(n => {
+    notifications.forEach((n: any) => {
       if (!n.isRead) markAsRead(n.id);
     });
   };
 
   const filtered = activeTab === 'All' 
     ? notifications 
-    : notifications.filter(n => n.type === activeTab.toLowerCase() || (activeTab === 'Orders' && n.type === 'order'));
+    : notifications.filter((n: any) => n.type === activeTab.toLowerCase() || (activeTab === 'Orders' && n.type === 'order'));
 
   const getEmoji = (type: string) => {
     switch (type) {
@@ -95,7 +95,7 @@ export default function NotificationsScreen() {
           <Text className="text-red-500 text-center font-bold mb-4">Failed to load notifications.</Text>
         )}
 
-        {filtered.map((item) => (
+        {filtered.map((item: any) => (
           <TouchableOpacity 
             key={item.id} 
             className={`flex-row bg-white rounded-2xl p-4 mb-3 shadow-sm border ${!item.isRead ? 'border-primary/20 bg-orange-50/30' : 'border-slate-100'}`}

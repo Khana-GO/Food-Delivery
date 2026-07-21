@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import type { SignOptions } from 'jsonwebtoken';
@@ -46,6 +45,5 @@ import { HomeModule } from './home/home.module';
     HomeModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

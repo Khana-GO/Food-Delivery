@@ -49,7 +49,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     >
       <View style={[styles.cardImage, { backgroundColor: fallbackColor }]}>
         {data.coverImageUrl ? (
-          <Image source={{ uri: data.coverImageUrl }} style={StyleSheet.absoluteFillObject} />
+          <Image source={{ uri: data.coverImageUrl }} style={StyleSheet.absoluteFill} />
         ) : (
           <Text style={styles.cardEmoji}>{fallbackEmoji}</Text>
         )}

@@ -1,14 +1,13 @@
 import { Text } from '@/components/ui/Text';
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions, Image } from 'react-native';
+import { View, StyleSheet, Animated, Image } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Radius } from '@/constants/theme';
-import { MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
+
+import { Colors } from '@/constants/theme';
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/store/authStore';
 
-const { width } = Dimensions.get('window');
 
 function KhanaGoLogo() {
   return (

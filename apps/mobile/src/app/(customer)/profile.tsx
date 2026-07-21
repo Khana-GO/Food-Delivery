@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/Text';
 import { Colors } from '@/constants/theme';
-import { useAuthStore, AuthRole } from '@/store/authStore';
+import { useAuthStore } from '@/store/authStore';
 import { useProfile } from '@/api/users';
 import { RoleSwitcher } from '@/components/common/RoleSwitcher';
 
@@ -23,21 +23,13 @@ const SETTINGS_MENU = [
 ];
 
 export default function ProfileScreen() {
-  const { logout, switchRole } = useAuthStore();
+  const { logout } = useAuthStore();
   const { data: userProfile, isLoading, isError } = useProfile();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const handleLogout = () => {
     logout();
     router.replace('/auth/login' as any);
-  };
-
-  const handleDevRoleSwitch = (newRole: AuthRole) => {
-    switchRole(newRole);
-    if (newRole === 'CUSTOMER') router.replace('/(customer)' as any);
-    if (newRole === 'DRIVER') router.replace('/(driver)' as any);
-    if (newRole === 'RESTAURANT_OWNER') router.replace('/(restaurant)' as any);
-    if (newRole === 'ADMIN') router.replace('/(admin)' as any);
   };
 
   if (isLoading) {
@@ -135,6 +127,9 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* Role Switcher */}
+        <RoleSwitcher />
+
         <TouchableOpacity 
           className="flex-row items-center justify-center p-4 rounded-2xl bg-red-50 mb-4 gap-2 border border-red-100"
           onPress={handleLogout}
@@ -144,9 +139,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         
         <Text className="text-center text-slate-400 text-xs mb-8">KhanaGo v2.4.1</Text>
-
-        {/* Actual Role Switcher */}
-        <RoleSwitcher />
 
       </ScrollView>
     </SafeAreaView>

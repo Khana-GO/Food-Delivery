@@ -58,7 +58,7 @@ export function PromoCarousel({ banners }: PromoCarouselProps) {
           style={[styles.offerCard, { backgroundColor: index % 2 === 0 ? Colors.primary : '#1E3A5F' }]}
         >
           {banner.imageUrl ? (
-            <Image source={{ uri: banner.imageUrl }} style={StyleSheet.absoluteFillObject} />
+            <Image source={{ uri: banner.imageUrl }} style={StyleSheet.absoluteFill} />
           ) : null}
           <View style={styles.overlay}>
             <Text style={styles.offerTitle}>{banner.title}</Text>
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     height: 140,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     padding: 18,
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.1)',
