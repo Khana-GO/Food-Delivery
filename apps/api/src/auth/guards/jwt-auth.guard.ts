@@ -6,17 +6,40 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+
+// ===============================
+// Constants
+// ===============================
+
+export const IS_PUBLIC_KEY = 'isPublic';
+
+// ===============================
+// Guard
+// ===============================
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    //  Check if route is marked as public
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    //  Skip authentication for public routes
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<Request & { user?: JwtPayload }>();
     const authHeader = request.headers.authorization;
 
@@ -34,7 +57,7 @@ export class JwtAuthGuard implements CanActivate {
       payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
-    } catch {
+    } catch (error) {
       throw new UnauthorizedException('Invalid or expired token');
     }
 

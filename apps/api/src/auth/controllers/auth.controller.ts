@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { LogoutDto } from '../dto/logout.dto';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { Public } from '../decorators/public.decorator';
 
 
 @Throttle({ default: { limit: 5, ttl: 60_000 } })  // 5 request in per minute from single ip
@@ -33,8 +34,10 @@ export class AuthController {
   }
 
   @Post('login')
+  @Public()
   @ApiOperation({ summary: 'Login user' })
   async login(@Body() dto: LoginUserDto) {
+    this.authService.logger.log(`Login attempt for email: ${dto.email}`); // Log the login attempt
     return this.authService.login(dto);
   }
 

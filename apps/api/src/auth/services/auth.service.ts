@@ -1,4 +1,4 @@
-  import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+  import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
   import { ConfigService } from '@nestjs/config';
   import { JwtService } from '@nestjs/jwt';
   import * as bcrypt from 'bcrypt';
@@ -22,6 +22,8 @@
       private readonly configService: ConfigService,
       private readonly sessionService: SessionsService
     ) {}
+
+    public readonly logger = new Logger(AuthService.name);
 
   async register(dto: RegisterUserDto) {
     const email = dto.email.trim().toLowerCase();
@@ -84,25 +86,34 @@
     }
 
     const otp = this.generateOtp();
-    await this.usersService.setResetToken(user.id, this.hashToken(otp), this.expiryInMinutes(10));
+    await this.usersService.setVerificationToken(user.id, this.hashToken(otp), this.expiryInMinutes(10));
     await this.mailService.sendVerificationCode(user.email, otp);
     return { message: 'If the account exists, a new code has been sent' };
   }
 
 
 
-    async login(dto: LoginUserDto) {
-      const user = await this.usersService.findByEmail(dto.email);
-      if (!user?.password || !(await bcrypt.compare(dto.password, user.password))) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-      if (!user.isVerified) {
-        throw new UnauthorizedException('Please verify your email first');
-      }
+// backend/src/auth/auth.service.ts
+// auth.service.ts
+  async login(dto: LoginUserDto) {
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(email);
 
-      await this.usersService.recordLogin(user.id);
-      return this.authResponse(user);
+    if (!user) {
+      throw new UnauthorizedException('No account found with this email. Please register first.');
     }
+
+    if (!user.password || !(await bcrypt.compare(dto.password, user.password))) {
+      throw new UnauthorizedException('Invalid email or password. Please try again.');
+    }
+
+    if (!user.isVerified) {
+      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification code.');
+    }
+
+    await this.usersService.recordLogin(user.id);
+    return this.authResponse(user);
+  }
 
 
 
