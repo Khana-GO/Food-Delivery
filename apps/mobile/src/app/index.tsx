@@ -17,7 +17,7 @@ const { width } = Dimensions.get('window');
 // KhanaGo Logo Component replicating the design
 function KhanaGoLogo() {
   return (
-    <View style={styles.logoWrapper}>
+    <View style={styles.logoWrapper} >
       {/* Background Soft Glow */}
       <View style={styles.glow} />
 

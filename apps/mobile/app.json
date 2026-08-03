@@ -21,6 +21,7 @@
       "package": "com.anonymous.mobile"
     },
     "web": {
+      "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },

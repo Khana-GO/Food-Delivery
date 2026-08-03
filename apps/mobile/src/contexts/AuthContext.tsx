@@ -3,6 +3,9 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useCallback,
+  useMemo,
+  useRef,
 } from "react";
 
 import { api } from "../../lib/axios";
@@ -16,17 +19,14 @@ import {
 
 import { User, UserRole } from "@food_delivery/types";
 
-
 // ===============================
 // Types
 // ===============================
 
-interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: User;
+interface LoginData {
+  email: string;
+  password: string;
 }
-
 
 interface RegisterData {
   firstName: string;
@@ -36,365 +36,164 @@ interface RegisterData {
   password: string;
 }
 
-
 interface AuthContextType {
-
-  // Current logged-in user
   user: User | null;
-
-
-  // Used while checking existing login session
-  loading: boolean;
-
-
-  // Quickly check authentication status
+  isInitializing: boolean;
+  isAuthenticating: boolean;
   isAuthenticated: boolean;
-
-
-  // Current user's role
   role: UserRole | null;
-
-
-  // Authentication actions
-  login: (data: LoginResponse) => Promise<void>;
-
+  login: (data: LoginData) => Promise<User>;
+  register: (data: RegisterData) => Promise<User>;
   logout: () => Promise<void>;
-
-  register: (
-    data: RegisterData
-  ) => Promise<void>;
-
+  refreshUser: () => Promise<void>;
 }
 
-
-
 // ===============================
-// Create Context
+// Context
 // ===============================
 
-const AuthContext =
-  createContext<AuthContextType | null>(null);
-
-
-
+const AuthContext = createContext<AuthContextType | null>(null);
 
 // ===============================
-// Auth Provider
-//
-// This component wraps the whole app.
-// Every screen inside this provider can access:
-//
-// user
-// login()
-// logout()
-// role
-//
-// using useAuth()
+// Provider
 // ===============================
 
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-export function AuthProvider(
-{
- children
-}:{
- children: React.ReactNode;
-}){
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
+  // ---------- Restore session on launch ----------
+  const restoreSession = useCallback(async () => {
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setIsInitializing(false);
+        return;
+      }
 
- const [user,setUser] =
- useState<User | null>(null);
-
-
- const [loading,setLoading] =
- useState(true);
-
-
-
- // ===================================
- // Runs once when application starts
- //
- // Purpose:
- // Check if user already logged in.
- //
- // Example:
- //
- // User closes app yesterday
- // Opens today
- //
- // We check SecureStore
- // If token exists:
- // restore user session
- // ===================================
-
- useEffect(()=>{
-
-   restoreSession();
-
- },[]);
-
-
-
- const restoreSession = async()=>{
-
-   try{
-
-
-    const token =
-      await getAccessToken();
-
-
-
-    // No token means user never logged in
-    if(!token){
-
-      setLoading(false);
-
-      return;
+      const response = await api.get("/auth/me");
+      if (isMountedRef.current) setUser(response.data.user);
+    } catch {
+      // Token expired or invalid
+      await deleteTokens();
+      if (isMountedRef.current) setUser(null);
+    } finally {
+      if (isMountedRef.current) setIsInitializing(false);
     }
-
-
-
-    // Token exists,
-    // ask backend for current user
-
-    const response =
-      await api.get("/auth/me");
-
-
-
-    setUser(
-      response.data.user
-    );
-
-
-
-   }
-   catch(error){
-
-     // Token expired or invalid
-
-     await deleteTokens();
-
-     setUser(null);
-
-   }
-   finally{
-
-     setLoading(false);
-
-   }
-
- };
-
-
-
-
-
- // ===================================
- // LOGIN
- //
- // Backend returns:
- //
- // {
- //   accessToken,
- //   refreshToken,
- //   user
- // }
- //
- // We:
- //
- // 1. Save tokens securely
- // 2. Store user in memory
- //
- // ===================================
-
-
- const login = async(
- data:LoginResponse
- )=>{
-
-
-   await saveAccessToken(
-     data.accessToken
-   );
-
-
-   await saveRefreshToken(
-     data.refreshToken
-   );
-
-
-
-   setUser(
-     data.user
-   );
-
- };
-
-
-
-
-
- // ===================================
- // LOGOUT
- //
- // Remove:
- //
- // 1. Secure tokens
- // 2. Current user state
- //
- // ===================================
-
-
- const logout = async()=>{
-
-
-   try{
-
-
-    await deleteTokens();
-
-
-    setUser(null);
-
-
-   }
-   catch(error){
-
-    console.log(
-      "Logout error",
-      error
-    );
-
-   }
-
- };
-
-
-
-
-
- // ===================================
- // REGISTER
- //
- // Usually:
- //
- // Call backend register API
- // Then login automatically
- //
- // ===================================
-
-
- const register = async(
- data:RegisterData
- )=>{
-
-
-   const response =
-   await api.post(
-     "/auth/register",
-     data
-   );
-
-
-
-   const loginData =
-   response.data;
-
-
-
-   await login(
-     loginData
-   );
-
-
- };
-
-
-
-
-
- return (
-
-<AuthContext.Provider
-
- value={{
-
-   user,
-
-
-   loading,
-
-
-   isAuthenticated:
-      !!user,
-
-
-   role:
-      user?.role ?? null,
-
-
-   login,
-
-
-   logout,
-
-
-   register,
-
-
- }}
-
->
-
-
- {children}
-
-
-</AuthContext.Provider>
-
- );
-
+  }, []);
+
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
+
+  // ---------- Login ----------
+  const login = useCallback(async (data: LoginData): Promise<User> => {
+    setIsAuthenticating(true);
+    try {
+      const response = await api.post("/auth/login", data);
+      const { accessToken, refreshToken, user: loggedInUser } = response.data;
+
+      await Promise.all([
+        saveAccessToken(accessToken),
+        saveRefreshToken(refreshToken),
+      ]);
+
+      if (isMountedRef.current) setUser(loggedInUser);
+      return loggedInUser;
+    } catch (error) {
+      // Keep the Axios error intact so the screen can display the API's
+      // response message (and use its status/code if needed).
+      throw error;
+    } finally {
+      if (isMountedRef.current) setIsAuthenticating(false);
+    }
+  }, []);
+
+  // ---------- Register ----------
+  const register = useCallback(async (data: RegisterData): Promise<User> => {
+    setIsAuthenticating(true);
+    try {
+      const response = await api.post("/auth/register", data);
+      const { accessToken, refreshToken, user: newUser } = response.data;
+
+      await Promise.all([
+        saveAccessToken(accessToken),
+        saveRefreshToken(refreshToken),
+      ]);
+
+      if (isMountedRef.current) setUser(newUser);
+      return newUser;
+    } catch (error) {
+      throw error;
+    } finally {
+      if (isMountedRef.current) setIsAuthenticating(false);
+    }
+  }, []);
+
+  // ---------- Logout ----------
+  const logout = useCallback(async () => {
+    setIsAuthenticating(true);
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      // Non-fatal: we still clear local state even if the server call fails
+      // (e.g. offline, or the token was already invalidated server-side).
+      console.warn("Logout API call failed, clearing local session anyway:", error);
+    } finally {
+      await deleteTokens();
+      if (isMountedRef.current) {
+        setUser(null);
+        setIsAuthenticating(false);
+      }
+    }
+  }, []);
+
+  // ---------- Refresh current user ----------
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await api.get("/auth/me");
+      if (isMountedRef.current) setUser(response.data.user);
+    } catch (error) {
+      console.warn("Failed to refresh user:", error);
+    }
+  }, []);
+
+  // ---------- Memoized context value ----------
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isInitializing,
+      isAuthenticating,
+      isAuthenticated: !!user,
+      role: user?.role ?? null,
+      login,
+      register,
+      logout,
+      refreshUser,
+    }),
+    [user, isInitializing, isAuthenticating, login, register, logout, refreshUser]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-
-
-
-
-// ===================================
+// ===============================
 // Custom Hook
-//
-// Instead of:
-// useContext(AuthContext)
-//
-// We use:
-// useAuth()
-//
-// Example:
-//
-// const {user,logout}=useAuth();
-//
-// ===================================
+// ===============================
 
-
-export function useAuth(){
-
-
- const context =
- useContext(
-   AuthContext
- );
-
-
- if(!context){
-
-   throw new Error(
-    "useAuth must be used inside AuthProvider"
-   );
-
- }
-
-
- return context;
-
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+  return context;
 }

@@ -1,135 +1,466 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ImageBackground,
+  StatusBar,
+  TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Radius, Spacing } from '@/constants/theme';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LoginScreen() {
-  const { login, user } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [loading, setLoading] = useState(false);
+// ────────────────────────────────────────────────────────────────────────────
+// Validation
+// ────────────────────────────────────────────────────────────────────────────
 
-  const validate = () => {
-    let valid = true;
-    if (!email.includes('@')) {
-      setEmailError('Please enter a valid email address.');
-      valid = false;
-    } else {
-      setEmailError('');
-    }
-    return valid;
-  };
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required.')
+    .email('Please enter a valid email address.'),
+  password: z.string().min(8, 'Password must be at least 8 characters.'),
+});
 
-  const handleLogin = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    // Navigate to customer dashboard
-    router.replace('/(customer)' as any);
-  };
+type LoginFormValues = z.infer<typeof loginSchema>;
+type FieldErrors = Partial<Record<keyof LoginFormValues, string>>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// Components
+// ────────────────────────────────────────────────────────────────────────────
+
+const Logo = React.memo(() => (
+  <View className="items-center justify-center w-full">
+    <View className="flex-row items-center gap-3">
+      <View className="w-12 h-12 rounded-2xl bg-primary items-center justify-center shadow-lg shadow-primary/30">
+        <MaterialCommunityIcons name="food" size={32} color="#FFFFFF" />
+      </View>
+      <View className="items-start">
+        <Text className="text-3xl font-extrabold tracking-tight text-white">
+          Khana<Text className="text-primary">Go</Text>
+        </Text>
+        <Text className="text-white/80 text-xs font-medium tracking-wide">
+          Delicious Food, Delivered Fast
+        </Text>
+      </View>
+    </View>
+  </View>
+));
+
+const Divider = React.memo(() => (
+  <View className="flex-row items-center gap-4 mb-5">
+    <View className="flex-1 h-px bg-gray-200" />
+    <Text className="text-gray-400 text-xs font-medium tracking-wider">
+      or continue with
+    </Text>
+    <View className="flex-1 h-px bg-gray-200" />
+  </View>
+));
+
+interface SocialButtonProps {
+  provider: 'google' | 'apple';
+  onPress: (provider: 'google' | 'apple') => void;
+  disabled?: boolean;
+}
+
+const SocialButton = React.memo(({ provider, onPress, disabled }: SocialButtonProps) => {
+  const isGoogle = provider === 'google';
+  const handlePress = useCallback(() => onPress(provider), [onPress, provider]);
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <TouchableOpacity
+      className={`flex-1 flex-row items-center justify-center gap-2.5 py-3.5 rounded-xl border border-gray-200 bg-white ${
+        disabled ? 'opacity-50' : ''
+      }`}
+      onPress={handlePress}
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <Ionicons
+        name={isGoogle ? 'logo-google' : 'logo-apple'}
+        size={22}
+        color={isGoogle ? '#EA4335' : '#000000'}
+      />
+      <Text className="text-black font-semibold text-sm">
+        {isGoogle ? 'Google' : 'Apple'}
+      </Text>
+    </TouchableOpacity>
+  );
+});
+
+interface InputFieldProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  error?: string;
+  editable?: boolean;
+  leftIcon: React.ReactNode;
+  isPassword?: boolean;
+  secureTextEntry?: boolean;
+  onTogglePassword?: () => void;
+  keyboardType?: 'email-address' | 'default';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoComplete?: 'email' | 'password' | 'off';
+  textContentType?: 'emailAddress' | 'password' | 'none';
+  returnKeyType?: 'next' | 'done';
+  onSubmitEditing?: () => void;
+}
+
+const InputField = React.memo(({
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  error,
+  editable = true,
+  leftIcon,
+  isPassword = false,
+  secureTextEntry = false,
+  onTogglePassword,
+  keyboardType = 'default',
+  autoCapitalize = 'none',
+  autoComplete = 'off',
+  textContentType = 'none',
+  returnKeyType = 'next',
+  onSubmitEditing,
+}: InputFieldProps) => {
+  const hasError = !!error;
+
+  return (
+    <View className="mb-4">
+      <Text className="text-sm font-semibold text-black mb-1.5">
+        {label}
+      </Text>
+      <View
+        className={`flex-row items-center rounded-xl border ${
+          hasError ? 'border-red-500' : 'border-gray-200'
+        } bg-white px-4 h-14 ${!editable ? 'opacity-60 bg-gray-50' : ''}`}
+      >
+        <View className="mr-3">{leftIcon}</View>
+        <TextInput
+          className="flex-1 text-base text-black py-3"
+          placeholder={placeholder}
+          placeholderTextColor="#999"
+          value={value}
+          onChangeText={onChangeText}
+          editable={editable}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+        />
+        {isPassword && (
+          <TouchableOpacity
+            onPress={onTogglePassword}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="ml-2"
+          >
+            <Feather
+              name={secureTextEntry ? 'eye' : 'eye-off'}
+              size={20}
+              color="#666"
+            />
+          </TouchableOpacity>
+        )}
+        {hasError && !isPassword && (
+          <Feather name="alert-circle" size={20} color="#EF4444" />
+        )}
+      </View>
+      {hasError && (
+        <Text className="text-red-500 text-xs mt-1 ml-1">
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Error Parser
+// ────────────────────────────────────────────────────────────────────────────
+
+function parseBackendError(error: any): string {
+  const responseMessage = error?.response?.data?.message;
+  const message = Array.isArray(responseMessage)
+    ? responseMessage[0]
+    : responseMessage || error?.message || '';
+  const lowerMessage = String(message).toLowerCase();
+
+  if (
+    lowerMessage.includes('invalid credentials') ||
+    lowerMessage.includes('invalid email or password')
+  ) {
+    return 'Invalid email or password. Please try again.';
+  }
+  if (
+    lowerMessage.includes('no account found with this email') ||
+    lowerMessage.includes('please register first')
+  ) {
+    return 'No account found with this email. Please register first.';
+  }
+  if (lowerMessage.includes('verify your email')) {
+    return 'Please verify your email address before logging in.';
+  }
+  if (lowerMessage.includes('account locked')) {
+    return 'Your account has been locked. Please contact support.';
+  }
+  if (lowerMessage.includes('too many')) {
+    return 'Too many failed login attempts. Please try again later.';
+  }
+  if (lowerMessage.includes('network') || lowerMessage.includes('connection')) {
+    return 'Network error. Please check your internet connection.';
+  }
+
+  return message || 'Login failed. Please check your credentials and try again.';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Main Screen
+// ────────────────────────────────────────────────────────────────────────────
+
+export default function LoginScreen() {
+  const { login, user, isAuthenticating } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [generalError, setGeneralError] = useState('');
+  const loginAttemptsRef = useRef(0);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      router.replace('/(customer)' as any);
+    }
+  }, [user]);
+
+  // Handlers
+  const handleEmailChange = useCallback((value: string) => {
+    setEmail(value);
+    setFieldErrors((prev) => (prev.email ? { ...prev, email: undefined } : prev));
+    setGeneralError('');
+  }, []);
+
+  const handlePasswordChange = useCallback((value: string) => {
+    setPassword(value);
+    setFieldErrors((prev) => (prev.password ? { ...prev, password: undefined } : prev));
+    setGeneralError('');
+  }, []);
+
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
+
+  const validate = useCallback((): LoginFormValues | null => {
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      setFieldErrors({
+        email: errors.email?.[0],
+        password: errors.password?.[0],
+      });
+      return null;
+    }
+    setFieldErrors({});
+    return result.data;
+  }, [email, password]);
+
+  const handleLogin = useCallback(async () => {
+    setGeneralError('');
+    const values = validate();
+    if (!values) return;
+
+    loginAttemptsRef.current += 1;
+
+    try {
+      await login({ email: values.email, password: values.password });
+      loginAttemptsRef.current = 0;
+      router.replace('/(customer)' as any);
+    } catch (error: any) {
+      const errorMessage = parseBackendError(error);
+      const lower = errorMessage.toLowerCase();
+
+      if (lower.includes('email')) {
+        setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
+      } else if (lower.includes('password')) {
+        setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
+      } else {
+        setGeneralError(errorMessage);
+      }
+    }
+  }, [login, validate]);
+
+  const handleSocialLogin = useCallback((provider: 'google' | 'apple') => {
+    console.log(`Social login requested: ${provider}`);
+  }, []);
+
+  const goToRegister = useCallback(() => {
+    router.replace('/auth/register' as any);
+  }, []);
+
+  const goToForgotPassword = useCallback(() => {
+    router.push('/auth/forgot-password' as any);
+  }, []);
+
+  const isLoginLoading = isAuthenticating;
+
+  return (
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header with Food Image */}
+      <ImageBackground
+        source={{
+          uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+        }}
+        className="w-full h-[280px]"
+        imageStyle={{
+          borderBottomLeftRadius: 30,
+          borderBottomRightRadius: 30,
+        }}
+        resizeMode="cover"
+      >
+        <View className="flex-1 bg-black/30 justify-center items-center px-6">
+          <Logo />
+        </View>
+      </ImageBackground>
+
+      {/* Form Section */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+        className="flex-1 -mt-8"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          className="flex-1 px-6"
+          contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoEmoji}>🍜</Text>
+          <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[560px]">
+            {/* Header */}
+            <View className="mb-6">
+              <Text className="text-3xl font-extrabold text-black tracking-tight mb-1">
+                Welcome Back
+              </Text>
+              <Text className="text-gray-500 text-sm tracking-wide">
+                Sign in to continue exploring delicious food
+              </Text>
             </View>
-            <Text style={styles.appName}>
-              <Text style={styles.appNameBlack}>Khana</Text>
-              <Text style={styles.appNameOrange}>Go</Text>
-            </Text>
-            <Text style={styles.appTagline}>Delicious Food, Delivered Fast.</Text>
-          </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue ordering your favourites.</Text>
-
-            <View style={styles.fields}>
-              <Input
-                label="Email or Phone Number"
-                placeholder="john@gmail.com"
+            {/* Form Fields */}
+            <View className="gap-1 mb-2">
+              <InputField
+                label="Email Address"
+                placeholder="Enter your email"
                 value={email}
-                onChangeText={setEmail}
-                error={emailError}
+                onChangeText={handleEmailChange}
+                error={fieldErrors.email}
+                editable={!isLoginLoading}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                leftIcon={<Text style={styles.fieldIcon}>✉️</Text>}
-                rightIcon={emailError ? <Text style={styles.errorIcon}>⚠️</Text> : undefined}
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+                leftIcon={<Feather name="mail" size={20} color="#666" />}
               />
 
-              <Input
+              <InputField
                 label="Password"
                 placeholder="Enter your password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={handlePasswordChange}
+                error={fieldErrors.password}
+                editable={!isLoginLoading}
                 isPassword
-                leftIcon={<Text style={styles.fieldIcon}>🔒</Text>}
+                secureTextEntry={!showPassword}
+                onTogglePassword={togglePasswordVisibility}
+                autoComplete="password"
+                textContentType="password"
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+                leftIcon={<Feather name="lock" size={20} color="#666" />}
               />
 
-              <View style={styles.rememberRow}>
-                <Text style={styles.rememberText}>Remember me</Text>
-                <TouchableOpacity>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
+              <View className="flex-row justify-end items-center mt-1 mb-2">
+                <TouchableOpacity
+                  onPress={goToForgotPassword}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  disabled={isLoginLoading}
+                >
+                  <Text className="text-primary text-sm font-semibold tracking-wide">
+                    Forgot Password?
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <Button
-              label="Log In"
+            {/* General Error */}
+            {generalError ? (
+              <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
+                <Feather name="alert-triangle" size={16} color="#EF4444" />
+                <Text className="text-red-500 text-sm text-center flex-1 font-medium">
+                  {generalError}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Login Button */}
+            <TouchableOpacity
+              className={`bg-primary rounded-xl py-4 mt-3 mb-5 ${
+                isLoginLoading ? 'opacity-70' : ''
+              } shadow-lg shadow-primary/25`}
               onPress={handleLogin}
-              loading={loading}
-              fullWidth
-              style={styles.loginBtn}
-            />
+              disabled={isLoginLoading}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-center font-bold text-base tracking-wide">
+                {isLoginLoading ? 'Signing in...' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
 
-            <View style={styles.dividerRow}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>or continue with</Text>
-              <View style={styles.divider} />
+            <Divider />
+
+            {/* Social Login */}
+            <View className="flex-row gap-3 mb-6">
+              <SocialButton
+                provider="google"
+                onPress={handleSocialLogin}
+                disabled={isLoginLoading}
+              />
+              <SocialButton
+                provider="apple"
+                onPress={handleSocialLogin}
+                disabled={isLoginLoading}
+              />
             </View>
 
-            <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.socialText}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>🍎</Text>
-                <Text style={styles.socialText}>Apple</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.signupRow}>
-              <Text style={styles.signupPrompt}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace('/auth/register' as any)}>
-                <Text style={styles.signupLink}>Sign Up</Text>
+            {/* Sign Up Link */}
+            <View className="flex-row justify-center items-center">
+              <Text className="text-gray-500 text-sm">
+                Don't have an account?
+              </Text>
+              <TouchableOpacity
+                onPress={goToRegister}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={isLoginLoading}
+              >
+                <Text className="text-primary font-bold text-sm ml-1">
+                  Sign Up
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -138,65 +469,3 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.white },
-  container: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
-  logoSection: { alignItems: 'center', paddingTop: 32, paddingBottom: 28 },
-  logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  logoEmoji: { fontSize: 30 },
-  appName: { fontSize: 26, marginBottom: 4 },
-  appNameBlack: { color: Colors.textDark, fontWeight: '800' },
-  appNameOrange: { color: Colors.primary, fontWeight: '800' },
-  appTagline: { fontSize: 14, color: Colors.textSecondary },
-  form: {},
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textDark, marginBottom: 6 },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 24 },
-  fields: { gap: 4, marginBottom: 8 },
-  fieldIcon: { fontSize: 16 },
-  errorIcon: { fontSize: 16 },
-  rememberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  rememberText: { fontSize: 13, color: Colors.textSecondary },
-  forgotText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  loginBtn: { marginTop: 12, marginBottom: 20 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  divider: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerText: { fontSize: 13, color: Colors.textSecondary },
-  socialRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
-  socialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
-  socialIcon: { fontSize: 16, fontWeight: '700' },
-  socialText: { fontSize: 14, fontWeight: '600', color: Colors.textDark },
-  signupRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  signupPrompt: { fontSize: 14, color: Colors.textSecondary },
-  signupLink: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
-});
