@@ -1,3 +1,4 @@
+// contexts/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -36,6 +37,22 @@ interface RegisterData {
   password: string;
 }
 
+interface VerifyEmailData {
+  email: string;
+  code: string;
+}
+
+interface ForgotPasswordData {
+  email: string;
+}
+
+interface ResetPasswordData {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
+
 interface AuthContextType {
   user: User | null;
   isInitializing: boolean;
@@ -43,9 +60,13 @@ interface AuthContextType {
   isAuthenticated: boolean;
   role: UserRole | null;
   login: (data: LoginData) => Promise<User>;
-  register: (data: RegisterData) => Promise<User>;
+  register: (data: RegisterData) => Promise<{ email: string; message: string }>;
+  verifyEmail: (data: VerifyEmailData) => Promise<void>;
+  resendVerificationCode: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  forgotPassword: (data: ForgotPasswordData) => Promise<void>;
+  resetPassword: (data: ResetPasswordData) => Promise<void>;
 }
 
 // ===============================
@@ -71,6 +92,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+
+  // ===============================
+// Implement methods in Provider
+// ===============================
+
+const forgotPassword = useCallback(async (data: ForgotPasswordData): Promise<void> => {
+  setIsAuthenticating(true);
+  try {
+    await api.post('/auth/forgot-password', data);
+  } catch (error) {
+    throw error;
+  } finally {
+    if (isMountedRef.current) setIsAuthenticating(false);
+  }
+}, []);
+
+const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void> => {
+  setIsAuthenticating(true);
+  try {
+    await api.post('/auth/reset-password', data);
+  } catch (error) {
+    throw error;
+  } finally {
+    if (isMountedRef.current) setIsAuthenticating(false);
+  }
+}, []);
+
   // ---------- Restore session on launch ----------
   const restoreSession = useCallback(async () => {
     try {
@@ -83,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.get("/auth/me");
       if (isMountedRef.current) setUser(response.data.user);
     } catch {
-      // Token expired or invalid
       await deleteTokens();
       if (isMountedRef.current) setUser(null);
     } finally {
@@ -110,28 +157,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isMountedRef.current) setUser(loggedInUser);
       return loggedInUser;
     } catch (error) {
-      // Keep the Axios error intact so the screen can display the API's
-      // response message (and use its status/code if needed).
       throw error;
     } finally {
       if (isMountedRef.current) setIsAuthenticating(false);
     }
   }, []);
 
-  // ---------- Register ----------
-  const register = useCallback(async (data: RegisterData): Promise<User> => {
+  // ---------- Register (no auto-login) ----------
+  const register = useCallback(async (data: RegisterData): Promise<{ email: string; message: string }> => {
     setIsAuthenticating(true);
     try {
       const response = await api.post("/auth/register", data);
-      const { accessToken, refreshToken, user: newUser } = response.data;
+      // The backend returns { message, email } – we don't save tokens or set user
+      return response.data;
+    } catch (error) {
+      throw error;
+    } finally {
+      if (isMountedRef.current) setIsAuthenticating(false);
+    }
+  }, []);
 
-      await Promise.all([
-        saveAccessToken(accessToken),
-        saveRefreshToken(refreshToken),
-      ]);
+  // ---------- Verify Email ----------
+  const verifyEmail = useCallback(async (data: VerifyEmailData): Promise<void> => {
+    setIsAuthenticating(true);
+    try {
+      await api.post("/auth/verify-email", data);
+    } catch (error) {
+      throw error;
+    } finally {
+      if (isMountedRef.current) setIsAuthenticating(false);
+    }
+  }, []);
 
-      if (isMountedRef.current) setUser(newUser);
-      return newUser;
+  // ---------- Resend Verification Code ----------
+  const resendVerificationCode = useCallback(async (email: string): Promise<void> => {
+    setIsAuthenticating(true);
+    try {
+      await api.post("/auth/resend-verification-code", { email });
     } catch (error) {
       throw error;
     } finally {
@@ -145,8 +207,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post("/auth/logout");
     } catch (error) {
-      // Non-fatal: we still clear local state even if the server call fails
-      // (e.g. offline, or the token was already invalidated server-side).
       console.warn("Logout API call failed, clearing local session anyway:", error);
     } finally {
       await deleteTokens();
@@ -177,10 +237,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: user?.role ?? null,
       login,
       register,
+      verifyEmail,
+      resendVerificationCode,
       logout,
       refreshUser,
+      forgotPassword,
+      resetPassword,
     }),
-    [user, isInitializing, isAuthenticating, login, register, logout, refreshUser]
+    [user, isInitializing, isAuthenticating, login, register, verifyEmail, resendVerificationCode, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

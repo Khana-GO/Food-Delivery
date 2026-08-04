@@ -25,6 +25,10 @@ const registerSchema = z
     firstName: z.string().min(2, 'First name must be at least 2 characters').max(100),
     lastName: z.string().min(2, 'Last name must be at least 2 characters').max(100),
     email: z.string().email('Invalid email address').min(5).max(255),
+    phone: z
+      .string()
+      .length(10, 'Phone number must be exactly 10 digits')
+      .regex(/^[0-9]+$/, 'Phone number must contain only digits'),
     password: z
       .string()
       .min(6, 'Password must be at least 6 characters')
@@ -33,7 +37,6 @@ const registerSchema = z
         'Password must contain uppercase, lowercase, and a number'
       ),
     confirmPassword: z.string(),
-    phone: z.string().optional(),
     agreed: z.boolean().refine((val) => val === true, 'You must agree to the terms'),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -124,6 +127,7 @@ interface InputFieldProps {
   textContentType?: 'emailAddress' | 'password' | 'name' | 'telephoneNumber' | 'none';
   returnKeyType?: 'next' | 'done';
   onSubmitEditing?: () => void;
+  required?: boolean;
 }
 
 const InputField = React.memo(({
@@ -143,6 +147,7 @@ const InputField = React.memo(({
   textContentType = 'none',
   returnKeyType = 'next',
   onSubmitEditing,
+  required = false,
 }: InputFieldProps) => {
   const hasError = !!error;
 
@@ -150,6 +155,7 @@ const InputField = React.memo(({
     <View className="mb-4">
       <Text className="text-sm font-semibold text-black mb-1.5">
         {label}
+        {required && <Text className="text-red-500 ml-0.5"> *</Text>}
       </Text>
       <View
         className={`flex-row items-center rounded-xl border ${
@@ -211,6 +217,9 @@ function parseBackendError(error: any): string {
 
   if (lowerMessage.includes('email already registered')) {
     return 'This email is already registered. Please login or use a different email.';
+  }
+  if (lowerMessage.includes('phone already registered')) {
+    return 'This phone number is already registered. Please use a different number.';
   }
   if (lowerMessage.includes('password must contain')) {
     return 'Password must contain uppercase, lowercase, and a number.';
@@ -280,36 +289,39 @@ export default function RegisterScreen() {
     setFieldErrors({});
     return result.data;
   }, [form]);
+const handleRegister = useCallback(async () => {
+  setGeneralError('');
+  const values = validate();
+  if (!values) return;
 
-  const handleRegister = useCallback(async () => {
-    setGeneralError('');
-    const values = validate();
-    if (!values) return;
+  try {
+    const result = await register({
+      firstName: values.firstName,
+      lastName: values.lastName,
+      email: values.email,
+      password: values.password,
+      phone: values.phone,
+    });
+    // Registration successful – navigate to verify page with email
+    router.replace({
+      pathname: '/auth/verify-email' as any,
+      params: { email: values.email },
+    });
+  } catch (error: any) {
+    const errorMessage = parseBackendError(error);
+    const lower = errorMessage.toLowerCase();
 
-    try {
-      // Call the register function from AuthContext
-      await register({
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-        password: values.password,
-        phone: values.phone || '',
-      });
-      // On success, user is set in context -> useEffect redirects
-    } catch (error: any) {
-      const errorMessage = parseBackendError(error);
-      const lower = errorMessage.toLowerCase();
-
-      // Try to map to field errors
-      if (lower.includes('email')) {
-        setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
-      } else if (lower.includes('password')) {
-        setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
-      } else {
-        setGeneralError(errorMessage);
-      }
+    if (lower.includes('email')) {
+      setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
+    } else if (lower.includes('phone')) {
+      setFieldErrors((prev) => ({ ...prev, phone: errorMessage }));
+    } else if (lower.includes('password')) {
+      setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
+    } else {
+      setGeneralError(errorMessage);
     }
-  }, [register, validate]);
+  }
+}, [register, validate]);
 
   const handleSocialLogin = useCallback((provider: 'google' | 'apple') => {
     console.log(`Social login requested: ${provider}`);
@@ -380,6 +392,7 @@ export default function RegisterScreen() {
                 textContentType="name"
                 returnKeyType="next"
                 leftIcon={<Feather name="user" size={20} color="#666" />}
+                required
               />
 
               <InputField
@@ -394,6 +407,7 @@ export default function RegisterScreen() {
                 textContentType="name"
                 returnKeyType="next"
                 leftIcon={<Feather name="user" size={20} color="#666" />}
+                required
               />
 
               <InputField
@@ -409,10 +423,11 @@ export default function RegisterScreen() {
                 textContentType="emailAddress"
                 returnKeyType="next"
                 leftIcon={<Feather name="mail" size={20} color="#666" />}
+                required
               />
 
               <InputField
-                label="Phone Number (optional)"
+                label="Phone Number"
                 placeholder="Enter your phone number"
                 value={form.phone}
                 onChangeText={(text) => updateField('phone', text)}
@@ -423,6 +438,7 @@ export default function RegisterScreen() {
                 textContentType="telephoneNumber"
                 returnKeyType="next"
                 leftIcon={<Feather name="phone" size={20} color="#666" />}
+                required
               />
 
               <InputField
@@ -439,6 +455,7 @@ export default function RegisterScreen() {
                 textContentType="password"
                 returnKeyType="next"
                 leftIcon={<Feather name="lock" size={20} color="#666" />}
+                required
               />
 
               <InputField
@@ -456,6 +473,7 @@ export default function RegisterScreen() {
                 returnKeyType="done"
                 onSubmitEditing={handleRegister}
                 leftIcon={<Feather name="lock" size={20} color="#666" />}
+                required
               />
             </View>
 
