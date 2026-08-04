@@ -21,7 +21,8 @@ describe('AuthService', () => {
     } as unknown as UsersService;
     const mail = { sendVerificationCode: sendVerificationEmail } as unknown as MailService;
     const config = { get: jest.fn((key: string) => (key === 'SALT_ROUNDS' ? '10' : undefined)) } as unknown as ConfigService;
-    const service = new AuthService(users, {} as JwtService, mail, config, {} as any);
+    const transaction = jest.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({}));
+    const service = new AuthService(users, {} as JwtService, mail, config, {} as any, { transaction } as any);
 
     await service.register({ firstName: 'John', lastName: 'Doe', email: 'John@Example.com', password: 'StrongPass123' });
 
@@ -35,6 +36,37 @@ describe('AuthService', () => {
     }));
     expect(emailCall?.[1]).toEqual(expect.stringMatching(/^\d{6}$/));
     expect(createdUser?.verificationToken).not.toBe(emailCall?.[1]);
+  });
+
+  it('rejects registration from the transaction when verification email delivery fails', async () => {
+    const create = jest.fn(async () => ({ id: 'user-1', email: 'john@example.com' }));
+    const sendVerificationCode = jest.fn(async () => {
+      throw new Error('mail unavailable');
+    });
+    const transaction = jest.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({}));
+    const users = {
+      findByEmail: jest.fn(async () => undefined),
+      create,
+    } as unknown as UsersService;
+    const config = { get: jest.fn((key: string) => (key === 'SALT_ROUNDS' ? '10' : undefined)) } as unknown as ConfigService;
+    const service = new AuthService(
+      users,
+      {} as JwtService,
+      { sendVerificationCode } as unknown as MailService,
+      config,
+      {} as SessionsService,
+      { transaction } as any,
+    );
+
+    await expect(service.register({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      password: 'StrongPass123',
+    })).rejects.toThrow('mail unavailable');
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 
   it('uses the persisted session id for the refresh-token jti so logout can revoke the right session', async () => {
@@ -62,7 +94,7 @@ describe('AuthService', () => {
       get: jest.fn((key: string) => (key === 'SALT_ROUNDS' ? '10' : key === 'JWT_EXPIRES_IN' ? '15m' : key === 'JWT_REFRESH_EXPIRES_IN' ? '7d' : undefined)),
     } as unknown as ConfigService;
 
-    const service = new AuthService(users, jwt, mail, config, sessionService);
+    const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
 
     await (service as any).authResponse(user);
 
@@ -94,7 +126,7 @@ describe('AuthService', () => {
       const mail = {} as MailService;
       const config = { get: jest.fn() } as unknown as ConfigService;
 
-      const service = new AuthService(users, jwt, mail, config, sessionService);
+      const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
 
       const result = await service.logout('valid-refresh-token');
 
@@ -116,7 +148,7 @@ describe('AuthService', () => {
       const mail = {} as MailService;
       const config = { get: jest.fn() } as unknown as ConfigService;
 
-      const service = new AuthService(users, jwt, mail, config, sessionService);
+      const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
 
       const result = await service.logout('expired-refresh-token');
 
@@ -136,7 +168,7 @@ describe('AuthService', () => {
       const mail = {} as MailService;
       const config = { get: jest.fn() } as unknown as ConfigService;
 
-      const service = new AuthService(users, jwt, mail, config, sessionService);
+      const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
 
       const result = await service.logout('access-token');
 
@@ -157,7 +189,7 @@ describe('AuthService', () => {
       const mail = {} as MailService;
       const config = { get: jest.fn() } as unknown as ConfigService;
 
-      const service = new AuthService(users, jwt, mail, config, sessionService);
+      const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
 
       const result = await service.logout('refresh-token-no-jti');
 
@@ -176,7 +208,7 @@ describe('AuthService', () => {
       const mail = {} as MailService;
       const config = { get: jest.fn() } as unknown as ConfigService;
 
-      const service = new AuthService(users, jwt, mail, config, sessionService);
+      const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
 
       const result = await service.logoutAllDevices('user-1');
 

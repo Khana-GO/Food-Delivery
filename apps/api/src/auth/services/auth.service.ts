@@ -12,6 +12,10 @@
   import { VerifyEmailDto } from '../dto/verify-email.dto';
   import { ResendVerificationDto } from '../dto/resend-verification-code.dto';
   import { SessionsService } from '../../sessions/sessions.service';
+  import { Inject } from '@nestjs/common';
+  import { NeonDatabase } from 'drizzle-orm/neon-serverless';
+  import { DATABASE } from '../../db/database.constants';
+  import * as schema from '../../db/schema';
 
   @Injectable()
   export class AuthService {
@@ -20,7 +24,8 @@
       private readonly jwtService: JwtService,
       private readonly mailService: MailService,
       private readonly configService: ConfigService,
-      private readonly sessionService: SessionsService
+      private readonly sessionService: SessionsService,
+      @Inject(DATABASE) private readonly db: NeonDatabase<typeof schema>,
     ) {}
 
     public readonly logger = new Logger(AuthService.name);
@@ -32,18 +37,21 @@
     }
 
     const otp = this.generateOtp();
-    const user = await this.usersService.create({
-      firstName: dto.firstName.trim(),
-      lastName: dto.lastName.trim(),
-      email,
-      password: await bcrypt.hash(dto.password, this.saltRounds()),
-      phone: dto.phone?.trim(),
-      verificationToken: this.hashToken(otp),
-      verificationTokenExpiry: this.expiryInMinutes(10),
-      isVerified: false,
-    });
+    const user = await this.db.transaction(async (tx) => {
+      const createdUser = await this.usersService.create({
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        email,
+        password: await bcrypt.hash(dto.password, this.saltRounds()),
+        phone: dto.phone?.trim(),
+        verificationToken: this.hashToken(otp),
+        verificationTokenExpiry: this.expiryInMinutes(10),
+        isVerified: false,
+      }, tx);
 
-    await this.mailService.sendVerificationCode(user.email, otp);
+      await this.mailService.sendVerificationCode(createdUser.email, otp);
+      return createdUser;
+    });
     return { message: 'Check your email for a verification code', email: user.email };
   }
 

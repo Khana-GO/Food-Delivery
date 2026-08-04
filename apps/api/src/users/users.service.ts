@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { DATABASE } from '../db/database.constants';
-import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import * as schema from '../db/schema';
 import { usersTable, type NewUsersTable } from '../db/schema/user.schema';
 
@@ -9,7 +9,7 @@ import { usersTable, type NewUsersTable } from '../db/schema/user.schema';
 export class UsersService {
   constructor(
     @Inject(DATABASE)
-    private readonly db: NeonHttpDatabase<typeof schema>,
+    private readonly db: NeonDatabase<typeof schema>,
   ) {}
 
   async findByEmail(email: string) {
@@ -34,8 +34,11 @@ export class UsersService {
     return this.db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
   }
 
-  async create(data: NewUsersTable) {
-    const [newUser] = await this.db.insert(usersTable).values(data).returning();
+  async create(
+    data: NewUsersTable,
+    db: Pick<NeonDatabase<typeof schema>, 'insert'> = this.db,
+  ) {
+    const [newUser] = await db.insert(usersTable).values(data).returning();
     return newUser;
   }
 

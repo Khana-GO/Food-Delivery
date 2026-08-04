@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq, and, lt } from 'drizzle-orm';
 import * as crypto from 'crypto';
 import { DATABASE } from '../db/database.constants';
-import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import * as schema from '../db/schema'
 import { sessionsTable } from '../db/schema';
 // import your DB provider
@@ -12,7 +12,7 @@ import { sessionsTable } from '../db/schema';
 export class SessionsService {
  constructor(
      @Inject(DATABASE)
-     private readonly db: NeonHttpDatabase<typeof schema>,
+     private readonly db: NeonDatabase<typeof schema>,
    ) {}
 
   private hashToken(token: string) {
