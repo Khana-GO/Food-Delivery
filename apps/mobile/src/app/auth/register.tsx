@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHomeRoute } from 'lib/roles';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation (matches backend RegisterUserDto)
@@ -259,7 +260,7 @@ export default function RegisterScreen() {
   // Redirect if already authenticated
   React.useEffect(() => {
     if (user) {
-      router.replace('/(customer)' as any);
+      router.replace(getHomeRoute(user.role) as any);
     }
   }, [user]);
 

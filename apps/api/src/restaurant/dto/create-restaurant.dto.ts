@@ -1,12 +1,87 @@
-import { IsLatitude, IsLongitude, IsNotEmpty, IsString, Length, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEmail,
+  IsNumber,
+  IsLatitude,
+  IsLongitude,
+  IsBoolean,
+  IsInt,
+} from 'class-validator';
 
 export class CreateRestaurantDto {
-  @IsString() @Length(2, 255) name!: string;
-  @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) slug!: string;
-  @IsString() @IsNotEmpty() addressLine!: string;
-  @IsString() @Length(2, 100) city!: string;
-  @IsString() @Length(2, 100) country!: string;
-  @IsLatitude() latitude!: number;
-  @IsLongitude() longitude!: number;
-  @IsString() @Length(2, 100) cuisineType!: string;
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  slug!: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  addressLine!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  city!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  country!: string;
+
+  @IsOptional()
+  @IsString()
+  postalCode?: string;
+
+  @IsLatitude()
+  latitude!: number;
+
+  @IsLongitude()
+  longitude!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  cuisineType!: string;
+
+  @IsOptional()
+  @IsString()
+  openingTime?: string; // HH:mm:ss
+
+  @IsOptional()
+  @IsString()
+  closingTime?: string; // HH:mm:ss
+
+  @IsOptional()
+  @IsNumber()
+  deliveryFee?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minimumOrderAmount?: number;
+
+  @IsOptional()
+  @IsInt()
+  estimatedDeliveryTime?: number;
 }

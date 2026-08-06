@@ -1,33 +1,79 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet, View } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { View, Text } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
-  return (
-    <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiFocused]}>{emoji}</Text>
-      <Text style={[styles.tabLabel, focused ? styles.tabLabelFocused : styles.tabLabelNormal]}>
-        {label}
-      </Text>
-    </View>
-  );
+// ────────────────────────────────────────────────────────────────────────────
+// Tab Icon Component
+// ────────────────────────────────────────────────────────────────────────────
+
+interface TabIconProps {
+  name: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  focused: boolean;
 }
 
+const TabIcon = ({ name, label, focused }: TabIconProps) => (
+  <View className="items-center justify-center gap-0.5 pt-1">
+    <Feather
+      name={name}
+      size={24}
+      color={focused ? '#E23744' : '#94A3B8'}
+      strokeWidth={focused ? 2.5 : 2}
+    />
+    <Text
+      className={`text-[10px] font-medium ${
+        focused ? 'text-primary font-bold' : 'text-slate-400'
+      }`}
+    >
+      {label}
+    </Text>
+  </View>
+);
+
+// ────────────────────────────────────────────────────────────────────────────
+// Main Restaurant Layout
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function RestaurantLayout() {
+  const { isInitializing } = useAuth();
+  useProtectedRoute(['RESTAURANT_OWNER']);
+
+  if (isInitializing) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <View className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E8ECF0',
+          height: 68,
+          paddingBottom: 8,
+          paddingTop: 4,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🏠" label="Home" focused={focused} />
+            <TabIcon name="home" label="Home" focused={focused} />
           ),
         }}
       />
@@ -35,7 +81,7 @@ export default function RestaurantLayout() {
         name="menu"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🍴" label="Menu" focused={focused} />
+            <TabIcon name="menu" label="Menu" focused={focused} />
           ),
         }}
       />
@@ -43,32 +89,14 @@ export default function RestaurantLayout() {
         name="categories"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🗂️" label="Categories" focused={focused} />
+            <TabIcon name="grid" label="Categories" focused={focused} />
           ),
         }}
       />
+
+      {/* Hidden screens (if any) */}
+      <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: 68,
-    paddingBottom: 8,
-    paddingTop: 4,
-  },
-  tabIconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingTop: 4,
-  },
-  tabEmoji: { fontSize: 22, opacity: 0.45 },
-  tabEmojiFocused: { opacity: 1 },
-  tabLabel: { fontSize: 10, fontWeight: '500' },
-  tabLabelFocused: { color: Colors.primary, fontWeight: '700' },
-  tabLabelNormal: { color: Colors.textSecondary },
-});

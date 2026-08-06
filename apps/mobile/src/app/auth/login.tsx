@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHomeRoute } from 'lib/roles';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation
@@ -242,7 +243,7 @@ export default function LoginScreen() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
-      router.replace('/(customer)' as any);
+      router.replace(getHomeRoute(user.role) as any);
     }
   }, [user]);
 
@@ -277,30 +278,34 @@ export default function LoginScreen() {
     return result.data;
   }, [email, password]);
 
-  const handleLogin = useCallback(async () => {
-    setGeneralError('');
-    const values = validate();
-    if (!values) return;
 
-    loginAttemptsRef.current += 1;
 
-    try {
-      await login({ email: values.email, password: values.password });
-      loginAttemptsRef.current = 0;
-      router.replace('/(customer)' as any);
-    } catch (error: any) {
-      const errorMessage = parseBackendError(error);
-      const lower = errorMessage.toLowerCase();
+// ... inside LoginScreen
+const handleLogin = useCallback(async () => {
+  setGeneralError('');
+  const values = validate();
+  if (!values) return;
 
-      if (lower.includes('email')) {
-        setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
-      } else if (lower.includes('password')) {
-        setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
-      } else {
-        setGeneralError(errorMessage);
-      }
+  loginAttemptsRef.current += 1;
+
+  try {
+    const user = await login({ email: values.email, password: values.password });
+    loginAttemptsRef.current = 0;
+    const homeRoute = getHomeRoute(user.role);
+    router.replace(homeRoute as any);
+  } catch (error: any) {
+    const errorMessage = parseBackendError(error);
+    const lower = errorMessage.toLowerCase();
+
+    if (lower.includes('email')) {
+      setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
+    } else if (lower.includes('password')) {
+      setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
+    } else {
+      setGeneralError(errorMessage);
     }
-  }, [login, validate]);
+  }
+}, [login, validate]);
 
   const handleSocialLogin = useCallback((provider: 'google' | 'apple') => {
     console.log(`Social login requested: ${provider}`);

@@ -8,6 +8,9 @@ import { DbModule } from './db/database.module';
 import { AuthModule } from './auth/auth.module';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { UsersModule } from './users/users.module';
+import { MenuCategoriesModule } from './menu-categories/menu-categories.module';
+import { OrderModule } from './order/order.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -30,6 +33,9 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     RestaurantModule,
     UsersModule,
+    MenuCategoriesModule,
+    OrderModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

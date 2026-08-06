@@ -10,10 +10,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Radius, Shadow } from '@/constants/theme';
-import { useAuth, AuthRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const SETTINGS_MENU = [
@@ -33,14 +33,6 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     logout();
     router.replace('/auth/login' as any);
-  };
-
-  const handleDevRoleSwitch = (newRole: AuthRole) => {
-    switchRole(newRole);
-    if (newRole === 'CUSTOMER') router.replace('/(customer)' as any);
-    if (newRole === 'DRIVER') router.replace('/(driver)' as any);
-    if (newRole === 'RESTAURANT_OWNER') router.replace('/(restaurant)' as any);
-    if (newRole === 'ADMIN') router.replace('/(admin)' as any);
   };
 
   return (
