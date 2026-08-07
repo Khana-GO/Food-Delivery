@@ -10,7 +10,7 @@ export function getHomeRoute(role: UserRole): string {
     case 'DRIVER':
       return '/(driver)';
     case 'RESTAURANT_OWNER':
-      return '/(restaurant)';
+      return '/(restaurant-owner)';
     default:
       return '/(customer)'; // fallback
   }
