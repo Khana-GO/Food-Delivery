@@ -1,28 +1,39 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { Redirect, useRootNavigationState } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AppEntry() {
+  const rootNavigationState = useRootNavigationState();
+  const [isReady, setIsReady] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
   useEffect(() => {
     const init = async () => {
-      await new Promise((r) => setTimeout(r, 800));
-      const seen = await AsyncStorage.getItem('hasSeenOnboarding');
-      if (seen === 'true') {
-        router.replace('/auth/login');
-      } else {
-        router.replace('/onboarding');
+      try {
+        await new Promise((r) => setTimeout(r, 800));
+        const seen = await AsyncStorage.getItem('hasSeenOnboarding');
+        setHasSeenOnboarding(seen === 'true');
+      } catch (error) {
+        console.error("Error reading async storage:", error);
+      } finally {
+        setIsReady(true);
       }
     };
     init();
   }, []);
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.brand}>KhanaGo</Text>
-      <ActivityIndicator size="large" color="#FFFFFF" style={{ marginTop: 24 }} />
-    </View>
-  );
+  // Expo Router's <Redirect> will fail silently if the navigation state isn't ready.
+  if (!rootNavigationState?.key || !isReady) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.brand}>KhanaGo</Text>
+        <ActivityIndicator size="large" color="#FFFFFF" style={{ marginTop: 24 }} />
+      </View>
+    );
+  }
+
+  return <Redirect href={hasSeenOnboarding ? "/auth/login" : "/onboarding"} />;
 }
 
 const styles = StyleSheet.create({

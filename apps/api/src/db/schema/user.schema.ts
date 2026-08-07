@@ -29,7 +29,7 @@ export const usersTable = pgTable('users', {
 
   email: varchar('email', {
     length: 255,
-  }),
+  }).unique(),
 
   password: varchar('password', {
     length: 255,
@@ -37,7 +37,19 @@ export const usersTable = pgTable('users', {
 
   phone: varchar('phone', {
     length: 15,
-  }).notNull().unique(),
+  }).unique(),
+
+  googleId: varchar('google_id', {
+    length: 255,
+  }).unique(),
+
+  facebookId: varchar('facebook_id', {
+    length: 255,
+  }).unique(),
+
+  authProvider: varchar('auth_provider', {
+    length: 50,
+  }).default('LOCAL'),
 
   role: userRoleEnum().notNull().default('CUSTOMER'),
 

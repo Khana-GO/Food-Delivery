@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 import { UsersService } from '../../users/users.service';
 import { LoginUserDto } from '../dto/login.dto';
 import { RegisterUserDto } from '../dto/register.dto';
 import { VerifyOtpDto } from '../dto/verify-otp.dto';
+import { SocialLoginDto, SocialProvider } from '../dto/social-login.dto';
+import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -14,47 +17,88 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(dto: RegisterUserDto) {
     const phone = dto.phone.trim();
+    const email = dto.email.trim().toLowerCase();
+
     if (await this.usersService.findByPhone(phone)) {
       throw new BadRequestException('Phone number already registered');
     }
+    if (await this.usersService.findByEmail(email)) {
+      throw new BadRequestException('Email address already registered');
+    }
+
+    const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 10) : null;
 
     const user = await this.usersService.create({
       firstName: dto.firstName.trim(),
       lastName: dto.lastName.trim(),
+      email,
       phone,
+      password: hashedPassword,
       isVerified: false,
     });
 
     const otp = this.generateOtp();
     await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
-    
-    this.logger.log(`\n\n========================\n[DEV] OTP for ${phone} is: ${otp}\n========================\n`);
 
-    return { message: 'OTP sent to your phone' };
+    // Send OTP to the user's email
+    await this.mailService.sendOtpEmail(email, otp, dto.firstName.trim());
+    this.logger.log(`OTP sent to ${email} for phone ${phone}`);
+
+    return { message: 'Verification OTP sent to your email', phone: user.phone, email: user.email };
   }
 
   async login(dto: LoginUserDto) {
-    const phone = dto.phone.trim();
-    const user = await this.usersService.findByPhone(phone);
-    if (!user) {
-      throw new UnauthorizedException('Phone number not registered');
+    let user: Awaited<ReturnType<typeof this.usersService.findByPhone>> = undefined;
+
+    if (dto.email) {
+      user = await this.usersService.findByEmail(dto.email);
+    } else if (dto.phone) {
+      user = await this.usersService.findByPhone(dto.phone);
     }
 
-    const otp = this.generateOtp();
-    await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-    this.logger.log(`\n\n========================\n[DEV] OTP for ${phone} is: ${otp}\n========================\n`);
+    if (dto.password && user.password) {
+      const isMatch = await bcrypt.compare(dto.password, user.password);
+      if (!isMatch) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+    }
 
-    return { message: 'OTP sent to your phone' };
+    if (!user.isVerified) {
+      const otp = this.generateOtp();
+      await this.usersService.setOtp(user.id, otp, this.expiryInMinutes(10));
+      if (user.email) {
+        await this.mailService.sendOtpEmail(user.email, otp, user.firstName);
+      }
+      return {
+        requiresVerification: true,
+        message: 'Account not verified. OTP sent to your email.',
+        phone: user.phone,
+        email: user.email,
+      };
+    }
+
+    await this.usersService.recordLogin(user.id);
+    return this.authResponse(user);
   }
 
   async verifyOtp(dto: VerifyOtpDto) {
-    const phone = dto.phone.trim();
-    const user = await this.usersService.findByPhone(phone);
+    let user: Awaited<ReturnType<typeof this.usersService.findByPhone>> = undefined;
+
+    if (dto.email) {
+      user = await this.usersService.findByEmail(dto.email);
+    } else if (dto.phone) {
+      user = await this.usersService.findByPhone(dto.phone);
+    }
+
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -64,13 +108,58 @@ export class AuthService {
       throw new BadRequestException('Invalid OTP code. Please check and try again.');
     }
 
-    if (!user.otpExpiry || user.otpExpiry <= new Date()) {
+    if (!user.otpExpiry || new Date(user.otpExpiry) <= new Date()) {
       throw new BadRequestException('OTP has expired. Please request a new one.');
     }
 
     await this.usersService.verifyAndClearOtp(user.id);
     await this.usersService.recordLogin(user.id);
 
+    return this.authResponse(user);
+  }
+
+  async socialLogin(dto: SocialLoginDto) {
+    const email = dto.email.trim().toLowerCase();
+    const providerId = dto.id.trim();
+    const isGoogle = dto.provider === SocialProvider.GOOGLE;
+
+    // 1. Check if user already exists by provider ID
+    let user = isGoogle
+      ? await this.usersService.findByGoogleId(providerId)
+      : await this.usersService.findByFacebookId(providerId);
+
+    // 2. If not found by social ID, check by email
+    if (!user && email) {
+      user = await this.usersService.findByEmail(email);
+    }
+
+    if (user) {
+      // User exists — update social ID, photo, or verified status if needed
+      const updates: Record<string, any> = {};
+      if (isGoogle && !user.googleId) updates.googleId = providerId;
+      if (!isGoogle && !user.facebookId) updates.facebookId = providerId;
+      if (dto.imageUrl && !user.imageUrl) updates.imageUrl = dto.imageUrl;
+      if (!user.isVerified) updates.isVerified = true;
+
+      if (Object.keys(updates).length > 0) {
+        user = await this.usersService.update(user.id, updates);
+      }
+    } else {
+      // 3. Create new user from social profile
+      user = await this.usersService.create({
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName?.trim() || '',
+        email,
+        googleId: isGoogle ? providerId : null,
+        facebookId: !isGoogle ? providerId : null,
+        authProvider: dto.provider,
+        imageUrl: dto.imageUrl || null,
+        isVerified: true,
+        verifiedAt: new Date(),
+      });
+    }
+
+    await this.usersService.recordLogin(user.id);
     return this.authResponse(user);
   }
 
@@ -96,7 +185,7 @@ export class AuthService {
   }
 
   private generateOtp() {
-    return Math.floor(1000 + Math.random() * 9000).toString(); // 4 digit OTP
+    return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
   }
 
   private expiryInMinutes(minutes: number) {

@@ -4,7 +4,7 @@ import { AuthService } from '../services/auth.service';
 import { RegisterUserDto } from '../dto/register.dto';
 import { LoginUserDto } from '../dto/login.dto';
 import { VerifyOtpDto } from '../dto/verify-otp.dto';
-
+import { SocialLoginDto } from '../dto/social-login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -27,5 +27,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify OTP' })
   async verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto);
+  }
+
+  @Post('social-login')
+  @ApiOperation({ summary: 'Login or Register with Google or Facebook' })
+  async socialLogin(@Body() dto: SocialLoginDto) {
+    return this.authService.socialLogin(dto);
   }
 }

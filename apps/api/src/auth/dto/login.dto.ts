@@ -1,8 +1,15 @@
-import { IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
 
 export class LoginUserDto {
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
   @IsString()
-  @Length(10, 15)
-  @Matches(/^\+?\d+$/, { message: 'Must be a valid phone number' })
-  phone!: string;
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
 }

@@ -18,6 +18,24 @@ export class UsersService {
     });
   }
 
+  async findByEmail(email: string) {
+    return this.db.query.usersTable.findFirst({
+      where: eq(usersTable.email, email.trim().toLowerCase()),
+    });
+  }
+
+  async findByGoogleId(googleId: string) {
+    return this.db.query.usersTable.findFirst({
+      where: eq(usersTable.googleId, googleId.trim()),
+    });
+  }
+
+  async findByFacebookId(facebookId: string) {
+    return this.db.query.usersTable.findFirst({
+      where: eq(usersTable.facebookId, facebookId.trim()),
+    });
+  }
+
   async findById(id: string) {
     return this.db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
   }
