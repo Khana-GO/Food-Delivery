@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .expo/
+.agents/
+
 
 # --- Secrets & Keys ---
 .env

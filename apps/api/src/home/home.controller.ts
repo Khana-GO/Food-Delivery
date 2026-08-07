@@ -10,9 +10,16 @@ export class HomeController {
     @Query('lat') lat?: string,
     @Query('lng') lng?: string,
   ) {
-    const latitude = lat ? parseFloat(lat) : null;
-    const longitude = lng ? parseFloat(lng) : null;
+    try {
+      let latitude = lat && lat !== 'undefined' && lat !== 'null' ? parseFloat(lat) : null;
+      if (latitude !== null && isNaN(latitude)) latitude = null;
 
-    return this.homeService.getHomeData(latitude, longitude);
+      let longitude = lng && lng !== 'undefined' && lng !== 'null' ? parseFloat(lng) : null;
+      if (longitude !== null && isNaN(longitude)) longitude = null;
+
+      return await this.homeService.getHomeData(latitude, longitude);
+    } catch (error: any) {
+      return { statusCode: 500, message: error.message, stack: error.stack };
+    }
   }
 }

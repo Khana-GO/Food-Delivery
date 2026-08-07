@@ -5,8 +5,9 @@ import {
   text,
   timestamp,
   uuid,
+  integer,
+  doublePrecision,
 } from 'drizzle-orm/pg-core';
-import { menuItemsTable } from './menu.items.schema';
 import { usersTable } from './user.schema';
 import { restaurantsTable } from './restaurant.schema';
 
@@ -35,12 +36,6 @@ export const paymentStatusEnum = pgEnum('payment_status', [
 export const ordersTable = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
 
-  itemId: uuid('item_id')
-    .notNull()
-    .references(() => menuItemsTable.id, {
-      onDelete: 'cascade',
-    }),
-
   customerId: uuid('customer_id')
     .notNull()
     .references(() => usersTable.id, {
@@ -48,12 +43,19 @@ export const ordersTable = pgTable('orders', {
     }),
 
   driverId: uuid('driver_id')
-    .notNull()
     .references(() => usersTable.id),
 
   totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
 
   deliveryAddress: text('delivery_address').notNull(),
+  
+  deliveryLatitude: doublePrecision('delivery_latitude'),
+  
+  deliveryLongitude: doublePrecision('delivery_longitude'),
+  
+  distance: numeric('distance', { precision: 10, scale: 2 }),
+  
+  estimatedDeliveryTime: integer('estimated_delivery_time'),
 
   paymentId: text('payment_id'),
 

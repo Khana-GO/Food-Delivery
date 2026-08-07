@@ -4,11 +4,14 @@ import * as schema from '../db/schema';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, desc, eq, sql } from 'drizzle-orm';
 
+import { MapsService } from '../maps/maps.service';
+
 @Injectable()
 export class HomeService {
   constructor(
     @Inject(DATABASE)
     private readonly db: NodePgDatabase<typeof schema>,
+    private readonly mapsService: MapsService
   ) {}
 
   async getHomeData(latitude: number | null, longitude: number | null) {
@@ -44,7 +47,7 @@ export class HomeService {
     };
 
     // 4. Fetch Nearby Restaurants
-    const nearbyRestaurants = latitude !== null && longitude !== null
+    let nearbyRestaurants = latitude !== null && longitude !== null
       ? await this.db
           .select({
             restaurant: schema.restaurantsTable,
@@ -63,6 +66,28 @@ export class HomeService {
           .where(eq(schema.restaurantsTable.isActive, true))
           .orderBy(desc(schema.restaurantsTable.averageRating))
           .limit(10);
+
+    // Enhance with Google Maps distance and ETA if we have user location
+    if (latitude !== null && longitude !== null) {
+      const origin = { latitude, longitude };
+      // Map over them and fetch accurate distance/ETA concurrently
+      nearbyRestaurants = await Promise.all(
+        nearbyRestaurants.map(async (r: any) => {
+          if (r.restaurant.latitude && r.restaurant.longitude) {
+            const dest = { latitude: r.restaurant.latitude, longitude: r.restaurant.longitude };
+            const metrics = await this.mapsService.getDistanceAndDuration(origin, dest);
+            if (metrics) {
+              return {
+                ...r,
+                distance: parseFloat((metrics.distanceMeters / 1609.34).toFixed(2)),
+                estimatedDeliveryTime: Math.round(metrics.durationSeconds / 60),
+              };
+            }
+          }
+          return r;
+        })
+      );
+    }
 
     // 5. Top Rated Restaurants
     const topRatedRestaurants = await this.db.query.restaurantsTable.findMany({

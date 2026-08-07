@@ -1,9 +1,16 @@
-import { Text } from '@/components/ui/Text';
 import React, { useRef, useState } from 'react';
-import { View, Dimensions, TouchableOpacity, FlatList } from 'react-native';
-import { router } from 'expo-router';
+import {
+  View,
+  Text,
+  Dimensions,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  Animated,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
@@ -11,148 +18,180 @@ const { width } = Dimensions.get('window');
 const SLIDES = [
   {
     id: '1',
-    title: 'Discover Restaurants\nNearby',
-    subtitle:
-      'Explore the best local kitchens around you and find delicious meals delivered with warm Nepalese hospitality.',
-    illustration: (
-      <View className="w-full items-center py-4">
-        <View className="w-[78%] aspect-square bg-slate-100 rounded-3xl items-center justify-center relative overflow-hidden">
-          <View className="absolute bg-slate-200 w-full h-[2px] top-[40%]" />
-          <View className="absolute bg-slate-200 w-full h-[2px] top-[65%] opacity-50" />
-          <View className="absolute bg-slate-200 w-[2px] h-full left-[35%]" />
-          
-          <View className="absolute w-14 h-14 rounded-full bg-primary items-center justify-center z-10 shadow-lg">
-            <Text className="text-2xl">📍</Text>
-          </View>
-          <View className="absolute w-11 h-11 rounded-full bg-primary items-center justify-center top-16 left-10 opacity-90 shadow-md">
-            <Text className="text-xl">🍴</Text>
-          </View>
-          <View className="absolute w-11 h-11 rounded-full bg-green-500 items-center justify-center top-12 right-12 opacity-90 shadow-md">
-            <Text className="text-xl">🍕</Text>
-          </View>
-          <View className="absolute w-11 h-11 rounded-full bg-green-500 items-center justify-center bottom-20 left-12 opacity-90 shadow-md">
-            <Text className="text-xl">🥗</Text>
-          </View>
-          <View className="absolute w-11 h-11 rounded-full bg-primary items-center justify-center bottom-16 right-10 opacity-90 shadow-md">
-            <Text className="text-xl">☕</Text>
-          </View>
-        </View>
-      </View>
-    ),
+    title: 'Wide range of Food\nCategories & more',
+    description:
+      "Browse through our extensive list of restaurants and dishes, and when you're ready to order, simply add your desired items to your cart and checkout. It's that easy!",
+    image: require('../../assets/images/onboarding_1.png'),
   },
   {
     id: '2',
-    title: 'Order Your\nFavourites',
-    subtitle:
-      'Browse menus, customise your order and enjoy food from your favourite local restaurants with ease.',
-    illustration: (
-      <View className="w-full items-center py-4">
-        <View className="w-[78%] aspect-square bg-slate-100 rounded-3xl items-center justify-center relative shadow-sm">
-          <Text className="text-[80px]">🍜</Text>
-          <Text className="text-[40px] absolute top-5 right-8">🍕</Text>
-          <Text className="text-[35px] absolute bottom-8 left-6">🍔</Text>
-        </View>
-      </View>
-    ),
+    title: 'Free Deliveries for\nONE MONTH!!',
+    description:
+      'Get your favorite meals delivered to your doorstep for free with our online food delivery app - enjoy a whole month of complimentary delivery!',
+    image: require('../../assets/images/onboarding_2.png'),
   },
   {
     id: '3',
-    title: 'Fast & Reliable\nDelivery',
-    subtitle:
-      'Track your delivery in real time. Our riders bring your food hot and fresh right to your doorstep.',
-    illustration: (
-      <View className="w-full items-center py-4">
-        <View className="w-[78%] aspect-square bg-slate-100 rounded-3xl items-center justify-center relative shadow-sm">
-          <Text className="text-[80px]">🚴</Text>
-          <Text className="text-[35px] absolute top-5 right-8">📦</Text>
-          <Text className="text-[35px] absolute bottom-8 left-6">⏱️</Text>
-        </View>
-      </View>
-    ),
+    title: 'Get started on\nOrdering your Food',
+    description:
+      'Please create an account or sign in to your existing account to start browsing our selection of delicious meals from your favorite restaurants.',
+    image: require('../../assets/images/onboarding_3.png'),
   },
 ];
 
 export default function OnboardingScreen() {
-  const [current, setCurrent] = useState(0);
-  const flatRef = useRef<FlatList>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
 
-  const finishOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-    } catch (e) {}
-    router.replace('/auth/login' as any);
-  };
-
-  const goNext = () => {
-    if (current < SLIDES.length - 1) {
-      const next = current + 1;
-      flatRef.current?.scrollToOffset({ offset: next * width, animated: true });
-      setCurrent(next);
+  const handleNext = async () => {
+    if (activeIndex < SLIDES.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
     } else {
-      finishOnboarding();
+      await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+      router.replace('/auth/login');
     }
   };
 
-  const skip = () => finishOnboarding();
+  const handleSkip = async () => {
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    router.replace('/auth/login');
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F1FAEE]">
-      <View className="flex-row items-center justify-between px-5 py-3">
-        <View className="flex-row items-center gap-2">
-          <View className="w-9 h-9 rounded-xl bg-primary items-center justify-center shadow-sm">
-            <Ionicons name="fast-food-outline" size={20} color="#FFF" />
-          </View>
-          <Text className="text-lg font-bold text-slate-800">KhanaGo</Text>
-        </View>
-        <TouchableOpacity onPress={skip} className="p-2">
-          <Text className="text-[15px] text-slate-500 font-semibold">Skip</Text>
-        </TouchableOpacity>
-      </View>
-
+    <SafeAreaView style={styles.container}>
       <FlatList
-        ref={flatRef}
+        ref={flatListRef}
         data={SLIDES}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+          setActiveIndex(idx);
+        }}
         renderItem={({ item }) => (
-          <View className="px-6 items-center justify-center flex-1" style={{ width }}>
-            {item.illustration}
-            <Text className="text-3xl font-extrabold text-slate-800 text-center mt-7 mb-4 leading-10">
-              {item.title}
-            </Text>
-            <Text className="text-[15px] text-slate-500 text-center leading-6 px-2">
-              {item.subtitle}
-            </Text>
+          <View style={{ width }}>
+            {/* Illustration box */}
+            <View style={styles.illustrationBox}>
+              <Image source={item.image} style={styles.illustration} resizeMode="contain" />
+            </View>
           </View>
         )}
       />
 
-      <View className="px-6 pb-10 gap-5 items-center w-full">
-        <View className="flex-row gap-2">
+      {/* Bottom content - outside of FlatList so it stays fixed */}
+      <View style={styles.bottomContent}>
+        {/* Dots */}
+        <View style={styles.dotsRow}>
           {SLIDES.map((_, i) => (
             <View
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === current ? 'w-7 bg-primary' : 'w-2 bg-slate-300'
-              }`}
+              style={[
+                styles.dot,
+                i === activeIndex ? styles.dotActive : styles.dotInactive,
+              ]}
             />
           ))}
         </View>
 
-        <TouchableOpacity 
-          className="bg-primary w-full py-4 rounded-full items-center justify-center flex-row shadow-lg shadow-red-500/30" 
-          onPress={goNext} 
-          activeOpacity={0.85}
-        >
-          <Text className="text-white text-[17px] font-bold">
-            {current < SLIDES.length - 1 ? 'Next' : 'Get Started'}
-          </Text>
-          <Feather name="arrow-right" size={20} color="#FFF" style={{ marginLeft: 8 }} />
-        </TouchableOpacity>
+        {/* Title */}
+        <Text style={styles.title}>{SLIDES[activeIndex].title}</Text>
+
+        {/* Description */}
+        <Text style={styles.description}>{SLIDES[activeIndex].description}</Text>
+
+        {/* Buttons */}
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
+            <Text style={styles.skipText}>Skip  ›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleNext} style={styles.nextBtn}>
+            <Text style={styles.nextText}>
+              {activeIndex === SLIDES.length - 1 ? 'Continue' : 'Next'}  ›
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  illustrationBox: {
+    margin: 20,
+    height: 320,
+    backgroundColor: '#EFF3F8',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  illustration: {
+    width: '90%',
+    height: '90%',
+  },
+  bottomContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
+  },
+  dotActive: {
+    backgroundColor: '#F59E0B', // orange active dot as in UI kit
+  },
+  dotInactive: {
+    backgroundColor: '#CBD5E1',
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 12,
+    lineHeight: 38,
+  },
+  description: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skipBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  skipText: {
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  nextBtn: {
+    backgroundColor: '#38BDF8',
+    borderRadius: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 36,
+  },
+  nextText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+});

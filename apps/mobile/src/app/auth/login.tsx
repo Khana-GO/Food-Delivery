@@ -1,167 +1,350 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, TextInput } from 'react-native';
-import { router } from 'expo-router';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from '@/components/ui/Text';
-import { Colors } from '@/constants/theme';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-const loginSchema = z.object({
-  phone: z.string().min(10, 'Valid 10-digit phone number is required'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+type Tab = 'login' | 'signup';
 
 export default function LoginScreen() {
+  const [tab, setTab] = useState<Tab>('login');
+
+  // Login fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Sign up fields
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState('');
 
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      phone: '',
-    }
-  });
-
-  const onSubmit = async (data: LoginFormValues) => {
+  const handleSubmit = () => {
     setLoading(true);
-    setApiError('');
-    try {
-      const apiUrl = Platform.OS === 'web' 
-        ? process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:3000/api'
-        : process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.18.192:3000/api';
-      
-      const fullPhone = `+977${data.phone}`;
-      
-      const response = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: fullPhone }),
-      });
-      
-      const result = await response.json();
-      if (!response.ok) {
-        setApiError(result.message || 'Login failed');
-        setLoading(false);
-        return;
+    setTimeout(() => {
+      setLoading(false);
+      if (tab === 'register') {
+        router.push('/auth/verify');
+      } else {
+        router.replace('/(customer)');
       }
-
-      router.push({ pathname: '/auth/otp', params: { phone: fullPhone } } as any);
-    } catch (e) {
-      setApiError('Network error. Is the backend running?');
-    }
-    setLoading(false);
+    }, 1000);
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerClassName="flex-grow px-6 py-8"
-          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
-          bounces={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Logo Section */}
-          <View className="items-center mt-2 mb-10">
-            <Image
-              source={require('../../../assets/images/app_logo.png')}
-              style={{ width: 96, height: 96, marginBottom: 16 }}
-              resizeMode="contain"
-            />
-            <View className="flex-row items-center justify-center">
-              <Text className="text-[26px] font-extrabold text-[#1E293B]">Khana</Text>
-              <Text className="text-[26px] font-extrabold text-[#FF8A00] ml-1">Go</Text>
-            </View>
-            <Text className="text-[14px] text-[#64748B] mt-1">Delicious Food, Delivered Fast.</Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome!</Text>
+            <Text style={styles.subtitle}>Sign up or Login to your Account</Text>
           </View>
 
-          {/* Welcome Text Section */}
-          <View className="mb-8">
-            <Text className="text-[32px] font-extrabold text-[#1E293B] mb-2 leading-[40px]">Welcome Back</Text>
-            <Text className="text-[15px] text-[#64748B]">Sign in to continue ordering your favourites.</Text>
-          </View>
-
-          <View className="w-full">
-            {apiError ? <Text className="text-red-500 text-sm mb-4">{apiError}</Text> : null}
-
-            {/* Phone Input */}
-            <View className="mb-8">
-              <Text className="text-[13px] font-bold text-[#475569] mb-2">Phone Number</Text>
-              <Controller
-                control={control}
-                name="phone"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View className={`flex-row items-center border-[1.5px] rounded-2xl px-4 h-14 ${errors.phone ? 'border-red-500 bg-white' : 'border-[#E2E8F0] bg-white'}`}>
-                    <Ionicons name="call-outline" size={20} color={errors.phone ? '#EF4444' : '#64748B'} style={{ marginRight: 10 }} />
-                    <Text className="text-[15px] font-semibold text-[#1E293B] mr-2">+977</Text>
-                    <TextInput
-                      className="flex-1 text-[15px] text-[#1E293B] h-full"
-                      placeholder="9800000000"
-                      placeholderTextColor="#94A3B8"
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      value={value}
-                      keyboardType="phone-pad"
-                      autoCapitalize="none"
-                    />
-                    {errors.phone && (
-                      <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-                    )}
-                  </View>
-                )}
-              />
-              {errors.phone && <Text className="text-[#EF4444] text-[12px] mt-1.5 ml-1">{errors.phone.message}</Text>}
-            </View>
-
-            {/* Log In Button */}
-            <TouchableOpacity 
-              className="bg-[#FF8A00] h-14 rounded-2xl items-center justify-center shadow-sm mb-8"
-              onPress={handleSubmit(onSubmit)}
-              disabled={loading}
+          {/* Toggle */}
+          <View style={styles.toggle}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, tab === 'login' && styles.toggleBtnActive]}
+              onPress={() => setTab('login')}
               activeOpacity={0.8}
             >
-              <Text className="text-white text-[16px] font-bold">
-                {loading ? 'Sending OTP...' : 'Continue'}
+              <Text style={[styles.toggleText, tab === 'login' && styles.toggleTextActive]}>
+                Login
               </Text>
             </TouchableOpacity>
-
-            {/* Divider */}
-            <View className="flex-row items-center mb-8">
-              <View className="flex-1 h-[1px] bg-[#E2E8F0]" />
-              <Text className="px-4 text-[13px] text-[#64748B]">or continue with</Text>
-              <View className="flex-1 h-[1px] bg-[#E2E8F0]" />
-            </View>
-
-            {/* Social Buttons */}
-            <View className="flex-row justify-between gap-4 mb-8">
-              <TouchableOpacity className="flex-1 h-[52px] rounded-2xl border-[1px] border-[#E2E8F0] bg-white flex-row items-center justify-center">
-                <Ionicons name="logo-google" size={18} color="#1E293B" style={{ marginRight: 8 }} />
-                <Text className="text-[15px] font-bold text-[#1E293B]">Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-1 h-[52px] rounded-2xl border-[1px] border-[#E2E8F0] bg-white flex-row items-center justify-center">
-                <Ionicons name="logo-apple" size={18} color="#1E293B" style={{ marginRight: 8 }} />
-                <Text className="text-[15px] font-bold text-[#1E293B]">Apple</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Sign Up Link */}
-            <View className="flex-row justify-center pb-6">
-              <Text className="text-[#64748B] text-[15px]">Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/auth/register' as any)}>
-                <Text className="text-[#FF8A00] font-bold text-[15px]">Sign Up</Text>
-              </TouchableOpacity>
-            </View>
-
+            <TouchableOpacity
+              style={[styles.toggleBtn, tab === 'signup' && styles.toggleBtnActive]}
+              onPress={() => setTab('signup')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, tab === 'signup' && styles.toggleTextActive]}>
+                Sign Up
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Form */}
+          {tab === 'login' ? (
+            <View style={styles.form}>
+              <Text style={styles.label}>Email Address</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your Email"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
+
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your Password"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                />
+              </View>
+
+              <TouchableOpacity style={styles.forgotRow}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              {/* Social Divider */}
+              <View style={styles.socialRow}>
+                <Text style={styles.socialLabel}>Or Login Using:</Text>
+                <View style={styles.divider} />
+              </View>
+
+              {/* Social Buttons */}
+              <View style={styles.socialButtons}>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Text style={styles.googleG}>G</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Ionicons name="logo-apple" size={24} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Ionicons name="logo-facebook" size={24} color="#1877F2" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.form}>
+              <Text style={styles.label}>Full Name</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your Name"
+                  placeholderTextColor="#94A3B8"
+                  value={fullName}
+                  onChangeText={setFullName}
+                />
+              </View>
+
+              <Text style={styles.label}>Phone Number</Text>
+              <View style={styles.inputBox}>
+                <Text style={styles.countryCode}>+1  ›</Text>
+                <View style={styles.phoneDivider} />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="000 000 0000"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                />
+              </View>
+
+              <Text style={styles.label}>Create Password</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your Password"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry
+                  value={signupPassword}
+                  onChangeText={setSignupPassword}
+                />
+              </View>
+
+              {/* Social Divider */}
+              <View style={styles.socialRow}>
+                <Text style={styles.socialLabel}>Or Sign Up Using:</Text>
+                <View style={styles.divider} />
+              </View>
+
+              <View style={styles.socialButtons}>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Text style={styles.googleG}>G</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Ionicons name="logo-apple" size={24} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Ionicons name="logo-facebook" size={24} color="#1877F2" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Action Button */}
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleSubmit}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionBtnText}>
+              {loading ? 'Please wait...' : (tab === 'login' ? 'Login' : 'Next')}  ›
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 40,
+  },
+  header: {
+    marginBottom: 28,
+  },
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#64748B',
+  },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: '#FCE7F3',
+    borderRadius: 50,
+    padding: 4,
+    marginBottom: 32,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 50,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#F472B6',
+  },
+  toggleText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F472B6',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+  },
+  form: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 52,
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1E293B',
+  },
+  countryCode: {
+    fontSize: 15,
+    color: '#1E293B',
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  phoneDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#CBD5E1',
+    marginRight: 12,
+  },
+  forgotRow: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+    marginTop: -8,
+  },
+  forgotText: {
+    fontSize: 14,
+    color: '#64748B',
+    textDecorationLine: 'underline',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  socialLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    marginRight: 12,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  socialBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  googleG: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#DB4437',
+  },
+  actionBtn: {
+    backgroundColor: '#AEE2F9',
+    borderRadius: 30,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  actionBtnText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+});

@@ -1,7 +1,7 @@
-import { Text } from '@/components/ui/Text';
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import React from 'react';
+import { View, TextInput, TextInputProps, TouchableOpacity } from 'react-native';
+import { Colors } from '../../constants/theme';
+import { Text } from './Text';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -9,131 +9,56 @@ interface InputProps extends TextInputProps {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
-  containerStyle?: ViewStyle;
-  isPassword?: boolean;
 }
 
-export default function Input({
+export const Input: React.FC<InputProps> = ({
   label,
   error,
   leftIcon,
   rightIcon,
   onRightIconPress,
-  containerStyle,
-  isPassword,
+  className,
+  style,
   ...props
-}: InputProps) {
-  const [secureText, setSecureText] = useState(isPassword ?? false);
-  const [isFocused, setIsFocused] = useState(false);
-
-  // Border color logic
-  let borderColor: string = Colors.border;
-  if (error) borderColor = Colors.error;
-  else if (isFocused) borderColor = Colors.primary;
-
+}) => {
   return (
-    <View style={[styles.container, containerStyle]}>
-      <View style={[styles.inputRow, { borderColor }]}>
-        {label ? (
-          <View style={styles.floatingLabelContainer}>
-            <Text style={[
-              styles.floatingLabel, 
-              { color: error ? Colors.error : (isFocused ? Colors.primary : Colors.textSecondary) }
-            ]}>
-              {label}
-            </Text>
-          </View>
-        ) : null}
-
-        {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
-
+    <View className={`w-full mb-4 ${className}`}>
+      {label && (
+        <Text variant="bodySmall" weight="bold" color={Colors.text} className="mb-2 ml-1">
+          {label}
+        </Text>
+      )}
+      
+      <View 
+        className={`flex-row items-center h-16 px-5 rounded-2xl border ${
+          error ? 'border-red-500 bg-red-50' : 'border-gray-100 bg-[#F8FAFC]'
+        }`}
+        style={style}
+      >
+        {leftIcon && <View className="mr-3">{leftIcon}</View>}
+        
         <TextInput
-          style={[styles.input, leftIcon ? styles.inputWithLeft : null]}
-          placeholderTextColor={Colors.textLight}
-          secureTextEntry={secureText}
-          onFocus={(e) => {
-            setIsFocused(true);
-            props.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setIsFocused(false);
-            props.onBlur?.(e);
-          }}
+          className="flex-1 text-[16px] font-medium text-slate-800"
+          placeholderTextColor="#9CA3AF"
           {...props}
         />
-
-        {isPassword ? (
-          <TouchableOpacity
-            onPress={() => setSecureText((v) => !v)}
-            style={styles.iconRight}
+        
+        {rightIcon && (
+          <TouchableOpacity 
+            onPress={onRightIconPress} 
+            disabled={!onRightIconPress}
+            className="ml-3 p-2 -mr-2"
           >
-            <Text style={styles.eyeIcon}>{secureText ? '👁️' : '🙈'}</Text>
-          </TouchableOpacity>
-        ) : rightIcon ? (
-          <TouchableOpacity onPress={onRightIconPress} style={styles.iconRight}>
             {rightIcon}
           </TouchableOpacity>
-        ) : null}
+        )}
       </View>
-
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      
+      {error && (
+        <Text variant="caption" color={Colors.error} className="mt-1 ml-1">
+          {error}
+        </Text>
+      )}
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-    marginTop: 10, // give space for floating label
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    backgroundColor: Colors.white,
-    position: 'relative',
-  },
-  floatingLabelContainer: {
-    position: 'absolute',
-    top: -10,
-    left: 14,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 6,
-    zIndex: 10,
-  },
-  floatingLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  iconLeft: {
-    paddingLeft: 14,
-    paddingRight: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconRight: {
-    paddingRight: 14,
-    paddingLeft: 4,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    fontSize: 15,
-    color: Colors.textDark,
-    paddingHorizontal: 14,
-    fontWeight: '500',
-  },
-  inputWithLeft: {
-    paddingLeft: 4,
-  },
-  eyeIcon: {
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 12,
-    color: Colors.error,
-    marginTop: 4,
-    marginLeft: 2,
-  },
-});
+};

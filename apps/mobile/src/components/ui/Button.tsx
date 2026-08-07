@@ -1,135 +1,92 @@
-import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { TouchableOpacity, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { TouchableOpacity, ActivityIndicator, TouchableOpacityProps, View } from 'react-native';
+import { Colors } from '../../constants/theme';
+import { Text } from './Text';
 
-type Variant = 'primary' | 'outline' | 'ghost' | 'danger';
-type Size = 'sm' | 'md' | 'lg';
-
-interface ButtonProps {
+interface ButtonProps extends TouchableOpacityProps {
   label: string;
-  onPress?: () => void;
-  variant?: Variant;
-  size?: Size;
-  loading?: boolean;
-  disabled?: boolean;
-  fullWidth?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  size?: 'small' | 'medium' | 'large';
+  isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  fullWidth?: boolean;
 }
 
-export default function Button({
+export const Button: React.FC<ButtonProps> = ({
   label,
-  onPress,
   variant = 'primary',
-  size = 'lg',
-  loading = false,
-  disabled = false,
-  fullWidth = false,
-  style,
-  textStyle,
+  size = 'large',
+  isLoading = false,
   leftIcon,
   rightIcon,
-}: ButtonProps) {
-  const isDisabled = disabled || loading;
+  fullWidth = true,
+  disabled,
+  className,
+  style,
+  ...props
+}) => {
+  const getBackgroundColor = () => {
+    if (disabled) return '#E5E7EB';
+    switch (variant) {
+      case 'primary': return Colors.primary;
+      case 'secondary': return Colors.backgroundSecondary;
+      case 'outline': return 'transparent';
+      case 'ghost': return 'transparent';
+      default: return Colors.primary;
+    }
+  };
+
+  const getTextColor = () => {
+    if (disabled) return '#9CA3AF';
+    switch (variant) {
+      case 'primary': return '#FFFFFF';
+      case 'secondary': return Colors.text;
+      case 'outline': return Colors.primary;
+      case 'ghost': return Colors.textSecondary;
+      default: return '#FFFFFF';
+    }
+  };
+
+  const getPadding = () => {
+    switch (size) {
+      case 'small': return 'py-2 px-4';
+      case 'medium': return 'py-3 px-6';
+      case 'large': return 'py-4 px-8';
+      default: return 'py-4 px-8';
+    }
+  };
+
+  const getBorderStyles = () => {
+    if (variant === 'outline') {
+      return `border-2 border-[${Colors.primary}]`;
+    }
+    return '';
+  };
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      disabled={isDisabled}
+      className={`flex-row items-center justify-center rounded-[16px] ${getPadding()} ${getBorderStyles()} ${fullWidth ? 'w-full' : 'self-center'} ${className}`}
+      style={[{ backgroundColor: getBackgroundColor() }, style]}
+      disabled={disabled || isLoading}
       activeOpacity={0.8}
-      style={[
-        styles.base,
-        styles[variant],
-        styles[`size_${size}`],
-        fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
-        style,
-      ]}
+      {...props}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? '#fff' : Colors.primary}
-          size="small"
-        />
+      {isLoading ? (
+        <ActivityIndicator color={getTextColor()} />
       ) : (
         <>
-          {leftIcon}
-          <Text
-            style={[
-              styles.text,
-              styles[`text_${variant}`],
-              styles[`textSize_${size}`],
-              textStyle,
-            ]}
+          {leftIcon && <View className="mr-2">{leftIcon}</View>}
+          <Text 
+            weight="bold" 
+            color={getTextColor()}
+            style={{ fontSize: size === 'small' ? 14 : size === 'medium' ? 16 : 18 }}
           >
             {label}
           </Text>
-          {rightIcon}
+          {rightIcon && <View className="ml-2">{rightIcon}</View>}
         </>
       )}
     </TouchableOpacity>
   );
-}
-
-const styles = StyleSheet.create({
-  base: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.full,
-    gap: Spacing.sm,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-
-  // Variants
-  primary: {
-    backgroundColor: Colors.primary,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: Colors.error,
-  },
-
-  // Sizes
-  size_sm: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  size_md: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  size_lg: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-
-  // Text base
-  text: {
-    fontWeight: '600',
-  },
-  text_primary: { color: '#fff' },
-  text_outline: { color: Colors.primary },
-  text_ghost: { color: Colors.primary },
-  text_danger: { color: '#fff' },
-
-  // Text sizes
-  textSize_sm: { fontSize: 13 },
-  textSize_md: { fontSize: 15 },
-  textSize_lg: { fontSize: 16 },
-});
+};

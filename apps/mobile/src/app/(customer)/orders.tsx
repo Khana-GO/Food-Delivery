@@ -1,123 +1,182 @@
-import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Text } from '@/components/ui/Text';
-import { Colors } from '@/constants/theme';
-import { useOrders } from '@/api/orders';
+import { Ionicons } from '@expo/vector-icons';
+
+const ORDERS = [
+  {
+    id: '1',
+    restaurant: 'McDonald\'s',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/McDonald%27s_Golden_Arches.svg/100px-McDonald%27s_Golden_Arches.svg.png',
+    items: '2x Big Mac, 1x Fries',
+    total: 21.50,
+    status: 'PREPARING',
+    date: 'Today, 12:30 PM',
+  },
+  {
+    id: '2',
+    restaurant: 'KFC',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/KFC_logo.svg/100px-KFC_logo.svg.png',
+    items: '1x Bucket, 2x Cola',
+    total: 35.00,
+    status: 'DELIVERED',
+    date: 'Yesterday, 6:45 PM',
+  },
+  {
+    id: '3',
+    restaurant: 'Pizza Hut',
+    logo: 'https://upload.wikimedia.org/wikipedia/sco/d/d2/Pizza_Hut_logo.svg',
+    items: '1x Pepperoni Pizza',
+    total: 18.99,
+    status: 'CANCELLED',
+    date: 'Oct 15, 8:00 PM',
+  },
+];
 
 export default function OrdersScreen() {
-  const { data: orders, isLoading, isError } = useOrders();
-  const [activeTab, setActiveTab] = useState('Active');
-
-  const activeOrders = orders?.filter((o: any) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'PICKED_UP'].includes(o.orderStatus)) || [];
-  const pastOrders = orders?.filter((o: any) => ['DELIVERED', 'CANCELLED'].includes(o.orderStatus)) || [];
-
-  const displayOrders = activeTab === 'Active' ? activeOrders : pastOrders;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'DELIVERED': return '#22C55E';
+      case 'CANCELLED': return '#EF4444';
+      default: return '#F59E0B'; // PREPARING, PENDING, etc
+    }
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-slate-200">
-        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center mr-3">
-          <Text className="text-lg">←</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text className="text-lg font-extrabold text-slate-800">Your Orders</Text>
+        <Text style={styles.title}>Your Orders</Text>
       </View>
 
-      {/* Tabs */}
-      <View className="flex-row bg-white border-b border-slate-200 px-4 pt-2">
-        {['Active', 'Past Orders'].map((tab) => (
-          <TouchableOpacity 
-            key={tab}
-            className={`flex-1 items-center pb-3 border-b-2 ${activeTab === tab ? 'border-primary' : 'border-transparent'}`}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text className={`text-sm font-bold ${activeTab === tab ? 'text-primary' : 'text-slate-500'}`}>
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="p-4 pb-24">
-        {isLoading ? (
-          <View className="py-20 items-center justify-center">
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        ) : isError ? (
-          <View className="py-20 items-center justify-center">
-            <Text className="text-red-500 font-medium">Failed to load orders.</Text>
-          </View>
-        ) : displayOrders.length === 0 ? (
-          <View className="py-20 items-center justify-center">
-            <Text className="text-5xl mb-4">🧾</Text>
-            <Text className="text-lg font-bold text-slate-800 mb-2">No {activeTab.toLowerCase()} orders</Text>
-            <Text className="text-slate-500">When you place an order, it will appear here.</Text>
-            <TouchableOpacity 
-              className="mt-6 px-6 py-3 bg-primary rounded-full"
-              onPress={() => router.navigate('/(customer)' as any)}
-            >
-              <Text className="text-white font-bold">Order Now</Text>
-            </TouchableOpacity>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        {ORDERS.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="receipt-outline" size={64} color="#CBD5E1" />
+            <Text style={styles.emptyText}>You haven't placed any orders yet.</Text>
           </View>
         ) : (
-          displayOrders.map((order: any) => (
-            <TouchableOpacity 
-              key={order.id} 
-              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4"
-              onPress={() => {
-                // Navigate to order tracking/details
-              }}
-              activeOpacity={0.8}
-            >
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-sm font-extrabold text-slate-800">Order #{order.id.slice(0,8).toUpperCase()}</Text>
-                <View className={`px-2 py-1 rounded-md ${
-                  order.orderStatus === 'DELIVERED' ? 'bg-green-100' :
-                  order.orderStatus === 'CANCELLED' ? 'bg-red-100' : 'bg-orange-100'
-                }`}>
-                  <Text className={`text-xs font-bold ${
-                    order.orderStatus === 'DELIVERED' ? 'text-green-700' :
-                    order.orderStatus === 'CANCELLED' ? 'text-red-700' : 'text-orange-700'
-                  }`}>
-                    {order.orderStatus}
+          <View style={styles.ordersList}>
+            {ORDERS.map((order) => (
+              <TouchableOpacity key={order.id} style={styles.orderCard} onPress={() => {}}>
+                <View style={styles.orderHeader}>
+                  <View style={styles.restaurantInfo}>
+                    <View style={styles.logoCircle}>
+                      <Image source={{ uri: order.logo }} style={styles.logoImg} resizeMode="contain" />
+                    </View>
+                    <View>
+                      <Text style={styles.restaurantName}>{order.restaurant}</Text>
+                      <Text style={styles.orderDate}>{order.date}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+                    {order.status}
                   </Text>
-                </View>
-              </View>
-              
-              <View className="flex-row items-center gap-3 mb-3 pb-3 border-b border-slate-100">
-                <View className="w-12 h-12 bg-slate-100 rounded-xl items-center justify-center">
-                  <Text className="text-2xl">🏪</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-sm font-bold text-slate-800 mb-1">Food Items</Text>
-                  <Text className="text-xs text-slate-500">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-
-              <View className="flex-row justify-between items-center">
-                <View className="flex-row items-center gap-1">
-                  <Text className="text-xs text-slate-500">Total:</Text>
-                  <Text className="text-base font-extrabold text-primary">Rs. {order.totalAmount}</Text>
                 </View>
                 
-                {activeTab === 'Active' ? (
-                  <TouchableOpacity className="px-4 py-2 bg-slate-800 rounded-full">
-                    <Text className="text-white text-xs font-bold">Track Order</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity className="px-4 py-2 bg-primary/10 rounded-full">
-                    <Text className="text-primary text-xs font-bold">Reorder</Text>
+                <View style={styles.orderDetails}>
+                  <Text style={styles.itemsText}>{order.items}</Text>
+                  <Text style={styles.totalText}>${order.total.toFixed(2)}</Text>
+                </View>
+
+                {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+                  <TouchableOpacity style={styles.trackBtn}>
+                    <Text style={styles.trackText}>Track Order</Text>
                   </TouchableOpacity>
                 )}
-              </View>
-            </TouchableOpacity>
-          ))
+                {order.status === 'DELIVERED' && (
+                  <TouchableOpacity style={styles.reorderBtn}>
+                    <Text style={styles.reorderText}>Reorder</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
+  backText: { fontSize: 15, color: '#1E293B', marginBottom: 12 },
+  title: { fontSize: 30, fontWeight: '800', color: '#1E293B' },
+  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 100, gap: 16 },
+  emptyText: { fontSize: 16, color: '#64748B', fontWeight: '500' },
+  
+  ordersList: { paddingHorizontal: 16, gap: 16, paddingTop: 8 },
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  restaurantInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logoCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logoImg: { width: 36, height: 36 },
+  restaurantName: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+  orderDate: { fontSize: 13, color: '#94A3B8' },
+  statusText: { fontSize: 13, fontWeight: '700' },
+  
+  orderDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  itemsText: { fontSize: 14, color: '#64748B', flex: 1, marginRight: 16 },
+  totalText: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
+
+  trackBtn: {
+    backgroundColor: '#38BDF8',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  trackText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  
+  reorderBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  reorderText: { color: '#1E293B', fontSize: 14, fontWeight: '700' },
+});

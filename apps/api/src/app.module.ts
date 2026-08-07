@@ -14,6 +14,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { HomeModule } from './home/home.module';
+import { MapsModule } from './maps/maps.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { HomeModule } from './home/home.module';
     NotificationsModule,
     AdminModule,
     HomeModule,
+    MapsModule,
   ],
   controllers: [AppController],
 })

@@ -1,16 +1,15 @@
-import { Text } from '@/components/ui/Text';
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
-    <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiFocused]}>{emoji}</Text>
-      <Text style={[styles.tabLabel, focused ? styles.tabLabelFocused : styles.tabLabelNormal]}>
-        {label}
-      </Text>
+    <View style={styles.iconWrap}>
+      <Ionicons name={name} size={24} color={focused ? '#1E293B' : '#94A3B8'} />
+      {focused && <View style={styles.dot} />}
     </View>
   );
 }
@@ -21,76 +20,82 @@ export default function CustomerLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarActiveTintColor: '#1E293B',
+        tabBarInactiveTintColor: '#94A3B8',
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
+          tabBarLabel: 'Home',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🏠" label="Home" focused={focused} />
+            <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
+          tabBarLabel: 'Discover',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🔍" label="Search" focused={focused} />
+            <TabIcon name={focused ? 'compass' : 'compass-outline'} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
+          tabBarLabel: 'Cart',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🛒" label="Cart" focused={focused} />
+            <TabIcon name={focused ? 'bag' : 'bag-outline'} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
+          tabBarLabel: 'Orders',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🕐" label="Orders" focused={focused} />
+            <TabIcon name={focused ? 'receipt' : 'receipt-outline'} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👤" label="Profile" focused={focused} />
+            <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />
           ),
         }}
       />
-      {/* Hidden screens that are still part of this group */}
-      <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
-      <Tabs.Screen name="chat" options={{ href: null }} />
-      <Tabs.Screen name="become-driver" options={{ href: null }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#F1F5F9',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: 68,
-    paddingBottom: 8,
-    paddingTop: 4,
+    height: 72,
+    paddingBottom: 12,
+    paddingTop: 8,
   },
-  tabIconContainer: {
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  iconWrap: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingTop: 4,
   },
-  tabEmoji: { fontSize: 22, opacity: 0.45 },
-  tabEmojiFocused: { opacity: 1 },
-  tabLabel: { fontSize: 10, fontWeight: '500' },
-  tabLabelFocused: { color: Colors.primary, fontWeight: '700' },
-  tabLabelNormal: { color: Colors.textSecondary },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#1E293B',
+    marginTop: 2,
+  },
 });

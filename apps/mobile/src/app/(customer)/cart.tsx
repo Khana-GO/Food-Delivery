@@ -1,260 +1,203 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Text } from '@/components/ui/Text';
-import { Colors } from '@/constants/theme';
-import { useCartStore } from '@/store/cartStore';
-import { useCreateOrder } from '@/api/orders';
+import { Ionicons } from '@expo/vector-icons';
 
-const PAYMENT_METHODS = [
-  { id: 'ONLINE', label: 'Credit / Debit Card', icon: '💳' },
-  { id: 'OFFLINE', label: 'Cash on Delivery', icon: '💵' },
+const INITIAL_CART = [
+  {
+    id: '1',
+    name: 'Western BBQ Cheeseburger Meal',
+    price: 6.69,
+    quantity: 1,
+    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&auto=format&fit=crop',
+    restaurant: 'McDonald\'s',
+  },
+  {
+    id: '2',
+    name: 'Spicy Chicken Sandwich',
+    price: 5.49,
+    quantity: 2,
+    image: 'https://images.unsplash.com/photo-1626082895617-2c67678e0638?w=200&auto=format&fit=crop',
+    restaurant: 'KFC',
+  },
 ];
 
 export default function CartScreen() {
-  const { getCartArray, getSubtotal, updateQty, clearCart } = useCartStore();
-  const { mutate: placeOrder, isPending: isPlacingOrder } = useCreateOrder();
-  
-  const [promoCode, setPromoCode] = useState('');
-  const [deliveryNote, setDeliveryNote] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState('OFFLINE');
+  const [cartItems, setCartItems] = useState(INITIAL_CART);
 
-  const cartItems = getCartArray();
-  const subtotal = getSubtotal();
-
-  // Group items by restaurant for display
-  const groupedItems = cartItems.reduce((acc, item) => {
-    if (!acc[item.restaurantId]) {
-      acc[item.restaurantId] = {
-        restaurantId: item.restaurantId,
-        restaurantName: item.restaurantName,
-        emoji: item.emoji || '🏪',
-        items: []
-      };
-    }
-    acc[item.restaurantId].items.push(item);
-    return acc;
-  }, {} as Record<string, any>);
-
-  const groups = Object.values(groupedItems);
-
-  const tax = Math.round(subtotal * 0.13);
-  const deliveryFee = 60;
-  const platformFee = 15;
-  const discount = promoCode ? 50 : 0; // Fake discount
-  const total = subtotal > 0 ? (subtotal + tax + deliveryFee + platformFee - discount) : 0;
-
-  if (cartItems.length === 0) {
-    return (
-      <SafeAreaView className="flex-1 bg-slate-50 items-center justify-center p-6">
-        <Text className="text-6xl mb-4">🛒</Text>
-        <Text className="text-xl font-bold text-slate-800 mb-2">Your cart is empty</Text>
-        <Text className="text-slate-500 text-center mb-6">Looks like you haven't added any delicious food yet.</Text>
-        <TouchableOpacity 
-          className="bg-primary px-8 py-3 rounded-full"
-          onPress={() => router.navigate('/(customer)' as any)}
-        >
-          <Text className="text-white font-bold text-base">Browse Restaurants</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+  const updateQuantity = (id: string, delta: number) => {
+    setCartItems(prev =>
+      prev.map(item =>
+        item.id === id
+          ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+          : item
+      ).filter(item => item.quantity > 0)
     );
-  }
+  };
+
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const tax = subtotal * 0.13;
+  const deliveryFee = 2.99;
+  const total = subtotal + tax + deliveryFee;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-slate-200">
-        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center">
-          <Text className="text-lg">←</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text className="text-lg font-extrabold text-slate-800">Your Cart</Text>
-        <TouchableOpacity className="w-10 h-10 items-center justify-center" onPress={clearCart}>
-          <Text className="text-lg">🗑️</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>Your Cart</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Cart groups */}
-        {groups.map((group) => (
-          <View key={group.restaurantId} className="bg-white mx-4 mt-3 rounded-2xl p-4 shadow-sm border border-slate-100">
-            <View className="flex-row items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-lg bg-orange-50 items-center justify-center">
-                <Text className="text-xl">{group.emoji}</Text>
-              </View>
-              <View>
-                <Text className="text-base font-bold text-slate-800">{group.restaurantName}</Text>
-              </View>
-            </View>
-
-            {group.items.map((item: any) => (
-              <View key={item.id} className="flex-row items-center gap-3 py-3 border-t border-slate-100">
-                <View className="w-14 h-14 rounded-lg bg-orange-50 items-center justify-center">
-                  <Text className="text-2xl">🍽️</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-sm font-bold text-slate-800 mb-1">{item.name}</Text>
-                  <Text className="text-sm font-bold text-primary">Rs. {item.price}</Text>
-                </View>
-                <View className="flex-row items-center bg-primary rounded-full px-1 py-1">
-                  <TouchableOpacity
-                    className="w-7 h-7 items-center justify-center"
-                    onPress={() => updateQty(item.id, -1)}
-                  >
-                    <Text className="text-white text-lg leading-6">−</Text>
-                  </TouchableOpacity>
-                  <Text className="text-white text-sm font-bold min-w-[20px] text-center">{item.qty}</Text>
-                  <TouchableOpacity
-                    className="w-7 h-7 items-center justify-center"
-                    onPress={() => updateQty(item.id, 1)}
-                  >
-                    <Text className="text-white text-lg leading-6">+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        ))}
-
-        {/* Promo code */}
-        <View className="flex-row items-center bg-white mx-4 mt-3 rounded-xl px-4 py-2 border-2 border-dashed border-orange-200">
-          <Text className="text-lg mr-2">🏷️</Text>
-          <TextInput
-            className="flex-1 h-12 text-sm text-slate-800"
-            placeholder="Enter promo code"
-            placeholderTextColor={Colors.textLight}
-            value={promoCode}
-            onChangeText={setPromoCode}
-          />
-          <TouchableOpacity>
-            <Text className="text-primary font-bold text-sm">Apply</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Delivery instructions */}
-        <View className="bg-white mx-4 mt-3 rounded-xl px-4 shadow-sm border border-slate-100">
-          <TextInput
-            className="h-12 text-sm text-slate-800"
-            placeholder="Delivery instructions (optional)"
-            placeholderTextColor={Colors.textLight}
-            value={deliveryNote}
-            onChangeText={setDeliveryNote}
-          />
-        </View>
-
-        {/* Bill Details */}
-        <View className="bg-white mx-4 mt-3 rounded-2xl p-4 shadow-sm border border-slate-100">
-          <Text className="text-base font-extrabold text-slate-800 mb-3">Bill Details</Text>
-          {[
-            { label: 'Subtotal', value: `Rs. ${subtotal}` },
-            { label: 'Taxes (13%)', value: `Rs. ${tax}` },
-            { label: 'Delivery Fee', value: `Rs. ${deliveryFee}` },
-            { label: 'Platform Fee', value: `Rs. ${platformFee}` },
-          ].map((row) => (
-            <View key={row.label} className="flex-row justify-between mb-2">
-              <Text className="text-sm text-slate-500">{row.label}</Text>
-              <Text className="text-sm text-slate-800 font-medium">{row.value}</Text>
-            </View>
-          ))}
-          {discount > 0 && (
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-sm text-green-600">Discount</Text>
-              <Text className="text-sm text-green-600 font-medium">- Rs. {discount}</Text>
-            </View>
-          )}
-          <View className="h-[1px] bg-slate-200 my-2" />
-          <View className="flex-row justify-between">
-            <Text className="text-base font-extrabold text-slate-800">Grand Total</Text>
-            <Text className="text-base font-extrabold text-slate-800">Rs. {total}</Text>
-          </View>
-        </View>
-
-        {/* Delivery Address */}
-        <View className="bg-white mx-4 mt-3 rounded-2xl p-4 shadow-sm border border-slate-100">
-          <View className="flex-row justify-between mb-3">
-            <Text className="text-base font-bold text-slate-800">📍 Delivery Address</Text>
-            <TouchableOpacity>
-              <Text className="text-sm font-semibold text-primary">Change</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        {cartItems.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="cart-outline" size={64} color="#CBD5E1" />
+            <Text style={styles.emptyText}>Your cart is empty.</Text>
+            <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/(customer)/search')}>
+              <Text style={styles.browseText}>Browse Food</Text>
             </TouchableOpacity>
           </View>
-          <View className="flex-row items-center gap-3">
-            <View className="w-12 h-12 rounded-lg bg-slate-100 items-center justify-center">
-              <Text className="text-2xl">🗺️</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-bold text-slate-800 mb-1">Home</Text>
-              <Text className="text-xs text-slate-500 leading-tight">
-                Ward 4, Jhamsikhel Marg, Lalitpur,{"\n"}Kathmandu 44600
-              </Text>
-            </View>
-          </View>
-        </View>
+        ) : (
+          <>
+            {/* Cart Items */}
+            <View style={styles.itemsContainer}>
+              {cartItems.map((item) => (
+                <View key={item.id} style={styles.cartItemRow}>
+                  <Image source={{ uri: item.image }} style={styles.itemImage} />
+                  
+                  <View style={styles.itemDetails}>
+                    <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                    <Text style={styles.itemRestaurant}>{item.restaurant}</Text>
+                    <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+                  </View>
 
-        {/* Payment Methods */}
-        <View className="bg-white mx-4 mt-3 rounded-2xl p-4 shadow-sm border border-slate-100 mb-6">
-          <Text className="text-base font-bold text-slate-800 mb-3">Payment Method</Text>
-          {PAYMENT_METHODS.map((method, index) => (
-            <TouchableOpacity
-              key={method.id}
-              className={`flex-row items-center py-3 gap-3 ${index !== PAYMENT_METHODS.length - 1 ? 'border-b border-slate-100' : ''}`}
-              onPress={() => setSelectedPayment(method.id)}
-            >
-              <Text className="text-xl">{method.icon}</Text>
-              <Text className="flex-1 text-sm font-medium text-slate-800">{method.label}</Text>
-              <View className="w-5 h-5 rounded-full border-2 border-primary items-center justify-center">
-                {selectedPayment === method.id && (
-                  <View className="w-2.5 h-2.5 rounded-full bg-primary" />
-                )}
+                  <View style={styles.quantityControl}>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item.id, -1)}>
+                      <Ionicons name="remove" size={16} color="#64748B" />
+                    </TouchableOpacity>
+                    <Text style={styles.qtyText}>{item.quantity}</Text>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item.id, 1)}>
+                      <Ionicons name="add" size={16} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Receipt Summary */}
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Subtotal</Text>
+                <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
               </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View className="h-24" />
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Delivery Fee</Text>
+                <Text style={styles.summaryValue}>${deliveryFee.toFixed(2)}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Tax</Text>
+                <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
+              </View>
+              <View style={[styles.summaryRow, styles.totalRow]}>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      {/* Place Order button */}
-      <View className="absolute bottom-0 left-0 right-0 bg-primary flex-row items-center justify-between px-5 py-4 pb-8 shadow-lg border-t border-primary/20">
-        <View>
-          <Text className="text-xs text-white/80 font-medium mb-0.5">Total Amount</Text>
-          <Text className="text-xl font-extrabold text-white">Rs. {total}</Text>
+      {/* Checkout Bottom Bar */}
+      {cartItems.length > 0 && (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity style={styles.checkoutBtn} onPress={() => console.log('Checkout')}>
+            <Text style={styles.checkoutText}>Checkout</Text>
+            <Text style={styles.checkoutPrice}>${total.toFixed(2)}</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity 
-          className="flex-row items-center bg-white/20 px-6 py-3 rounded-full"
-          disabled={isPlacingOrder}
-          onPress={() => {
-            const orderData = {
-              restaurantId: cartItems[0]?.restaurantId,
-              deliveryAddress: 'Ward 4, Jhamsikhel Marg, Lalitpur, Kathmandu 44600',
-              paymentMethod: selectedPayment,
-              items: cartItems.map((item) => ({
-                id: item.id,
-                qty: item.qty,
-                price: item.price
-              }))
-            };
-            
-            placeOrder(orderData, {
-              onSuccess: () => {
-                clearCart();
-                router.replace('/(customer)/orders' as any);
-              },
-              onError: (err) => {
-                console.error('Failed to place order:', err);
-                alert('Failed to place order. Please try again.');
-              }
-            });
-          }}
-        >
-          {isPlacingOrder ? (
-             <ActivityIndicator color="white" />
-          ) : (
-             <>
-               <Text className="text-lg font-extrabold text-white mr-2">Place Order</Text>
-               <Text className="text-white text-lg">➔</Text>
-             </>
-          )}
-        </TouchableOpacity>
-      </View>
+      )}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
+  backText: { fontSize: 15, color: '#1E293B', marginBottom: 12 },
+  title: { fontSize: 30, fontWeight: '800', color: '#1E293B' },
+  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 100, gap: 16 },
+  emptyText: { fontSize: 16, color: '#64748B', fontWeight: '500' },
+  browseBtn: { backgroundColor: '#F1F5F9', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
+  browseText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  
+  itemsContainer: { paddingHorizontal: 16 },
+  cartItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 12,
+  },
+  itemImage: { width: 72, height: 72, borderRadius: 12 },
+  itemDetails: { flex: 1 },
+  itemName: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 4 },
+  itemRestaurant: { fontSize: 13, color: '#94A3B8', marginBottom: 8 },
+  itemPrice: { fontSize: 15, fontWeight: '700', color: '#38BDF8' },
+  
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  qtyBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  qtyText: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+  
+  summaryContainer: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  summaryLabel: { fontSize: 15, color: '#64748B' },
+  summaryValue: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+  totalRow: { marginTop: 12, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  totalLabel: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  totalValue: { fontSize: 18, fontWeight: '800', color: '#38BDF8' },
+
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+    paddingTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  checkoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E293B',
+    height: 56,
+    borderRadius: 28,
+    paddingHorizontal: 24,
+  },
+  checkoutText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  checkoutPrice: { fontSize: 16, fontWeight: '700', color: '#38BDF8' },
+});
