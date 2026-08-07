@@ -1,7 +1,7 @@
 node_modules/
 dist/
 .expo/
-.agents/
+.agent/
 
 
 # --- Secrets & Keys ---

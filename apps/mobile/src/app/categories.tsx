@@ -43,11 +43,11 @@ export default function CategoriesScreen() {
           {ALL_CATEGORIES.map((cat) => (
             <TouchableOpacity key={cat.id} style={styles.categoryItem} onPress={() => router.push('/(customer)/search' as any)}>
               <View style={styles.categoryCircle}>
-                {cat.isNew && (
+                {cat.isNew ? (
                   <View style={styles.newBadge}>
                     <Text style={styles.newBadgeText}>NEW</Text>
                   </View>
-                )}
+                ) : null}
                 <Text style={styles.emojiText}>{cat.emoji}</Text>
               </View>
               <Text style={styles.categoryName}>{cat.name}</Text>

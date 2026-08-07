@@ -34,7 +34,7 @@ export default function LoginScreen() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      if (tab === 'register') {
+      if (tab === 'signup') {
         router.push('/auth/verify');
       } else {
         router.replace('/(customer)');

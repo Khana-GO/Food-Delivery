@@ -51,7 +51,7 @@ export default function PhoneVerificationScreen() {
             {code.map((digit, idx) => (
               <TextInput
                 key={idx}
-                ref={(el) => (inputs.current[idx] = el)}
+                ref={(el) => { inputs.current[idx] = el; }}
                 style={[styles.codeInput, digit ? styles.codeInputActive : null]}
                 keyboardType="number-pad"
                 maxLength={1}

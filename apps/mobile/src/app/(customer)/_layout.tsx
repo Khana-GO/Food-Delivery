@@ -9,7 +9,7 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
     <View style={styles.iconWrap}>
       <Ionicons name={name} size={24} color={focused ? '#1E293B' : '#94A3B8'} />
-      {focused && <View style={styles.dot} />}
+      {focused ? <View style={styles.dot} /> : null}
     </View>
   );
 }

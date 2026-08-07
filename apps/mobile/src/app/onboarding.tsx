@@ -39,6 +39,14 @@ const SLIDES = [
   },
 ];
 
+const OnboardingSlide = React.memo(({ item }: { item: typeof SLIDES[0] }) => (
+  <View style={{ width }}>
+    <View style={styles.illustrationBox}>
+      <Image source={item.image} style={styles.illustration} resizeMode="contain" />
+    </View>
+  </View>
+));
+
 export default function OnboardingScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -70,14 +78,7 @@ export default function OnboardingScreen() {
           const idx = Math.round(e.nativeEvent.contentOffset.x / width);
           setActiveIndex(idx);
         }}
-        renderItem={({ item }) => (
-          <View style={{ width }}>
-            {/* Illustration box */}
-            <View style={styles.illustrationBox}>
-              <Image source={item.image} style={styles.illustration} resizeMode="contain" />
-            </View>
-          </View>
-        )}
+        renderItem={({ item }) => <OnboardingSlide item={item} />}
       />
 
       {/* Bottom content - outside of FlatList so it stays fixed */}

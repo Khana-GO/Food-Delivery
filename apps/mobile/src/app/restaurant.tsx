@@ -123,7 +123,7 @@ export default function RestaurantScreen() {
           {MENU_TABS.map((tab, i) => (
             <TouchableOpacity key={i} onPress={() => setActiveTab(i)} style={styles.menuTab}>
               <Text style={[styles.menuTabText, activeTab === i && styles.menuTabTextActive]}>{tab}</Text>
-              {activeTab === i && <View style={styles.menuTabUnderline} />}
+              {activeTab === i ? <View style={styles.menuTabUnderline} /> : null}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -151,14 +151,14 @@ export default function RestaurantScreen() {
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
-              onPress={() => router.push('/(customer)/meal' as any)}
+              onPress={() => router.push('/meal' as any)}
             >
               <Image source={{ uri: item.image }} style={styles.menuItemImage} resizeMode="cover" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuItemName}>{item.name}</Text>
-                {!!item.calories && (
+                {!!item.calories ? (
                   <Text style={styles.menuItemCal}>{item.calories}</Text>
-                )}
+                ) : null}
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
                   <Text style={styles.originalPrice}>{item.originalPrice}</Text>
                   <Text style={styles.discountPrice}>{item.price}</Text>

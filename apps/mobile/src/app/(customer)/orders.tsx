@@ -90,16 +90,16 @@ export default function OrdersScreen() {
                   <Text style={styles.totalText}>${order.total.toFixed(2)}</Text>
                 </View>
 
-                {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+                {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' ? (
                   <TouchableOpacity style={styles.trackBtn}>
                     <Text style={styles.trackText}>Track Order</Text>
                   </TouchableOpacity>
-                )}
-                {order.status === 'DELIVERED' && (
+                ) : null}
+                {order.status === 'DELIVERED' ? (
                   <TouchableOpacity style={styles.reorderBtn}>
                     <Text style={styles.reorderText}>Reorder</Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
               </TouchableOpacity>
             ))}
           </View>

@@ -86,7 +86,7 @@ export default function SearchScreen() {
               <TouchableOpacity
                 key={item.id}
                 style={styles.resultRow}
-                onPress={() => router.push('/(customer)/restaurant' as any)}
+                onPress={() => router.push('/restaurant' as any)}
               >
                 {item.type === 'food' ? (
                   <Image source={{ uri: item.image }} style={styles.foodThumb} />

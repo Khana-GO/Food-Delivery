@@ -48,7 +48,7 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Address + Order Now chips */}
         <View style={styles.chipRow}>
-          <TouchableOpacity style={styles.chip} onPress={() => router.push('/(customer)/address' as any)}>
+          <TouchableOpacity style={styles.chip} onPress={() => router.push('/address' as any)}>
             <Ionicons name="location-outline" size={14} color="#F59E0B" />
             <Text style={styles.chipText}>32, Kingston Ln.</Text>
           </TouchableOpacity>
@@ -77,17 +77,17 @@ export default function HomeScreen() {
           {CATEGORIES.map((cat) => (
             <TouchableOpacity key={cat.id} style={styles.categoryItem}>
               <View style={styles.categoryCircle}>
-                {cat.isNew && (
+                {cat.isNew ? (
                   <View style={styles.newBadge}>
                     <Text style={styles.newBadgeText}>NEW</Text>
                   </View>
-                )}
+                ) : null}
                 <Text style={{ fontSize: 32 }}>{cat.emoji}</Text>
               </View>
               <Text style={styles.categoryName}>{cat.name}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(customer)/categories' as any)}>
+          <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/categories' as any)}>
             <View style={[styles.categoryCircle, styles.seeAllCircle]}>
               <Text style={styles.seeAllArrow}>→</Text>
             </View>
@@ -115,7 +115,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={item.id}
               style={styles.trendingCard}
-              onPress={() => router.push('/(customer)/restaurant' as any)}
+              onPress={() => router.push('/restaurant' as any)}
             >
               <Image source={{ uri: item.image }} style={styles.trendingImage} resizeMode="cover" />
               <View style={styles.trendingFooter}>
