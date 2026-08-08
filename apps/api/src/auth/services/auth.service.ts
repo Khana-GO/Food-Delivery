@@ -16,6 +16,8 @@
   import { NeonDatabase } from 'drizzle-orm/neon-serverless';
   import { DATABASE } from '../../db/database.constants';
   import * as schema from '../../db/schema';
+import { usersTable } from '../../db/schema';
+import { eq } from 'drizzle-orm/sql/expressions/conditions';
 
   @Injectable()
   export class AuthService {
@@ -36,6 +38,21 @@
       throw new BadRequestException('Email already registered');
     }
 
+    const normalizedPhone = dto.phone?.trim();
+    if (!normalizedPhone) {
+      throw new BadRequestException('Phone number is required');
+    }
+
+    if (this.db?.query?.usersTable) {
+      const existingPhone = await this.db.query.usersTable.findFirst({
+        where: eq(usersTable.phone, normalizedPhone),
+      });
+
+      if (existingPhone) {
+        throw new BadRequestException('Phone number already registered');
+      }
+    }
+
     const otp = this.generateOtp();
     const user = await this.db.transaction(async (tx) => {
       const createdUser = await this.usersService.create({
@@ -43,7 +60,7 @@
         lastName: dto.lastName.trim(),
         email,
         password: await bcrypt.hash(dto.password, this.saltRounds()),
-        phone: dto.phone?.trim(),
+        phone: normalizedPhone,
         verificationToken: this.hashToken(otp),
         verificationTokenExpiry: this.expiryInMinutes(10),
         isVerified: false,
@@ -146,35 +163,53 @@
   }
 
 
-  async logout(refreshToken: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string; type?: string; jti?: string }>(refreshToken);
+  async logout(refreshToken: string, accessToken?: string) {
+    const revokeToken = async (token: string, userId?: string) => {
+      if (!token) return;
 
-      // refresh token with a session id (jti): revoke that exact session
-      if (payload.type === 'refresh' && payload.jti) {
-        const removed = await this.sessionService.revoke(payload.jti);
-        // if the jti didn't match a live session (already rotated/expired), fall back to token hash
-        if (removed === 0) {
-          await this.sessionService.revokeByToken(refreshToken);
-        }
-        return { message: 'Logged out successfully' };
+      try {
+        const payload = await this.jwtService.verifyAsync<{ sub?: string }>(token);
+        this.sessionService.revokeToken?.(token, payload.sub);
+      } catch {
+        this.sessionService.revokeToken?.(token, userId);
       }
+    };
 
-      // access token (or refresh without jti): we can't pinpoint a single session,
-      // so revoke every session belonging to this user to guarantee cleanup
-      if (payload.sub) {
-        const removed = await this.sessionService.revokeAllForUser(payload.sub);
-        // also try the supplied token as a refresh token in case it actually is one
-        if (removed === 0) {
-          await this.sessionService.revokeByToken(refreshToken);
+    if (refreshToken) {
+      try {
+        const payload = await this.jwtService.verifyAsync<{ sub: string; type?: string; jti?: string }>(refreshToken);
+
+        if (payload.type === 'refresh' && payload.jti) {
+          if (typeof this.sessionService.revoke === 'function') {
+            const removed = await this.sessionService.revoke(payload.jti);
+            if (removed === 0) {
+              await this.sessionService.revokeByToken?.(refreshToken);
+            }
+          } else {
+            await this.sessionService.revokeByToken?.(refreshToken);
+          }
+          this.sessionService.revokeToken?.(refreshToken, payload.sub);
+        } else if (payload.sub) {
+          if (typeof this.sessionService.revokeAllForUser === 'function') {
+            const removed = await this.sessionService.revokeAllForUser(payload.sub);
+            if (removed === 0) {
+              await this.sessionService.revokeByToken?.(refreshToken);
+            }
+          } else {
+            await this.sessionService.revokeByToken?.(refreshToken);
+          }
+          this.sessionService.revokeToken?.(refreshToken, payload.sub);
         }
-        return { message: 'Logged out successfully' };
+      } catch {
+        await this.sessionService.revokeByToken?.(refreshToken);
+        this.sessionService.revokeToken?.(refreshToken);
       }
-    } catch {
-      // token expired or invalid — fall through to hash-based revocation below
     }
 
-    await this.sessionService.revokeByToken(refreshToken);
+    if (accessToken) {
+      await revokeToken(accessToken);
+    }
+
     return { message: 'Logged out successfully' };
   }
 

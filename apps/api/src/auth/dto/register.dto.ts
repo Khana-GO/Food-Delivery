@@ -31,8 +31,7 @@ export class    RegisterUserDto {
   )
   password!: string;
 
-  @IsOptional()
   @IsString()
   @Length(7, 10)
-  phone?: string;
+  phone!: string;
 }

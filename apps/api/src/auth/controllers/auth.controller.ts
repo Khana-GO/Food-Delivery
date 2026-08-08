@@ -22,7 +22,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Register user' })
+  @Public()
+  @ApiOperation({ summary: 'Register a new user' })
   async register(@Body() dto: RegisterUserDto) {
     return this.authService.register(dto);
   }
@@ -83,8 +84,9 @@ export class AuthController {
 @ApiOperation({ summary: 'Logout current device/session' })
 async logout(@Body() dto: LogoutDto, @Req() req: { headers?: Record<string, string | undefined> } | string | undefined) {
   const authorizationHeader = typeof req === 'string' ? req : req?.headers?.authorization;
-  const refreshToken = dto?.refreshToken || this.extractBearerToken(authorizationHeader);
-  return this.authService.logout(refreshToken);
+  const accessToken = this.extractBearerToken(authorizationHeader);
+  const refreshToken = dto?.refreshToken || '';
+  return this.authService.logout(refreshToken, accessToken);
 }
 
 @UseGuards(JwtAuthGuard)

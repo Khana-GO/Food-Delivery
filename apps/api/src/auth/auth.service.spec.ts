@@ -24,7 +24,7 @@ describe('AuthService', () => {
     const transaction = jest.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({}));
     const service = new AuthService(users, {} as JwtService, mail, config, {} as any, { transaction } as any);
 
-    await service.register({ firstName: 'John', lastName: 'Doe', email: 'John@Example.com', password: 'StrongPass123' });
+    await service.register({ firstName: 'John', lastName: 'Doe', email: 'John@Example.com', password: 'StrongPass123', phone: '1234567' });
 
     const createCall = create.mock.calls[0] as unknown as [Record<string, unknown>] | undefined;
     const createdUser = createCall?.[0] as { email: string; verificationToken: string } | undefined;
@@ -63,6 +63,7 @@ describe('AuthService', () => {
       lastName: 'Doe',
       email: 'john@example.com',
       password: 'StrongPass123',
+      phone: '1234567',
     })).rejects.toThrow('mail unavailable');
 
     expect(transaction).toHaveBeenCalledTimes(1);
@@ -154,6 +155,30 @@ describe('AuthService', () => {
 
       const revokeByTokenArgs = (revokeByToken as unknown as { mock: { calls: Array<unknown[]> } }).mock.calls[0];
       expect(revokeByTokenArgs?.[0]).toBe('expired-refresh-token');
+      expect(result).toEqual({ message: 'Logged out successfully' });
+    });
+
+    it('revokes both the access token and refresh token when the user logs out', async () => {
+      const revoke = jest.fn(async () => 1);
+      const revokeByToken = jest.fn(async () => 0);
+      const revokeToken = jest.fn();
+      const revokeAllForUser = jest.fn(async () => 1);
+      const sessionService = { revoke, revokeByToken, revokeToken, revokeAllForUser } as unknown as SessionsService;
+
+      const verifyAsync = jest.fn()
+        .mockResolvedValueOnce({ sub: 'user-1', type: 'access' })
+        .mockResolvedValueOnce({ sub: 'user-1', type: 'refresh', jti: 'session-123' });
+      const jwt = { verifyAsync } as unknown as JwtService;
+      const users = {} as UsersService;
+      const mail = {} as MailService;
+      const config = { get: jest.fn() } as unknown as ConfigService;
+
+      const service = new AuthService(users, jwt, mail, config, sessionService, {} as any);
+
+      const result = await service.logout('refresh-token', 'access-token');
+
+      expect(revokeToken).toHaveBeenCalledWith('access-token', 'user-1');
+      expect(revokeToken).toHaveBeenCalledWith('refresh-token', 'user-1');
       expect(result).toEqual({ message: 'Logged out successfully' });
     });
 

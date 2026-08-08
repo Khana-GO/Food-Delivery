@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { SessionsService } from '../../sessions/sessions.service';
 
 // ===============================
 // Constants
@@ -26,6 +27,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly reflector: Reflector,
+    private readonly sessionsService: SessionsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -41,6 +43,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request & { user?: JwtPayload }>();
+    // console.log('Request headers:', request.headers); // Log the request headers for debugging
     const authHeader = request.headers.authorization;
 
     if (!authHeader || typeof authHeader !== 'string') {
@@ -63,6 +66,10 @@ export class JwtAuthGuard implements CanActivate {
 
     if (payload.type === 'refresh') {
       throw new UnauthorizedException('Refresh tokens cannot access protected routes');
+    }
+
+    if (this.sessionsService.isTokenRevoked(token, payload.sub)) {
+      throw new UnauthorizedException('Session was revoked. Please log in again.');
     }
 
     request.user = payload;
