@@ -1,26 +1,50 @@
-export const Colors = {
-  // Primary - Sky/Light Blue used for buttons and accents in the UI kit
+import { useColorScheme } from 'react-native';
+
+export const LightColors = {
   primary: '#38BDF8',
-  // Pink used for active tabs in Login/Signup toggle
+  primaryDark: '#0284C7',
   pink: '#F472B6',
   pinkLight: '#FCE7F3',
-  // Orange used for "NEW" badges and price highlights
   orange: '#FF5A1F',
-  // Background
   background: '#FFFFFF',
-  backgroundSecondary: '#F1F5F9',
-  // Text
+  backgroundSecondary: '#F8FAFC',
+  cardBackground: '#FFFFFF',
   text: '#1E293B',
   textSecondary: '#64748B',
   textLight: '#94A3B8',
-  // Utility
   success: '#22C55E',
   warning: '#F59E0B',
   error: '#EF4444',
   border: '#E2E8F0',
-  inputBackground: '#F1F5F9',
-  // UI Kit specific - card border
+  inputBackground: '#F8FAFC',
   cardBorder: '#E2E8F0',
+};
+
+export const DarkColors = {
+  primary: '#38BDF8',
+  primaryDark: '#0284C7',
+  pink: '#F472B6',
+  pinkLight: '#831843',
+  orange: '#FF5A1F',
+  background: '#0F172A',
+  backgroundSecondary: '#1E293B',
+  cardBackground: '#1E293B',
+  text: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textLight: '#64748B',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  border: '#334155',
+  inputBackground: '#1E293B',
+  cardBorder: '#334155',
+};
+
+export const Colors = LightColors;
+
+export const useThemeColors = () => {
+  const scheme = useColorScheme();
+  return scheme === 'dark' ? DarkColors : LightColors;
 };
 
 export const Spacing = {
@@ -32,12 +56,26 @@ export const Spacing = {
   xxl: 48,
 };
 
+export const TouchTarget = {
+  minWidth: 48,
+  minHeight: 48,
+};
+
 export const Radius = {
   s: 8,
   m: 12,
   l: 16,
   xl: 24,
   full: 9999,
+};
+
+export const Typography = {
+  h1: { fontSize: 30, lineHeight: 38, fontWeight: '800' as const },
+  h2: { fontSize: 24, lineHeight: 30, fontWeight: '800' as const },
+  h3: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const },
+  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const },
+  caption: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
+  button: { fontSize: 16, lineHeight: 20, fontWeight: '700' as const },
 };
 
 export const Shadows = {

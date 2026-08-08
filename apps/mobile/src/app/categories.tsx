@@ -41,7 +41,16 @@ export default function CategoriesScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.gridContainer}>
         <View style={styles.grid}>
           {ALL_CATEGORIES.map((cat) => (
-            <TouchableOpacity key={cat.id} style={styles.categoryItem} onPress={() => router.push('/(customer)/search' as any)}>
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryItem}
+              onPress={() =>
+                router.push({
+                  pathname: '/(customer)/search',
+                  params: { category: cat.name },
+                } as any)
+              }
+            >
               <View style={styles.categoryCircle}>
                 {cat.isNew ? (
                   <View style={styles.newBadge}>

@@ -67,7 +67,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <TouchableOpacity
       className={`flex-row items-center justify-center rounded-[16px] ${getPadding()} ${getBorderStyles()} ${fullWidth ? 'w-full' : 'self-center'} ${className}`}
-      style={[{ backgroundColor: getBackgroundColor() }, style]}
+      style={[{ backgroundColor: getBackgroundColor(), minHeight: 48 }, style]}
       disabled={disabled || isLoading}
       activeOpacity={0.8}
       {...props}

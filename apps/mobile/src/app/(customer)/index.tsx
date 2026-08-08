@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useCartStore } from '../../store/cartStore';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +22,36 @@ const CATEGORIES = [
   { id: '3', name: 'Salads', emoji: '🥗' },
   { id: '4', name: 'Sweets', emoji: '🍩' },
   { id: '5', name: 'Utensils', emoji: '🫖', isNew: true },
+];
+
+const RECOMMENDED_ITEMS = [
+  {
+    id: 'rec_1',
+    name: 'Western BBQ Cheeseburger',
+    restaurant: "McDonald's",
+    price: '$6.69',
+    rating: 4.8,
+    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&auto=format&fit=crop',
+    reason: 'Based on your past orders',
+  },
+  {
+    id: 'rec_2',
+    name: '8pc Chicken Bucket Meal',
+    restaurant: 'KFC',
+    price: '$18.99',
+    rating: 4.6,
+    image: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=400&auto=format&fit=crop',
+    reason: 'Popular near you',
+  },
+  {
+    id: 'rec_3',
+    name: 'Avocado & Quinoa Power Salad',
+    restaurant: 'Green & Fresh',
+    price: '$9.49',
+    rating: 4.9,
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&auto=format&fit=crop',
+    reason: 'You liked healthy salads',
+  },
 ];
 
 const TRENDING = [
@@ -41,11 +72,25 @@ const TRENDING = [
 ];
 
 export default function HomeScreen() {
-  const [search, setSearch] = useState('');
+  const { addItem, getCartArray } = useCartStore();
+  const cartItems = getCartArray();
+
+  const handleQuickAdd = (rec: typeof RECOMMENDED_ITEMS[0]) => {
+    addItem({
+      id: rec.id,
+      name: rec.name,
+      price: parseFloat(rec.price.replace('$', '')),
+      restaurantId: 'mcdonalds_1',
+      restaurantName: rec.restaurant,
+      image: rec.image,
+    });
+
+    router.push('/(customer)/cart');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Address + Order Now chips */}
         <View style={styles.chipRow}>
           <TouchableOpacity style={styles.chip} onPress={() => router.push('/address' as any)}>
@@ -59,7 +104,17 @@ export default function HomeScreen() {
         </View>
 
         {/* Greeting */}
-        <Text style={styles.greeting}>Good Evening Luisa</Text>
+        <View style={styles.greetingRow}>
+          <Text style={styles.greeting}>Good Evening, Luisa 👋</Text>
+          {cartItems.length > 0 && (
+            <TouchableOpacity style={styles.cartBadgeBtn} onPress={() => router.push('/(customer)/cart')}>
+              <Ionicons name="bag" size={20} color="#38BDF8" />
+              <View style={styles.badgeDot}>
+                <Text style={styles.badgeCountText}>{cartItems.reduce((a, b) => a + b.qty, 0)}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Search bar */}
         <TouchableOpacity
@@ -75,7 +130,16 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Categories</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
           {CATEGORIES.map((cat) => (
-            <TouchableOpacity key={cat.id} style={styles.categoryItem}>
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryItem}
+              onPress={() =>
+                router.push({
+                  pathname: '/(customer)/search',
+                  params: { category: cat.name },
+                } as any)
+              }
+            >
               <View style={styles.categoryCircle}>
                 {cat.isNew ? (
                   <View style={styles.newBadge}>
@@ -95,14 +159,42 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </ScrollView>
 
+        {/* Recommended For You Based On History */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Recommended For You</Text>
+          <Text style={styles.historyBadge}>✨ Based on order history</Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 14, paddingBottom: 10, marginBottom: 20 }}
+        >
+          {RECOMMENDED_ITEMS.map((rec) => (
+            <View key={rec.id} style={styles.recCard}>
+              <Image source={{ uri: rec.image }} style={styles.recImage} />
+              <View style={styles.recBody}>
+                <Text style={styles.recName} numberOfLines={1}>{rec.name}</Text>
+                <Text style={styles.recRest}>{rec.restaurant}</Text>
+                <View style={styles.recPriceRow}>
+                  <Text style={styles.recPrice}>{rec.price}</Text>
+                  <TouchableOpacity style={styles.addCartSmallBtn} onPress={() => handleQuickAdd(rec)}>
+                    <Ionicons name="add" size={16} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
         {/* Offers Near You */}
-        <Text style={styles.sectionTitle}>Offers Near you</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+        <Text style={styles.sectionTitle}>Offers Near You</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, marginBottom: 24 }}>
           {[
             'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop',
             'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=600&auto=format&fit=crop',
           ].map((uri, i) => (
-            <TouchableOpacity key={i} style={styles.offerCard}>
+            <TouchableOpacity key={i} style={styles.offerCard} onPress={() => router.push('/restaurant' as any)}>
               <Image source={{ uri }} style={styles.offerImage} resizeMode="cover" />
             </TouchableOpacity>
           ))}
@@ -148,7 +240,29 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   chipText: { fontSize: 13, fontWeight: '600', color: '#92400E' },
-  greeting: { fontSize: 30, fontWeight: '800', color: '#1E293B', paddingHorizontal: 16, marginBottom: 16 },
+
+  greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16 },
+  greeting: { fontSize: 26, fontWeight: '800', color: '#1E293B' },
+  cartBadgeBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  badgeCountText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -161,7 +275,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   searchPlaceholder: { fontSize: 14, color: '#94A3B8' },
-  sectionTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B', paddingHorizontal: 16, marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', paddingHorizontal: 16, marginBottom: 14 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 16 },
+  historyBadge: { fontSize: 11, fontWeight: '700', color: '#0284C7', backgroundColor: '#E0F2FE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 14 },
+
   categoriesRow: { paddingHorizontal: 16, gap: 16, paddingBottom: 8, marginBottom: 24 },
   categoryItem: { alignItems: 'center', width: 72 },
   categoryCircle: {
@@ -192,9 +309,33 @@ const styles = StyleSheet.create({
     borderColor: '#38BDF8',
   },
   seeAllArrow: { fontSize: 22, color: '#38BDF8' },
+
+  recCard: {
+    width: 170,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  recImage: { width: '100%', height: 110 },
+  recBody: { padding: 10 },
+  recName: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  recRest: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  recPriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  recPrice: { fontSize: 14, fontWeight: '800', color: '#38BDF8' },
+  addCartSmallBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   offerCard: {
     width: width * 0.8,
-    height: 160,
+    height: 150,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#F1F5F9',
