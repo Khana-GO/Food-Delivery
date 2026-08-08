@@ -5,10 +5,6 @@ import { Feather } from '@expo/vector-icons';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 
-// ────────────────────────────────────────────────────────────────────────────
-// Tab Icon Component (reusable)
-// ────────────────────────────────────────────────────────────────────────────
-
 interface TabIconProps {
   name: React.ComponentProps<typeof Feather>['name'];
   label: string;
@@ -32,10 +28,6 @@ const TabIcon = ({ name, label, focused }: TabIconProps) => (
     </Text>
   </View>
 );
-
-// ────────────────────────────────────────────────────────────────────────────
-// Main Admin Layout
-// ────────────────────────────────────────────────────────────────────────────
 
 export default function AdminLayout() {
   const { isInitializing } = useAuth();
@@ -69,34 +61,11 @@ export default function AdminLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name="bar-chart-2" label="Dashboard" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="restaurants"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name="home" label="Restaurants" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="users"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name="users" label="Users" focused={focused} />
-          ),
-        }}
-      />
-
-      {/* Hidden screens (if any) */}
-      <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="dashboard" options={{ tabBarIcon: ({ focused }) => <TabIcon name="bar-chart-2" label="Dashboard" focused={focused} /> }} />
+      <Tabs.Screen name="users" options={{ tabBarIcon: ({ focused }) => <TabIcon name="users" label="Users" focused={focused} /> }} />
+      <Tabs.Screen name="restaurants" options={{ tabBarIcon: ({ focused }) => <TabIcon name="home" label="Restaurants" focused={focused} /> }} />
+      <Tabs.Screen name="orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="shopping-bag" label="Orders" focused={focused} /> }} />
+      <Tabs.Screen name="analytics" options={{ tabBarIcon: ({ focused }) => <TabIcon name="pie-chart" label="Analytics" focused={focused} /> }} />
     </Tabs>
   );
 }

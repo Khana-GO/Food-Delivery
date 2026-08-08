@@ -7,7 +7,7 @@ const roleHomeMap: Record<UserRole, string> = {
   ADMIN: '/(admin)',
   CUSTOMER: '/(customer)',
   DRIVER: '/(driver)',
-  RESTAURANT_OWNER: '/(restaurant-owner)',
+  RESTAURANT_OWNER: '/(restaurant)',
 };
 
 export function useProtectedRoute(allowedRoles: UserRole[] = []) {
@@ -19,13 +19,14 @@ export function useProtectedRoute(allowedRoles: UserRole[] = []) {
     // Wait until auth is restored
     if (isInitializing) return;
 
-    const inAuthGroup = segments[0] === 'auth';
-    const inOnboarding = segments[0] === 'onboarding';
-    const inProtectedGroup = segments[0]?.startsWith('(') && segments[0] !== '(auth)';
+    const currentSegment = segments[0];
+    const inAuthGroup = currentSegment === '(auth)' || currentSegment === 'auth';
+    const inOnboarding = currentSegment === 'onboarding';
+    const inProtectedGroup = currentSegment?.startsWith('(') && currentSegment !== '(auth)';
 
     // --- 1. Not authenticated → redirect to login (unless already on auth/onboarding) ---
     if (!isAuthenticated && !inAuthGroup && !inOnboarding) {
-      router.replace('/auth/login');
+      router.replace('/(auth)/login');
       return;
     }
 

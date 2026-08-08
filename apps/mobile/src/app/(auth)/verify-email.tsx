@@ -77,7 +77,7 @@ export default function VerifyEmailScreen() {
       setSuccess(true);
       // Navigate to login after a short delay
       setTimeout(() => {
-        router.replace("/auth/login" as any);
+        router.replace("/(auth)/login" as any);
       }, 1500);
     } catch (err: any) {
       const msg =
@@ -106,7 +106,7 @@ export default function VerifyEmailScreen() {
   }, [email, resendVerificationCode, resendCooldown]);
 
   const goToLogin = useCallback(() => {
-    router.replace("/auth/login" as any);
+    router.replace("/(auth)/login" as any);
   }, []);
 
   const isVerifying = isAuthenticating;

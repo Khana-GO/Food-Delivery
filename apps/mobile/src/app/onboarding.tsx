@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,37 +7,37 @@ import {
   TouchableOpacity,
   FlatList,
   Animated,
-} from 'react-native';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Radius } from '@/constants/theme';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+} from "react-native";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors, Radius } from "@/constants/theme";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const illustrationStyles = StyleSheet.create({
-  mapContainer: { width: '100%', alignItems: 'center', paddingVertical: 16 },
+  mapContainer: { width: "100%", alignItems: "center", paddingVertical: 16 },
   mapBg: {
     width: width * 0.78,
     height: width * 0.78,
-    backgroundColor: '#F3F4F6',
-    borderRadius: Radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+    backgroundColor: "#F3F4F6",
+    borderRadius: Radius["2xl"],
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
-  line: { position: 'absolute', backgroundColor: '#E5E7EB' },
-  lineH1: { width: '100%', height: 2, top: '40%' },
-  lineH2: { width: '100%', height: 2, top: '65%', opacity: 0.5 },
-  lineV1: { width: 2, height: '100%', left: '35%' },
+  line: { position: "absolute", backgroundColor: "#E5E7EB" },
+  lineH1: { width: "100%", height: 2, top: "40%" },
+  lineH2: { width: "100%", height: 2, top: "65%", opacity: 0.5 },
+  lineV1: { width: 2, height: "100%", left: "35%" },
   pin: {
-    position: 'absolute',
+    position: "absolute",
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   pinCenter: {
     backgroundColor: Colors.primary,
@@ -47,8 +47,8 @@ const illustrationStyles = StyleSheet.create({
     zIndex: 10,
   },
   pinTopLeft: { top: 60, left: 40, backgroundColor: Colors.primary },
-  pinTopRight: { top: 50, right: 50, backgroundColor: '#22C55E' },
-  pinBotLeft: { bottom: 70, left: 50, backgroundColor: '#22C55E' },
+  pinTopRight: { top: 50, right: 50, backgroundColor: "#22C55E" },
+  pinBotLeft: { bottom: 70, left: 50, backgroundColor: "#22C55E" },
   pinBotRight: { bottom: 60, right: 40, backgroundColor: Colors.primary },
   pinIcon: { fontSize: 24 },
   pinSmIcon: { fontSize: 20 },
@@ -56,11 +56,11 @@ const illustrationStyles = StyleSheet.create({
 
 const SLIDES = [
   {
-    id: '1',
-    title: 'Discover Restaurants\nNearby',
+    id: "1",
+    title: "Discover Restaurants\nNearby",
     subtitle:
-      'Explore the best local kitchens around you and find delicious meals delivered with warm Nepalese hospitality.',
-    emoji: '🗺️',
+      "Explore the best local kitchens around you and find delicious meals delivered with warm Nepalese hospitality.",
+    emoji: "🗺️",
     illustration: (
       <View style={illustrationStyles.mapContainer}>
         <View style={illustrationStyles.mapBg}>
@@ -75,13 +75,17 @@ const SLIDES = [
           <View style={[illustrationStyles.pin, illustrationStyles.pinTopLeft]}>
             <Text style={illustrationStyles.pinSmIcon}>🍴</Text>
           </View>
-          <View style={[illustrationStyles.pin, illustrationStyles.pinTopRight]}>
+          <View
+            style={[illustrationStyles.pin, illustrationStyles.pinTopRight]}
+          >
             <Text style={illustrationStyles.pinSmIcon}>🍕</Text>
           </View>
           <View style={[illustrationStyles.pin, illustrationStyles.pinBotLeft]}>
             <Text style={illustrationStyles.pinSmIcon}>🥗</Text>
           </View>
-          <View style={[illustrationStyles.pin, illustrationStyles.pinBotRight]}>
+          <View
+            style={[illustrationStyles.pin, illustrationStyles.pinBotRight]}
+          >
             <Text style={illustrationStyles.pinSmIcon}>☕</Text>
           </View>
         </View>
@@ -89,33 +93,49 @@ const SLIDES = [
     ),
   },
   {
-    id: '2',
-    title: 'Order Your\nFavourites',
+    id: "2",
+    title: "Order Your\nFavourites",
     subtitle:
-      'Browse menus, customise your order and enjoy food from your favourite local restaurants with ease.',
-    emoji: '🛒',
+      "Browse menus, customise your order and enjoy food from your favourite local restaurants with ease.",
+    emoji: "🛒",
     illustration: (
       <View style={illustrationStyles.mapContainer}>
         <View style={illustrationStyles.mapBg}>
           <Text style={{ fontSize: 80 }}>🍜</Text>
-          <Text style={{ fontSize: 40, position: 'absolute', top: 20, right: 30 }}>🍕</Text>
-          <Text style={{ fontSize: 35, position: 'absolute', bottom: 30, left: 25 }}>🍔</Text>
+          <Text
+            style={{ fontSize: 40, position: "absolute", top: 20, right: 30 }}
+          >
+            🍕
+          </Text>
+          <Text
+            style={{ fontSize: 35, position: "absolute", bottom: 30, left: 25 }}
+          >
+            🍔
+          </Text>
         </View>
       </View>
     ),
   },
   {
-    id: '3',
-    title: 'Fast & Reliable\nDelivery',
+    id: "3",
+    title: "Fast & Reliable\nDelivery",
     subtitle:
-      'Track your delivery in real time. Our riders bring your food hot and fresh right to your doorstep.',
-    emoji: '🚴',
+      "Track your delivery in real time. Our riders bring your food hot and fresh right to your doorstep.",
+    emoji: "🚴",
     illustration: (
       <View style={illustrationStyles.mapContainer}>
         <View style={illustrationStyles.mapBg}>
           <Text style={{ fontSize: 80 }}>🚴</Text>
-          <Text style={{ fontSize: 35, position: 'absolute', top: 20, right: 30 }}>📦</Text>
-          <Text style={{ fontSize: 35, position: 'absolute', bottom: 30, left: 25 }}>⏱️</Text>
+          <Text
+            style={{ fontSize: 35, position: "absolute", top: 20, right: 30 }}
+          >
+            📦
+          </Text>
+          <Text
+            style={{ fontSize: 35, position: "absolute", bottom: 30, left: 25 }}
+          >
+            ⏱️
+          </Text>
         </View>
       </View>
     ),
@@ -128,9 +148,9 @@ export default function OnboardingScreen() {
 
   const finishOnboarding = async () => {
     try {
-      await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+      await AsyncStorage.setItem("hasSeenOnboarding", "true");
     } catch (e) {}
-    router.replace('/auth/login' as any);
+    router.replace("/(auth)/login" as any);
   };
 
   const goNext = () => {
@@ -184,16 +204,28 @@ export default function OnboardingScreen() {
           {SLIDES.map((_, i) => (
             <View
               key={i}
-              style={[styles.dotBase, i === current ? styles.dotActive : styles.dotInactive]}
+              style={[
+                styles.dotBase,
+                i === current ? styles.dotActive : styles.dotInactive,
+              ]}
             />
           ))}
         </View>
 
-        <TouchableOpacity style={styles.nextBtn} onPress={goNext} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.nextBtn}
+          onPress={goNext}
+          activeOpacity={0.85}
+        >
           <Text style={styles.nextText}>
-            {current < SLIDES.length - 1 ? 'Next' : 'Get Started'}
+            {current < SLIDES.length - 1 ? "Next" : "Get Started"}
           </Text>
-          <Feather name="arrow-right" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+          <Feather
+            name="arrow-right"
+            size={20}
+            color="#FFF"
+            style={{ marginLeft: 8 }}
+          />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -203,34 +235,34 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   logoSmall: {
     width: 36,
     height: 36,
     borderRadius: 10,
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  logoText: { fontSize: 18, fontWeight: '700', color: Colors.textDark },
-  skipText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '500' },
+  logoText: { fontSize: 18, fontWeight: "700", color: Colors.textDark },
+  skipText: { fontSize: 15, color: Colors.textSecondary, fontWeight: "500" },
   slide: {
     paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
   },
   title: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.textDark,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 28,
     marginBottom: 14,
     lineHeight: 34,
@@ -238,7 +270,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 23,
     paddingHorizontal: 8,
   },
@@ -246,20 +278,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     gap: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  dots: { flexDirection: 'row', gap: 8 },
+  dots: { flexDirection: "row", gap: 8 },
   dotBase: { height: 8, borderRadius: 4 },
   dotActive: { width: 28, backgroundColor: Colors.primary },
   dotInactive: { width: 8, backgroundColor: Colors.border },
   nextBtn: {
     backgroundColor: Colors.primary,
-    width: '100%',
+    width: "100%",
     paddingVertical: 17,
     borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
   },
-  nextText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  nextText: { color: "#fff", fontSize: 17, fontWeight: "700" },
 });

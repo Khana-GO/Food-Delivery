@@ -37,7 +37,7 @@ export default function SplashPage() {
     try {
       const hasSeen = await AsyncStorage.getItem('hasSeenOnboarding');
       if (hasSeen === 'true') {
-        router.replace('/auth/login' as any);
+        router.replace('/(auth)/login' as any);
       } else {
         router.replace('/onboarding' as any);
       }

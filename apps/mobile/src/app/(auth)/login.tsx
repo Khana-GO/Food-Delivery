@@ -312,11 +312,15 @@ const handleLogin = useCallback(async () => {
   }, []);
 
   const goToRegister = useCallback(() => {
-    router.replace('/auth/register' as any);
+    router.replace('/(auth)/register' as any);
+  }, []);
+
+  const handleForgotPassword = useCallback(() => {
+    router.push('/(auth)/forgot-password' as any);
   }, []);
 
   const goToForgotPassword = useCallback(() => {
-    router.push('/auth/forgot-password' as any);
+    router.push('/(auth)/forgot-password' as any);
   }, []);
 
   const isLoginLoading = isAuthenticating;

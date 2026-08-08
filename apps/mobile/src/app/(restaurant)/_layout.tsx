@@ -29,9 +29,9 @@ const TabIcon = ({ name, label, focused }: TabIconProps) => (
   </View>
 );
 
-export default function DriverLayout() {
+export default function RestaurantLayout() {
   const { isInitializing } = useAuth();
-  useProtectedRoute(['DRIVER']);
+  useProtectedRoute(['RESTAURANT_OWNER']);
 
   if (isInitializing) {
     return (
@@ -61,11 +61,11 @@ export default function DriverLayout() {
         },
       }}
     >
-      <Tabs.Screen name="dashboard" options={{ tabBarIcon: ({ focused }) => <TabIcon name="navigation" label="Deliveries" focused={focused} /> }} />
-      <Tabs.Screen name="available-orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="clipboard" label="Available" focused={focused} /> }} />
-      <Tabs.Screen name="active-delivery" options={{ tabBarIcon: ({ focused }) => <TabIcon name="truck" label="Active" focused={focused} /> }} />
+      <Tabs.Screen name="dashboard" options={{ tabBarIcon: ({ focused }) => <TabIcon name="home" label="Dashboard" focused={focused} /> }} />
+      <Tabs.Screen name="restaurant/profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="store" label="Restaurant" focused={focused} /> }} />
+      <Tabs.Screen name="menu/index" options={{ tabBarIcon: ({ focused }) => <TabIcon name="menu" label="Menu" focused={focused} /> }} />
+      <Tabs.Screen name="orders/index" options={{ tabBarIcon: ({ focused }) => <TabIcon name="shopping-bag" label="Orders" focused={focused} /> }} />
       <Tabs.Screen name="earnings" options={{ tabBarIcon: ({ focused }) => <TabIcon name="dollar-sign" label="Earnings" focused={focused} /> }} />
-      <Tabs.Screen name="profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} /> }} />
     </Tabs>
   );
 }

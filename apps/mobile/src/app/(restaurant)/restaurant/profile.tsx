@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -13,11 +13,11 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '@/contexts/AuthContext';
+} from "react-native";
+import { router } from "expo-router";
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -57,39 +57,48 @@ export default function OwnerProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
 
   const scrollViewRef = useRef<ScrollView>(null);
 
   // ─── Mock Restaurant Data ───
   const [restaurant, setRestaurant] = useState<RestaurantData>({
-    id: '1',
-    name: 'Spice Garden',
-    email: 'spicegarden@restaurant.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main Street',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
-    cuisine: ['Indian', 'Chinese', 'Continental'],
-    description: 'Authentic Indian cuisine with a modern twist. We bring the rich flavors of India to your table, using fresh ingredients and traditional recipes passed down through generations.',
+    id: "1",
+    name: "Spice Garden",
+    email: "spicegarden@restaurant.com",
+    phone: "+1 (555) 123-4567",
+    address: "123 Main Street",
+    city: "New York",
+    state: "NY",
+    zipCode: "10001",
+    cuisine: ["Indian", "Chinese", "Continental"],
+    description:
+      "Authentic Indian cuisine with a modern twist. We bring the rich flavors of India to your table, using fresh ingredients and traditional recipes passed down through generations.",
     logo: null,
     coverImage: null,
     isOpen: true,
     deliveryFee: 2.99,
-    minOrderAmount: 10.00,
+    minOrderAmount: 10.0,
     estimatedDeliveryTime: 30,
     rating: 4.8,
     totalOrders: 1247,
-    joinDate: 'January 2024',
+    joinDate: "January 2024",
   });
 
   // ─── Stats ───
   const stats = [
-    { label: 'Total Orders', value: restaurant.totalOrders, icon: 'shopping-bag' },
-    { label: 'Rating', value: `${restaurant.rating} ⭐`, icon: 'star' },
-    { label: 'Open Since', value: restaurant.joinDate, icon: 'calendar' },
-    { label: 'Avg. Delivery', value: `${restaurant.estimatedDeliveryTime} min`, icon: 'clock' },
+    {
+      label: "Total Orders",
+      value: restaurant.totalOrders,
+      icon: "shopping-bag",
+    },
+    { label: "Rating", value: `${restaurant.rating} ⭐`, icon: "star" },
+    { label: "Open Since", value: restaurant.joinDate, icon: "calendar" },
+    {
+      label: "Avg. Delivery",
+      value: `${restaurant.estimatedDeliveryTime} min`,
+      icon: "clock",
+    },
   ];
 
   // ─── Handlers ───
@@ -98,33 +107,39 @@ export default function OwnerProfile() {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      setSuccessMessage('Restaurant profile updated successfully!');
+      setSuccessMessage("Restaurant profile updated successfully!");
       setShowSuccessModal(true);
       setIsEditing(false);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update restaurant profile. Please try again.');
+      Alert.alert(
+        "Error",
+        "Failed to update restaurant profile. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const handleImagePick = useCallback(async (type: 'logo' | 'cover') => {
+  const handleImagePick = useCallback(async (type: "logo" | "cover") => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library.');
+      Alert.alert(
+        "Permission Required",
+        "Please allow access to your photo library.",
+      );
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: type === 'logo' ? [1, 1] : [16, 9],
+      aspect: type === "logo" ? [1, 1] : [16, 9],
       quality: 0.8,
     });
 
     if (!result.canceled) {
       const uri = result.assets[0].uri;
-      if (type === 'logo') {
+      if (type === "logo") {
         setRestaurant((prev) => ({ ...prev, logo: uri }));
       } else {
         setRestaurant((prev) => ({ ...prev, coverImage: uri }));
@@ -139,12 +154,19 @@ export default function OwnerProfile() {
   const handleLogout = useCallback(async () => {
     setShowLogoutModal(false);
     await logout();
-    router.replace('/auth/login');
+    router.replace("/(auth)/login");
   }, [logout]);
 
   const renderStat = useCallback(
-    (stat: { label: string; value: string | number; icon: React.ComponentProps<typeof Feather>['name'] }) => (
-      <View key={stat.label} className="flex-1 bg-white rounded-xl p-4 items-center border border-gray-100">
+    (stat: {
+      label: string;
+      value: string | number;
+      icon: React.ComponentProps<typeof Feather>["name"];
+    }) => (
+      <View
+        key={stat.label}
+        className="flex-1 bg-white rounded-xl p-4 items-center border border-gray-100"
+      >
         <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center mb-2">
           <Feather name={stat.icon} size={20} color="#E23744" />
         </View>
@@ -152,34 +174,43 @@ export default function OwnerProfile() {
         <Text className="text-xs text-gray-500 font-medium">{stat.label}</Text>
       </View>
     ),
-    []
+    [],
   );
 
   const renderField = useCallback(
-    (label: string, value: string, key: keyof RestaurantData, multiline = false) => (
+    (
+      label: string,
+      value: string,
+      key: keyof RestaurantData,
+      multiline = false,
+    ) => (
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">{label}</Text>
         {isEditing ? (
           <TextInput
             className={`border border-gray-200 rounded-xl px-4 py-3 text-base text-black bg-white ${
-              multiline ? 'min-h-[100px] text-left pt-3' : ''
+              multiline ? "min-h-[100px] text-left pt-3" : ""
             }`}
             value={value}
-            onChangeText={(text) => setRestaurant((prev) => ({ ...prev, [key]: text }))}
+            onChangeText={(text) =>
+              setRestaurant((prev) => ({ ...prev, [key]: text }))
+            }
             multiline={multiline}
             numberOfLines={multiline ? 4 : 1}
-            textAlignVertical={multiline ? 'top' : 'center'}
+            textAlignVertical={multiline ? "top" : "center"}
             placeholder={`Enter ${label.toLowerCase()}`}
             placeholderTextColor="#999"
           />
         ) : (
           <View className="border border-gray-100 rounded-xl px-4 py-3 bg-gray-50">
-            <Text className="text-base text-black">{value || 'Not provided'}</Text>
+            <Text className="text-base text-black">
+              {value || "Not provided"}
+            </Text>
           </View>
         )}
       </View>
     ),
-    [isEditing]
+    [isEditing],
   );
 
   // ─── Main Render ───
@@ -192,14 +223,20 @@ export default function OwnerProfile() {
             <TouchableOpacity onPress={() => router.back()} className="p-1">
               <Feather name="arrow-left" size={24} color="#1A1A1A" />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-black">Restaurant Profile</Text>
+            <Text className="text-xl font-bold text-black">
+              Restaurant Profile
+            </Text>
           </View>
           <View className="flex-row gap-2">
             <TouchableOpacity
               className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
               onPress={() => setIsEditing(!isEditing)}
             >
-              <Feather name={isEditing ? 'x' : 'edit-2'} size={20} color="#E23744" />
+              <Feather
+                name={isEditing ? "x" : "edit-2"}
+                size={20}
+                color="#E23744"
+              />
             </TouchableOpacity>
             <TouchableOpacity
               className="w-10 h-10 rounded-full bg-red-50 items-center justify-center"
@@ -220,20 +257,27 @@ export default function OwnerProfile() {
         {/* Cover Image */}
         <View className="relative">
           {restaurant.coverImage ? (
-            <Image source={{ uri: restaurant.coverImage }} className="w-full h-48" />
+            <Image
+              source={{ uri: restaurant.coverImage }}
+              className="w-full h-48"
+            />
           ) : (
             <View className="w-full h-48 bg-gradient-to-r from-primary/20 to-primary/10 items-center justify-center">
               <MaterialCommunityIcons name="food" size={64} color="#E23744" />
-              <Text className="text-gray-500 text-sm mt-2">Add Cover Image</Text>
+              <Text className="text-gray-500 text-sm mt-2">
+                Add Cover Image
+              </Text>
             </View>
           )}
           {isEditing && (
             <TouchableOpacity
               className="absolute bottom-4 right-4 bg-black/70 px-4 py-2 rounded-full flex-row items-center gap-2"
-              onPress={() => handleImagePick('cover')}
+              onPress={() => handleImagePick("cover")}
             >
               <Feather name="camera" size={16} color="#FFF" />
-              <Text className="text-white text-xs font-medium">Change Cover</Text>
+              <Text className="text-white text-xs font-medium">
+                Change Cover
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -243,8 +287,8 @@ export default function OwnerProfile() {
           <View className="flex-row items-end gap-4">
             {/* Logo */}
             <TouchableOpacity
-              className={`relative ${isEditing ? 'active:opacity-70' : ''}`}
-              onPress={() => isEditing && handleImagePick('logo')}
+              className={`relative ${isEditing ? "active:opacity-70" : ""}`}
+              onPress={() => isEditing && handleImagePick("logo")}
               disabled={!isEditing}
             >
               {restaurant.logo ? (
@@ -268,28 +312,32 @@ export default function OwnerProfile() {
 
             {/* Restaurant Info */}
             <View className="flex-1 pb-1">
-              <Text className="text-2xl font-bold text-black">{restaurant.name}</Text>
+              <Text className="text-2xl font-bold text-black">
+                {restaurant.name}
+              </Text>
               <View className="flex-row items-center gap-2 mt-1">
                 <View
                   className={`px-2 py-0.5 rounded-full ${
-                    restaurant.isOpen ? 'bg-green-100' : 'bg-red-100'
+                    restaurant.isOpen ? "bg-green-100" : "bg-red-100"
                   }`}
                 >
                   <Text
                     className={`text-xs font-semibold ${
-                      restaurant.isOpen ? 'text-green-600' : 'text-red-600'
+                      restaurant.isOpen ? "text-green-600" : "text-red-600"
                     }`}
                   >
-                    {restaurant.isOpen ? '● Open' : '● Closed'}
+                    {restaurant.isOpen ? "● Open" : "● Closed"}
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-1">
                   <Feather name="star" size={14} color="#F59E0B" />
-                  <Text className="text-sm font-semibold text-black">{restaurant.rating}</Text>
+                  <Text className="text-sm font-semibold text-black">
+                    {restaurant.rating}
+                  </Text>
                 </View>
               </View>
               <Text className="text-sm text-gray-500 mt-0.5">
-                {restaurant.cuisine.join(' • ')}
+                {restaurant.cuisine.join(" • ")}
               </Text>
             </View>
 
@@ -300,8 +348,8 @@ export default function OwnerProfile() {
                 <Switch
                   value={restaurant.isOpen}
                   onValueChange={handleToggleOpen}
-                  trackColor={{ false: '#D1D5DB', true: '#E23744' }}
-                  thumbColor={restaurant.isOpen ? '#FFF' : '#F3F4F6'}
+                  trackColor={{ false: "#D1D5DB", true: "#E23744" }}
+                  thumbColor={restaurant.isOpen ? "#FFF" : "#F3F4F6"}
                 />
               </View>
             )}
@@ -319,7 +367,9 @@ export default function OwnerProfile() {
         <View className="px-6 mt-6">
           <View className="bg-white rounded-2xl p-5 border border-gray-100">
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-bold text-black">Restaurant Details</Text>
+              <Text className="text-lg font-bold text-black">
+                Restaurant Details
+              </Text>
               {isEditing && (
                 <TouchableOpacity
                   className="bg-primary px-4 py-2 rounded-lg flex-row items-center gap-2"
@@ -331,32 +381,36 @@ export default function OwnerProfile() {
                   ) : (
                     <>
                       <Feather name="check" size={16} color="#FFF" />
-                      <Text className="text-white text-sm font-semibold">Save Changes</Text>
+                      <Text className="text-white text-sm font-semibold">
+                        Save Changes
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
               )}
             </View>
 
-            {renderField('Restaurant Name', restaurant.name, 'name')}
-            {renderField('Email', restaurant.email, 'email')}
-            {renderField('Phone', restaurant.phone, 'phone')}
-            {renderField('Address', restaurant.address, 'address')}
-            {renderField('City', restaurant.city, 'city')}
-            {renderField('State', restaurant.state, 'state')}
-            {renderField('Zip Code', restaurant.zipCode, 'zipCode')}
+            {renderField("Restaurant Name", restaurant.name, "name")}
+            {renderField("Email", restaurant.email, "email")}
+            {renderField("Phone", restaurant.phone, "phone")}
+            {renderField("Address", restaurant.address, "address")}
+            {renderField("City", restaurant.city, "city")}
+            {renderField("State", restaurant.state, "state")}
+            {renderField("Zip Code", restaurant.zipCode, "zipCode")}
 
             {/* Cuisine Tags */}
             <View className="mb-4">
-              <Text className="text-sm font-semibold text-black mb-1.5">Cuisine Types</Text>
+              <Text className="text-sm font-semibold text-black mb-1.5">
+                Cuisine Types
+              </Text>
               {isEditing ? (
                 <TextInput
                   className="border border-gray-200 rounded-xl px-4 py-3 text-base text-black bg-white"
-                  value={restaurant.cuisine.join(', ')}
+                  value={restaurant.cuisine.join(", ")}
                   onChangeText={(text) =>
                     setRestaurant((prev) => ({
                       ...prev,
-                      cuisine: text.split(',').map((item) => item.trim()),
+                      cuisine: text.split(",").map((item) => item.trim()),
                     }))
                   }
                   placeholder="Indian, Chinese, Italian"
@@ -369,18 +423,27 @@ export default function OwnerProfile() {
                       key={index}
                       className="bg-primary/10 px-3 py-1.5 rounded-full"
                     >
-                      <Text className="text-primary text-sm font-medium">{cuisine}</Text>
+                      <Text className="text-primary text-sm font-medium">
+                        {cuisine}
+                      </Text>
                     </View>
                   ))}
                 </View>
               )}
             </View>
 
-            {renderField('Description', restaurant.description, 'description', true)}
+            {renderField(
+              "Description",
+              restaurant.description,
+              "description",
+              true,
+            )}
 
             {/* Business Settings */}
             <View className="mt-4 pt-4 border-t border-gray-100">
-              <Text className="text-lg font-bold text-black mb-4">Business Settings</Text>
+              <Text className="text-lg font-bold text-black mb-4">
+                Business Settings
+              </Text>
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-sm text-gray-600">Delivery Fee</Text>
                 {isEditing ? (
@@ -388,13 +451,18 @@ export default function OwnerProfile() {
                     className="border border-gray-200 rounded-lg px-3 py-2 text-base text-black bg-white w-24 text-right"
                     value={String(restaurant.deliveryFee)}
                     onChangeText={(text) =>
-                      setRestaurant((prev) => ({ ...prev, deliveryFee: parseFloat(text) || 0 }))
+                      setRestaurant((prev) => ({
+                        ...prev,
+                        deliveryFee: parseFloat(text) || 0,
+                      }))
                     }
                     keyboardType="decimal-pad"
                     placeholderTextColor="#999"
                   />
                 ) : (
-                  <Text className="text-base font-semibold text-black">${restaurant.deliveryFee.toFixed(2)}</Text>
+                  <Text className="text-base font-semibold text-black">
+                    ${restaurant.deliveryFee.toFixed(2)}
+                  </Text>
                 )}
               </View>
               <View className="flex-row items-center justify-between mb-3">
@@ -404,17 +472,24 @@ export default function OwnerProfile() {
                     className="border border-gray-200 rounded-lg px-3 py-2 text-base text-black bg-white w-24 text-right"
                     value={String(restaurant.minOrderAmount)}
                     onChangeText={(text) =>
-                      setRestaurant((prev) => ({ ...prev, minOrderAmount: parseFloat(text) || 0 }))
+                      setRestaurant((prev) => ({
+                        ...prev,
+                        minOrderAmount: parseFloat(text) || 0,
+                      }))
                     }
                     keyboardType="decimal-pad"
                     placeholderTextColor="#999"
                   />
                 ) : (
-                  <Text className="text-base font-semibold text-black">${restaurant.minOrderAmount.toFixed(2)}</Text>
+                  <Text className="text-base font-semibold text-black">
+                    ${restaurant.minOrderAmount.toFixed(2)}
+                  </Text>
                 )}
               </View>
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm text-gray-600">Est. Delivery Time</Text>
+                <Text className="text-sm text-gray-600">
+                  Est. Delivery Time
+                </Text>
                 {isEditing ? (
                   <TextInput
                     className="border border-gray-200 rounded-lg px-3 py-2 text-base text-black bg-white w-24 text-right"
@@ -444,7 +519,10 @@ export default function OwnerProfile() {
 
       {/* ─── Logout Modal ─── */}
       <Modal visible={showLogoutModal} transparent animationType="fade">
-        <Pressable className="flex-1 bg-black/50" onPress={() => setShowLogoutModal(false)}>
+        <Pressable
+          className="flex-1 bg-black/50"
+          onPress={() => setShowLogoutModal(false)}
+        >
           <View className="flex-1 items-center justify-center px-6">
             <Pressable className="bg-white rounded-2xl w-full max-w-sm p-6">
               <View className="items-center mb-4">
@@ -452,7 +530,9 @@ export default function OwnerProfile() {
                   <Feather name="log-out" size={32} color="#EF4444" />
                 </View>
               </View>
-              <Text className="text-xl font-bold text-black text-center">Log Out</Text>
+              <Text className="text-xl font-bold text-black text-center">
+                Log Out
+              </Text>
               <Text className="text-gray-500 text-center mt-2">
                 Are you sure you want to log out of your restaurant account?
               </Text>
@@ -461,13 +541,17 @@ export default function OwnerProfile() {
                   className="flex-1 py-3 rounded-xl bg-gray-100"
                   onPress={() => setShowLogoutModal(false)}
                 >
-                  <Text className="text-black font-semibold text-center">Cancel</Text>
+                  <Text className="text-black font-semibold text-center">
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   className="flex-1 py-3 rounded-xl bg-red-500"
                   onPress={handleLogout}
                 >
-                  <Text className="text-white font-semibold text-center">Log Out</Text>
+                  <Text className="text-white font-semibold text-center">
+                    Log Out
+                  </Text>
                 </TouchableOpacity>
               </View>
             </Pressable>
@@ -477,20 +561,29 @@ export default function OwnerProfile() {
 
       {/* ─── Success Modal ─── */}
       <Modal visible={showSuccessModal} transparent animationType="fade">
-        <Pressable className="flex-1 bg-black/50" onPress={() => setShowSuccessModal(false)}>
+        <Pressable
+          className="flex-1 bg-black/50"
+          onPress={() => setShowSuccessModal(false)}
+        >
           <View className="flex-1 items-center justify-center px-6">
             <Pressable className="bg-white rounded-2xl w-full max-w-sm p-6">
               <View className="items-center">
                 <View className="w-16 h-16 rounded-full bg-green-50 items-center justify-center">
                   <Feather name="check-circle" size={32} color="#22C55E" />
                 </View>
-                <Text className="text-xl font-bold text-black text-center mt-4">Success!</Text>
-                <Text className="text-gray-500 text-center mt-2">{successMessage}</Text>
+                <Text className="text-xl font-bold text-black text-center mt-4">
+                  Success!
+                </Text>
+                <Text className="text-gray-500 text-center mt-2">
+                  {successMessage}
+                </Text>
                 <TouchableOpacity
                   className="w-full py-3 rounded-xl bg-primary mt-6"
                   onPress={() => setShowSuccessModal(false)}
                 >
-                  <Text className="text-white font-semibold text-center">Got it</Text>
+                  <Text className="text-white font-semibold text-center">
+                    Got it
+                  </Text>
                 </TouchableOpacity>
               </View>
             </Pressable>

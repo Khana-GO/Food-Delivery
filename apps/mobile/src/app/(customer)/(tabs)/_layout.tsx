@@ -2,8 +2,6 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useProtectedRoute } from '@/hooks/useProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface TabIconProps {
   name: React.ComponentProps<typeof Feather>['name'];
@@ -29,18 +27,7 @@ const TabIcon = ({ name, label, focused }: TabIconProps) => (
   </View>
 );
 
-export default function DriverLayout() {
-  const { isInitializing } = useAuth();
-  useProtectedRoute(['DRIVER']);
-
-  if (isInitializing) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <View className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-      </View>
-    );
-  }
-
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -61,11 +48,36 @@ export default function DriverLayout() {
         },
       }}
     >
-      <Tabs.Screen name="dashboard" options={{ tabBarIcon: ({ focused }) => <TabIcon name="navigation" label="Deliveries" focused={focused} /> }} />
-      <Tabs.Screen name="available-orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="clipboard" label="Available" focused={focused} /> }} />
-      <Tabs.Screen name="active-delivery" options={{ tabBarIcon: ({ focused }) => <TabIcon name="truck" label="Active" focused={focused} /> }} />
-      <Tabs.Screen name="earnings" options={{ tabBarIcon: ({ focused }) => <TabIcon name="dollar-sign" label="Earnings" focused={focused} /> }} />
-      <Tabs.Screen name="profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} /> }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon name="home" label="Home" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon name="search" label="Explore" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon name="clock" label="Orders" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="favourites"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon name="heart" label="Favorites" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }

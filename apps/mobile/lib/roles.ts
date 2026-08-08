@@ -1,17 +1,12 @@
-// src/utils/roles.ts
 import { UserRole } from '@food_delivery/types';
 
+export const roleHomeMap: Record<UserRole, string> = {
+  ADMIN: '/(admin)',
+  CUSTOMER: '/(customer)',
+  DRIVER: '/(driver)',
+  RESTAURANT_OWNER: '/(restaurant)',
+};
+
 export function getHomeRoute(role: UserRole): string {
-  switch (role) {
-    case 'ADMIN':
-      return '/(admin)';
-    case 'CUSTOMER':
-      return '/(customer)';
-    case 'DRIVER':
-      return '/(driver)';
-    case 'RESTAURANT_OWNER':
-      return '/(restaurant-owner)';
-    default:
-      return '/(customer)'; // fallback
-  }
+  return roleHomeMap[role] || '/(customer)';
 }

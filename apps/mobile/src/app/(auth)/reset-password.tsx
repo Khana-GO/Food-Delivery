@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,12 @@ import {
   StatusBar,
   TextInput,
   Alert,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { z } from 'zod';
-import { useAuth } from '@/contexts/AuthContext';
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { z } from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation
@@ -23,19 +23,19 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const resetPasswordSchema = z
   .object({
-    code: z.string().length(6, 'Enter a valid 6-digit code'),
+    code: z.string().length(6, "Enter a valid 6-digit code"),
     newPassword: z
       .string()
-      .min(6, 'Password must be at least 6 characters')
+      .min(6, "Password must be at least 6 characters")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-        'Password must contain uppercase, lowercase, and a number'
+        "Password must contain uppercase, lowercase, and a number",
       ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
   });
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
@@ -71,23 +71,29 @@ export default function ResetPasswordScreen() {
   const { email } = useLocalSearchParams<{ email: string }>();
   const { resetPassword, isAuthenticating } = useAuth();
 
-  const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [generalError, setGeneralError] = useState('');
+  const [generalError, setGeneralError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const validate = useCallback((): ResetPasswordFormValues | null => {
-    const result = resetPasswordSchema.safeParse({ code, newPassword, confirmPassword });
+    const result = resetPasswordSchema.safeParse({
+      code,
+      newPassword,
+      confirmPassword,
+    });
     if (!result.success) {
       const errors = result.error.flatten().fieldErrors;
       const formatted: FieldErrors = {};
-      (Object.keys(errors) as Array<keyof ResetPasswordFormValues>).forEach((key) => {
-        formatted[key] = errors[key]?.[0];
-      });
+      (Object.keys(errors) as Array<keyof ResetPasswordFormValues>).forEach(
+        (key) => {
+          formatted[key] = errors[key]?.[0];
+        },
+      );
       setFieldErrors(formatted);
       return null;
     }
@@ -96,7 +102,7 @@ export default function ResetPasswordScreen() {
   }, [code, newPassword, confirmPassword]);
 
   const handleSubmit = useCallback(async () => {
-    setGeneralError('');
+    setGeneralError("");
     const values = validate();
     if (!values) return;
 
@@ -107,16 +113,21 @@ export default function ResetPasswordScreen() {
         newPassword: values.newPassword,
       });
       setSuccess(true);
-      Alert.alert('Success', 'Your password has been reset. Please log in with your new password.');
+      Alert.alert(
+        "Success",
+        "Your password has been reset. Please log in with your new password.",
+      );
       setTimeout(() => {
-        router.replace('/auth/login' as any);
+        router.replace("/(auth)/login" as any);
       }, 1500);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Something went wrong. Please try again.';
+      const msg =
+        err?.response?.data?.message ||
+        "Something went wrong. Please try again.";
       const lower = msg.toLowerCase();
-      if (lower.includes('code')) {
+      if (lower.includes("code")) {
         setFieldErrors((prev) => ({ ...prev, code: msg }));
-      } else if (lower.includes('password')) {
+      } else if (lower.includes("password")) {
         setFieldErrors((prev) => ({ ...prev, newPassword: msg }));
       } else {
         setGeneralError(msg);
@@ -124,18 +135,24 @@ export default function ResetPasswordScreen() {
     }
   }, [code, newPassword, confirmPassword, email, resetPassword, validate]);
 
-  const toggleShowNewPassword = useCallback(() => setShowNewPassword((prev) => !prev), []);
-  const toggleShowConfirmPassword = useCallback(() => setShowConfirmPassword((prev) => !prev), []);
+  const toggleShowNewPassword = useCallback(
+    () => setShowNewPassword((prev) => !prev),
+    [],
+  );
+  const toggleShowConfirmPassword = useCallback(
+    () => setShowConfirmPassword((prev) => !prev),
+    [],
+  );
 
   const isSubmitting = isAuthenticating;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ImageBackground
         source={{
-          uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+          uri: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
         }}
         className="w-full h-[240px]"
         imageStyle={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}
@@ -148,8 +165,8 @@ export default function ResetPasswordScreen() {
 
       <KeyboardAvoidingView
         className="flex-1 -mt-8"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
           className="flex-1 px-6"
@@ -164,7 +181,8 @@ export default function ResetPasswordScreen() {
                 Reset Password
               </Text>
               <Text className="text-gray-500 text-sm tracking-wide">
-                Enter the 6-digit code sent to your email and set a new password.
+                Enter the 6-digit code sent to your email and set a new
+                password.
               </Text>
               <Text className="text-primary font-semibold text-sm mt-1">
                 {email}
@@ -176,7 +194,9 @@ export default function ResetPasswordScreen() {
               <Text className="text-sm font-semibold text-black mb-1.5">
                 Verification Code
               </Text>
-              <View className={`flex-row items-center rounded-xl border ${fieldErrors.code ? 'border-red-500' : 'border-gray-200'} bg-white px-4 h-14`}>
+              <View
+                className={`flex-row items-center rounded-xl border ${fieldErrors.code ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
+              >
                 <Feather name="mail" size={20} color="#666" />
                 <TextInput
                   className="flex-1 ml-3 text-base text-black py-3"
@@ -184,7 +204,7 @@ export default function ResetPasswordScreen() {
                   placeholderTextColor="#999"
                   value={code}
                   onChangeText={(text) => {
-                    setCode(text.replace(/\D/g, '').slice(0, 6));
+                    setCode(text.replace(/\D/g, "").slice(0, 6));
                     setFieldErrors((prev) => ({ ...prev, code: undefined }));
                   }}
                   keyboardType="number-pad"
@@ -193,7 +213,11 @@ export default function ResetPasswordScreen() {
                   editable={!isSubmitting}
                 />
               </View>
-              {fieldErrors.code && <Text className="text-red-500 text-xs mt-1 ml-1">{fieldErrors.code}</Text>}
+              {fieldErrors.code && (
+                <Text className="text-red-500 text-xs mt-1 ml-1">
+                  {fieldErrors.code}
+                </Text>
+              )}
             </View>
 
             {/* New Password */}
@@ -201,7 +225,9 @@ export default function ResetPasswordScreen() {
               <Text className="text-sm font-semibold text-black mb-1.5">
                 New Password
               </Text>
-              <View className={`flex-row items-center rounded-xl border ${fieldErrors.newPassword ? 'border-red-500' : 'border-gray-200'} bg-white px-4 h-14`}>
+              <View
+                className={`flex-row items-center rounded-xl border ${fieldErrors.newPassword ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
+              >
                 <Feather name="lock" size={20} color="#666" />
                 <TextInput
                   className="flex-1 ml-3 text-base text-black py-3"
@@ -210,17 +236,31 @@ export default function ResetPasswordScreen() {
                   value={newPassword}
                   onChangeText={(text) => {
                     setNewPassword(text);
-                    setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      newPassword: undefined,
+                    }));
                   }}
                   secureTextEntry={!showNewPassword}
                   returnKeyType="next"
                   editable={!isSubmitting}
                 />
-                <TouchableOpacity onPress={toggleShowNewPassword} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+                <TouchableOpacity
+                  onPress={toggleShowNewPassword}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather
+                    name={showNewPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#666"
+                  />
                 </TouchableOpacity>
               </View>
-              {fieldErrors.newPassword && <Text className="text-red-500 text-xs mt-1 ml-1">{fieldErrors.newPassword}</Text>}
+              {fieldErrors.newPassword && (
+                <Text className="text-red-500 text-xs mt-1 ml-1">
+                  {fieldErrors.newPassword}
+                </Text>
+              )}
             </View>
 
             {/* Confirm Password */}
@@ -228,7 +268,9 @@ export default function ResetPasswordScreen() {
               <Text className="text-sm font-semibold text-black mb-1.5">
                 Confirm Password
               </Text>
-              <View className={`flex-row items-center rounded-xl border ${fieldErrors.confirmPassword ? 'border-red-500' : 'border-gray-200'} bg-white px-4 h-14`}>
+              <View
+                className={`flex-row items-center rounded-xl border ${fieldErrors.confirmPassword ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
+              >
                 <Feather name="lock" size={20} color="#666" />
                 <TextInput
                   className="flex-1 ml-3 text-base text-black py-3"
@@ -237,25 +279,41 @@ export default function ResetPasswordScreen() {
                   value={confirmPassword}
                   onChangeText={(text) => {
                     setConfirmPassword(text);
-                    setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      confirmPassword: undefined,
+                    }));
                   }}
                   secureTextEntry={!showConfirmPassword}
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit}
                   editable={!isSubmitting}
                 />
-                <TouchableOpacity onPress={toggleShowConfirmPassword} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+                <TouchableOpacity
+                  onPress={toggleShowConfirmPassword}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#666"
+                  />
                 </TouchableOpacity>
               </View>
-              {fieldErrors.confirmPassword && <Text className="text-red-500 text-xs mt-1 ml-1">{fieldErrors.confirmPassword}</Text>}
+              {fieldErrors.confirmPassword && (
+                <Text className="text-red-500 text-xs mt-1 ml-1">
+                  {fieldErrors.confirmPassword}
+                </Text>
+              )}
             </View>
 
             {/* General Error */}
             {generalError && (
               <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
                 <Feather name="alert-triangle" size={16} color="#EF4444" />
-                <Text className="text-red-500 text-sm text-center flex-1 font-medium">{generalError}</Text>
+                <Text className="text-red-500 text-sm text-center flex-1 font-medium">
+                  {generalError}
+                </Text>
               </View>
             )}
 
@@ -270,35 +328,44 @@ export default function ResetPasswordScreen() {
 
             <TouchableOpacity
               className={`bg-primary rounded-xl py-4 mt-2 mb-3 ${
-                isSubmitting || !code || !newPassword ? 'opacity-50' : ''
+                isSubmitting || !code || !newPassword ? "opacity-50" : ""
               } shadow-lg shadow-primary/25`}
               onPress={handleSubmit}
               disabled={isSubmitting || !code || !newPassword}
               activeOpacity={0.8}
             >
               <Text className="text-white text-center font-bold text-base tracking-wide">
-                {isSubmitting ? 'Resetting...' : 'Reset Password'}
+                {isSubmitting ? "Resetting..." : "Reset Password"}
               </Text>
             </TouchableOpacity>
 
             <View className="flex-row justify-center items-center mt-2">
-              <Text className="text-gray-500 text-sm">Didn't receive the code? </Text>
+              <Text className="text-gray-500 text-sm">
+                Didn't receive the code?{" "}
+              </Text>
               <TouchableOpacity
                 onPress={() => {
                   router.replace({
-                    pathname: '/auth/forgot-password' as any,
+                    pathname: "/(auth)/forgot-password" as any,
                     params: { email },
                   });
                 }}
                 disabled={isSubmitting}
               >
-                <Text className="text-primary font-semibold text-sm">Try Again</Text>
+                <Text className="text-primary font-semibold text-sm">
+                  Try Again
+                </Text>
               </TouchableOpacity>
             </View>
 
             <View className="flex-row justify-center items-center mt-4">
-              <Text className="text-gray-500 text-sm">Remember your password? </Text>
-              <TouchableOpacity onPress={() => router.replace('/auth/login' as any)} disabled={isSubmitting}>
+              <Text className="text-gray-500 text-sm">
+                Remember your password?{" "}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.replace("/(auth)/login" as any)}
+                disabled={isSubmitting}
+              >
                 <Text className="text-primary font-bold text-sm">Log In</Text>
               </TouchableOpacity>
             </View>
