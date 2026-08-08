@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Animated,
-  useWindowDimensions,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,8 +54,8 @@ const signupSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .min(7, 'Enter a valid phone number')
-    .max(20, 'Phone number is too long'),
+    .min(7, 'Enter a valid 10-digit phone number')
+    .max(10, 'Phone number must be 10 digits'),
   password: z
     .string()
     .min(1, 'Password is required')
@@ -72,7 +70,6 @@ type LoginForm  = z.infer<typeof loginSchema>;
 type SignupForm = z.infer<typeof signupSchema>;
 type Tab = 'login' | 'signup';
 
-const ANIM_DURATION = 220;
 /** Max submit attempts before a cooldown kicks in (brute-force protection) */
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_MS  = 30_000; // 30 seconds
@@ -81,14 +78,18 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
-  const { width } = useWindowDimensions();
   const [tab, setTab]         = useState<Tab>('login');
   const [loading, setLoading] = useState(false);
+
+  // Refs for focusing next inputs easily
+  const loginPassRef = useRef<TextInput>(null);
+  const signupEmailRef = useRef<TextInput>(null);
+  const signupPhoneRef = useRef<TextInput>(null);
+  const signupPassRef = useRef<TextInput>(null);
 
   const handleSocialLogin = async (provider: 'GOOGLE' | 'FACEBOOK') => {
     setLoading(true);
     try {
-      // Sends social authentication payload to backend which creates/fetches user & stores in PostgreSQL DB
       const res = await axios.post(`${API_BASE}/auth/social-login`, {
         provider,
         id: `${provider.toLowerCase()}_user_${Date.now()}`,
@@ -115,45 +116,26 @@ export default function LoginScreen() {
   const cooldownUntil = useRef<number>(0);
   const [cooldownLeft, setCooldownLeft] = useState(0);
 
-  // Animated values
-  const slideX  = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-  const pillX   = useRef(new Animated.Value(0)).current;
 
   // ── react-hook-form for Login ───────────────────────────────────────────────
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    mode: 'onSubmit',
+    mode: 'onChange',
     defaultValues: { email: '', password: '' },
   });
 
   // ── react-hook-form for Signup ──────────────────────────────────────────────
   const signupForm = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
-    mode: 'onSubmit',
+    mode: 'onChange',
     defaultValues: { fullName: '', email: '', phone: '', password: '' },
   });
 
-  // ── Tab animation ───────────────────────────────────────────────────────────
-  const switchTab = useCallback(
-    (next: Tab) => {
-      if (next === tab) return;
-      const goingRight = next === 'signup';
-      Animated.parallel([
-        Animated.timing(slideX, { toValue: goingRight ? -width * 0.15 : width * 0.15, duration: ANIM_DURATION, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0, duration: ANIM_DURATION, useNativeDriver: true }),
-      ]).start(() => {
-        setTab(next);
-        slideX.setValue(goingRight ? width * 0.15 : -width * 0.15);
-        Animated.parallel([
-          Animated.timing(slideX, { toValue: 0, duration: ANIM_DURATION, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 1, duration: ANIM_DURATION, useNativeDriver: true }),
-        ]).start();
-      });
-      Animated.timing(pillX, { toValue: goingRight ? 1 : 0, duration: ANIM_DURATION, useNativeDriver: false }).start();
-    },
-    [tab, width, slideX, opacity, pillX]
-  );
+  // ── Tab switching (simple, reliable across platforms) ──────────────────────
+  const switchTab = (next: Tab) => {
+    if (next === tab) return;
+    setTab(next);
+  };
 
   // ── Submission with rate-limit guard ────────────────────────────────────────
   const onLoginSubmit = async (data: LoginForm) => {
@@ -161,7 +143,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await axios.post(`${API_BASE}/auth/login`, {
-        email: data.email,
+        email: sanitize(data.email),
         password: data.password,
       });
 
@@ -185,14 +167,14 @@ export default function LoginScreen() {
     if (!checkRateLimit()) return;
     setLoading(true);
     try {
-      const nameParts = data.fullName.trim().split(' ');
+      const nameParts = sanitize(data.fullName).split(' ');
       const firstName = nameParts[0] || 'User';
       const lastName = nameParts.slice(1).join(' ') || 'Customer';
 
-      const res = await axios.post(`${API_BASE}/auth/register`, {
+      await axios.post(`${API_BASE}/auth/register`, {
         firstName,
         lastName,
-        email: data.email,
+        email: sanitize(data.email),
         phone: data.phone,
         password: data.password,
       });
@@ -211,12 +193,11 @@ export default function LoginScreen() {
 
   function checkRateLimit(): boolean {
     const now = Date.now();
-    if (now < cooldownUntil.current) return false; // still in cooldown
+    if (now < cooldownUntil.current) return false;
     attemptCount.current += 1;
     if (attemptCount.current > MAX_ATTEMPTS) {
       cooldownUntil.current = now + COOLDOWN_MS;
       attemptCount.current = 0;
-      // Show countdown
       let remaining = Math.ceil(COOLDOWN_MS / 1000);
       setCooldownLeft(remaining);
       const tick = setInterval(() => {
@@ -228,8 +209,6 @@ export default function LoginScreen() {
     }
     return true;
   }
-
-  const pillTranslate = pillX.interpolate({ inputRange: [0, 1], outputRange: ['0%', '50%'] });
 
   const isCoolingDown = cooldownLeft > 0;
 
@@ -244,9 +223,9 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>Sign up or Login to your Account</Text>
           </View>
 
-          {/* Animated Toggle */}
+          {/* Toggle */}
           <View style={styles.toggle}>
-            <Animated.View style={[styles.pill, { left: pillTranslate }]} />
+            <View style={[styles.pill, { left: tab === 'signup' ? '50%' : '0%' }]} pointerEvents="none" />
             <TouchableOpacity style={styles.toggleBtn} onPress={() => switchTab('login')} activeOpacity={0.8}>
               <Text style={[styles.toggleText, tab === 'login' && styles.toggleTextActive]}>Login</Text>
             </TouchableOpacity>
@@ -264,9 +243,8 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* Animated Form Area */}
-          <Animated.View style={{ transform: [{ translateX: slideX }], opacity }}>
-
+          {/* Form Area */}
+          <View style={styles.formArea}>
             {tab === 'login' ? (
               /* ── LOGIN FORM ── */
               <View style={styles.form}>
@@ -285,9 +263,11 @@ export default function LoginScreen() {
                           autoCapitalize="none"
                           autoCorrect={false}
                           textContentType="emailAddress"
-                          value={field.value}
+                          value={field.value ?? ''}
                           onChangeText={field.onChange}
                           onBlur={field.onBlur}
+                          onSubmitEditing={() => loginPassRef.current?.focus()}
+                          returnKeyType="next"
                         />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
@@ -303,14 +283,17 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
+                          ref={loginPassRef}
                           style={styles.input}
                           placeholder="Enter your Password"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry
                           textContentType="password"
-                          value={field.value}
+                          value={field.value ?? ''}
                           onChangeText={field.onChange}
                           onBlur={field.onBlur}
+                          onSubmitEditing={loginForm.handleSubmit(onLoginSubmit)}
+                          returnKeyType="done"
                         />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
@@ -340,9 +323,11 @@ export default function LoginScreen() {
                           placeholderTextColor="#94A3B8"
                           autoCapitalize="words"
                           textContentType="name"
-                          value={field.value}
+                          value={field.value ?? ''}
                           onChangeText={field.onChange}
                           onBlur={field.onBlur}
+                          onSubmitEditing={() => signupEmailRef.current?.focus()}
+                          returnKeyType="next"
                         />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
@@ -358,6 +343,7 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
+                          ref={signupEmailRef}
                           style={styles.input}
                           placeholder="Enter your Email"
                           placeholderTextColor="#94A3B8"
@@ -365,9 +351,11 @@ export default function LoginScreen() {
                           autoCapitalize="none"
                           autoCorrect={false}
                           textContentType="emailAddress"
-                          value={field.value}
+                          value={field.value ?? ''}
                           onChangeText={field.onChange}
                           onBlur={field.onBlur}
+                          onSubmitEditing={() => signupPhoneRef.current?.focus()}
+                          returnKeyType="next"
                         />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
@@ -381,18 +369,22 @@ export default function LoginScreen() {
                   name="phone"
                   render={({ field, fieldState }) => (
                     <>
-                      <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
+                      <View style={[styles.phoneInputBox, fieldState.error && styles.inputError]}>
                         <Text style={styles.countryCode}>+977  ›</Text>
                         <View style={styles.phoneDivider} />
                         <TextInput
-                          style={[styles.input, { flex: 1 }]}
+                          ref={signupPhoneRef}
+                          style={styles.phoneInput}
                           placeholder="9800000000"
                           placeholderTextColor="#94A3B8"
-                          keyboardType="phone-pad"
+                          keyboardType="number-pad"
+                          maxLength={10}
                           textContentType="telephoneNumber"
-                          value={field.value}
-                          onChangeText={field.onChange}
+                          value={field.value ?? ''}
+                          onChangeText={(text) => field.onChange(text.replace(/[^0-9]/g, ''))}
                           onBlur={field.onBlur}
+                          onSubmitEditing={() => signupPassRef.current?.focus()}
+                          returnKeyType="next"
                         />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
@@ -408,14 +400,17 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
+                          ref={signupPassRef}
                           style={styles.input}
                           placeholder="Min 8 chars, uppercase, number"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry
                           textContentType="newPassword"
-                          value={field.value}
+                          value={field.value ?? ''}
                           onChangeText={field.onChange}
                           onBlur={field.onBlur}
+                          onSubmitEditing={signupForm.handleSubmit(onSignupSubmit)}
+                          returnKeyType="done"
                         />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
@@ -426,7 +421,7 @@ export default function LoginScreen() {
                 <SocialSection label="Or Sign Up Using:" onSocialLogin={handleSocialLogin} />
               </View>
             )}
-          </Animated.View>
+          </View>
 
           {/* Action Button */}
           <TouchableOpacity
@@ -527,25 +522,50 @@ const styles = StyleSheet.create({
   },
   rateLimitText: { color: '#DC2626', fontSize: 13, fontWeight: '500', textAlign: 'center' },
 
-  // Form
+  // Form Area
+  formArea: { width: '100%' },
   form: { marginBottom: 24 },
   label: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 8 },
+  
   inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
-    paddingHorizontal: 16,
     height: 52,
     marginBottom: 6,
     borderWidth: 1.5,
     borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  phoneInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    height: 52,
+    paddingLeft: 16,
+    marginBottom: 6,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    overflow: 'hidden',
   },
   inputError: {
     borderColor: '#EF4444',
     backgroundColor: '#FFF5F5',
   },
-  input: { flex: 1, fontSize: 15, color: '#1E293B' },
+  input: {
+    width: '100%',
+    height: '100%',
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: '#1E293B',
+  },
+  phoneInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: '#1E293B',
+  },
   errorText: {
     fontSize: 12,
     color: '#EF4444',
@@ -553,7 +573,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   countryCode: { fontSize: 15, color: '#1E293B', fontWeight: '600', marginRight: 8 },
-  phoneDivider: { width: 1, height: 20, backgroundColor: '#CBD5E1', marginRight: 12 },
+  phoneDivider: { width: 1, height: 20, backgroundColor: '#CBD5E1', marginRight: 4 },
   forgotRow: { alignSelf: 'flex-end', marginBottom: 24, marginTop: 4 },
   forgotText: { fontSize: 14, color: '#64748B', textDecorationLine: 'underline' },
 
@@ -581,11 +601,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    boxShadow: '0 4px 12px rgba(56, 189, 248, 0.35)',
-  } as any,
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 4,
+  },
   actionBtnDisabled: {
     backgroundColor: '#94A3B8',
-    boxShadow: 'none',
-  } as any,
+    elevation: 0,
+  },
   actionBtnText: { fontSize: 17, fontWeight: '700', color: '#FFFFFF' },
 });

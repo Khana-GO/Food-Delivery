@@ -13,18 +13,29 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+
+// Safe conditional import for react-native-maps to prevent web codegenNativeComponent crash
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Polyline = Maps.Polyline;
+}
 
 const { width } = Dimensions.get('window');
 
-// Mock route coordinates (Brampton / Toronto area demo)
-const RESTAURANT_LOCATION = { latitude: 43.7315, longitude: -79.7624 };
-const CUSTOMER_LOCATION = { latitude: 43.7540, longitude: -79.7380 };
+// Mock route coordinates (Kathmandu / Lalitpur area demo)
+const RESTAURANT_LOCATION = { latitude: 27.712, longitude: 85.313 };
+const CUSTOMER_LOCATION = { latitude: 27.678, longitude: 85.316 };
 
 const ROUTE_POINTS = [
   RESTAURANT_LOCATION,
-  { latitude: 43.7380, longitude: -79.7550 },
-  { latitude: 43.7450, longitude: -79.7460 },
+  { latitude: 27.702, longitude: 85.314 },
+  { latitude: 27.690, longitude: 85.315 },
   CUSTOMER_LOCATION,
 ];
 
@@ -37,7 +48,7 @@ const ORDER_STEPS = [
 
 export default function LiveOrderTrackScreen() {
   const { orderId } = useLocalSearchParams();
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<any>(null);
 
   // Driver simulation animation state
   const [driverIndex, setDriverIndex] = useState(1);
@@ -70,8 +81,8 @@ export default function LiveOrderTrackScreen() {
     Alert.alert('Call Delivery Partner', 'Do you want to call Marcus (Driver)?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Call +1 (555) 234-5678',
-        onPress: () => Linking.openURL('tel:+15552345678'),
+        text: 'Call +977 9841234567',
+        onPress: () => Linking.openURL('tel:+9779841234567'),
       },
     ]);
   };
@@ -85,7 +96,7 @@ export default function LiveOrderTrackScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Live Order Tracking</Text>
+          <Text style={styles.headerTitle}>Live Order Tracking 🇳🇵</Text>
           <Text style={styles.orderIdText}>Order #{orderId || 'FD-89241'}</Text>
         </View>
 
@@ -104,44 +115,55 @@ export default function LiveOrderTrackScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Map Container */}
         <View style={styles.mapContainer}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            initialRegion={{
-              latitude: 43.742,
-              longitude: -79.750,
-              latitudeDelta: 0.045,
-              longitudeDelta: 0.045,
-            }}
-          >
-            {/* Polyline Route */}
-            <Polyline
-              coordinates={ROUTE_POINTS}
-              strokeColor="#38BDF8"
-              strokeWidth={4}
-            />
+          {Platform.OS !== 'web' && MapView ? (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              initialRegion={{
+                latitude: 27.695,
+                longitude: 85.314,
+                latitudeDelta: 0.045,
+                longitudeDelta: 0.045,
+              }}
+            >
+              <Polyline
+                coordinates={ROUTE_POINTS}
+                strokeColor="#38BDF8"
+                strokeWidth={4}
+              />
 
-            {/* Restaurant Marker */}
-            <Marker coordinate={RESTAURANT_LOCATION} title="McDonald's">
-              <View style={styles.markerContainer}>
-                <Text style={{ fontSize: 20 }}>🍔</Text>
-              </View>
-            </Marker>
+              <Marker coordinate={RESTAURANT_LOCATION} title="McDonald's Durbar Marg">
+                <View style={styles.markerContainer}>
+                  <Text style={{ fontSize: 20 }}>🍔</Text>
+                </View>
+              </Marker>
 
-            {/* Driver Live Marker */}
-            <Marker coordinate={currentDriverPos} title="Driver Marcus">
-              <View style={[styles.markerContainer, styles.driverMarker]}>
-                <Ionicons name="bicycle" size={20} color="#FFFFFF" />
-              </View>
-            </Marker>
+              <Marker coordinate={currentDriverPos} title="Driver Marcus">
+                <View style={[styles.markerContainer, styles.driverMarker]}>
+                  <Ionicons name="bicycle" size={20} color="#FFFFFF" />
+                </View>
+              </Marker>
 
-            {/* Customer Marker */}
-            <Marker coordinate={CUSTOMER_LOCATION} title="Your Address">
-              <View style={[styles.markerContainer, styles.customerMarker]}>
-                <Ionicons name="home" size={18} color="#FFFFFF" />
+              <Marker coordinate={CUSTOMER_LOCATION} title="Patan Address">
+                <View style={[styles.markerContainer, styles.customerMarker]}>
+                  <Ionicons name="home" size={18} color="#FFFFFF" />
+                </View>
+              </Marker>
+            </MapView>
+          ) : (
+            /* Web Fallback Live Telemetry Map Container */
+            <View style={styles.webMapFallback}>
+              <Ionicons name="map-outline" size={48} color="#38BDF8" />
+              <Text style={styles.webMapTitle}>Kathmandu Valley GPS Live Tracking</Text>
+              <Text style={styles.webMapSub}>
+                Rider Marcus is {driverIndex * 30 + 10}% along the route (Durbar Marg ➔ Patan)
+              </Text>
+
+              <View style={styles.webProgressBar}>
+                <View style={[styles.webProgressFill, { width: `${(driverIndex / (ROUTE_POINTS.length - 1)) * 100}%` }]} />
               </View>
-            </Marker>
-          </MapView>
+            </View>
+          )}
 
           {/* Live ETA Card Floating on Map */}
           <View style={styles.etaFloatingCard}>
@@ -218,7 +240,7 @@ export default function LiveOrderTrackScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.driverName}>Marcus Vance</Text>
-              <Text style={styles.vehicleInfo}>Honda Civic • Red • ABC-1234</Text>
+              <Text style={styles.vehicleInfo}>Honda Dio • Red • Ba 92 Pa 4812</Text>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={14} color="#F59E0B" />
                 <Text style={styles.ratingText}>4.9 (240+ deliveries)</Text>
@@ -245,8 +267,8 @@ export default function LiveOrderTrackScreen() {
           <View style={styles.detailRow}>
             <Ionicons name="location-outline" size={20} color="#38BDF8" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.detailTitle}>Home Address</Text>
-              <Text style={styles.detailSub}>32 Kingston Lane, Apt 4B, Brampton, ON</Text>
+              <Text style={styles.detailTitle}>Home Address (Nepal 🇳🇵)</Text>
+              <Text style={styles.detailSub}>Durbar Marg, House #45, Kathmandu</Text>
             </View>
           </View>
 
@@ -254,7 +276,7 @@ export default function LiveOrderTrackScreen() {
             <Ionicons name="document-text-outline" size={20} color="#F59E0B" />
             <View style={{ flex: 1 }}>
               <Text style={styles.detailTitle}>Instructions for Driver</Text>
-              <Text style={styles.detailSub}>Gate Code #1234. Please leave at the front door.</Text>
+              <Text style={styles.detailSub}>Near Annapurna Hotel. Call when at main gate.</Text>
             </View>
           </View>
         </View>
@@ -303,6 +325,39 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFill,
   },
+  webMapFallback: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  webMapTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginTop: 8,
+  },
+  webMapSub: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  webProgressBar: {
+    width: '80%',
+    height: 6,
+    backgroundColor: '#BAE6FD',
+    borderRadius: 3,
+    marginTop: 14,
+    overflow: 'hidden',
+  },
+  webProgressFill: {
+    height: '100%',
+    backgroundColor: '#0284C7',
+    borderRadius: 3,
+  },
+
   markerContainer: {
     width: 36,
     height: 36,
