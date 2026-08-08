@@ -78,13 +78,20 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
- const [tab, setTab]         = useState<Tab>('login');
- const [loading, setLoading] = useState(false);
- 
- // Refs for focusing next inputs easily (only login password ref needed)
- const loginPassRef = useRef<TextInput>(null);
- 
- const handleSocialLogin = async (provider: 'GOOGLE' | 'FACEBOOK') => {
+  const [tab, setTab]         = useState<Tab>('login');
+  const [loading, setLoading] = useState(false);
+  
+  // Refs for focusing next inputs easily
+  const loginEmailRef  = useRef<TextInput>(null);
+  const loginPassRef   = useRef<TextInput>(null);
+  const fullNameRef    = useRef<TextInput>(null);
+  const signupEmailRef = useRef<TextInput>(null);
+  const signupPhoneRef = useRef<TextInput>(null);
+  const signupPassRef  = useRef<TextInput>(null);
+
+  const handleSocialLogin = async (provider: 'GOOGLE' | 'FACEBOOK') => {
+    // Social login action commented out for now (manual email signup only):
+    /*
     setLoading(true);
     try {
       const res = await axios.post(`${API_BASE}/auth/social-login`, {
@@ -106,6 +113,7 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+    */
   };
 
   // Brute-force rate limiting (client-side guard)
@@ -117,14 +125,14 @@ export default function LoginScreen() {
   // ── react-hook-form for Login ───────────────────────────────────────────────
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
     defaultValues: { email: '', password: '' },
   });
 
   // ── react-hook-form for Signup ──────────────────────────────────────────────
   const signupForm = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
     defaultValues: { fullName: '', email: '', phone: '', password: '' },
   });
 
@@ -253,6 +261,10 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
+                          ref={loginEmailRef}
+                          nativeID="login-email-input"
+                          aria-label="Login Email"
+                          accessibilityLabel="Login Email"
                           style={styles.input}
                           placeholder="Enter your Email"
                           placeholderTextColor="#94A3B8"
@@ -261,7 +273,7 @@ export default function LoginScreen() {
                           autoCorrect={false}
                           textContentType="emailAddress"
                           value={field.value ?? ''}
-                          onChangeText={field.onChange}
+                          onChangeText={(val) => field.onChange(val)}
                           onBlur={field.onBlur}
                           onSubmitEditing={() => loginPassRef.current?.focus()}
                           returnKeyType="next"
@@ -281,13 +293,16 @@ export default function LoginScreen() {
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
                           ref={loginPassRef}
+                          nativeID="login-password-input"
+                          aria-label="Login Password"
+                          accessibilityLabel="Login Password"
                           style={styles.input}
                           placeholder="Enter your Password"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry
                           textContentType="password"
                           value={field.value ?? ''}
-                          onChangeText={field.onChange}
+                          onChangeText={(val) => field.onChange(val)}
                           onBlur={field.onBlur}
                           onSubmitEditing={loginForm.handleSubmit(onLoginSubmit)}
                           returnKeyType="done"
@@ -314,16 +329,20 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
-                          ref={field.ref}
+                          ref={fullNameRef}
+                          nativeID="signup-fullname-input"
+                          aria-label="Full Name"
+                          accessibilityLabel="Full Name"
                           style={styles.input}
                           placeholder="Enter your Name"
                           placeholderTextColor="#94A3B8"
                           autoCapitalize="words"
+                          autoCorrect={false}
                           textContentType="name"
                           value={field.value ?? ''}
-                          onChangeText={field.onChange}
+                          onChangeText={(val) => field.onChange(val)}
                           onBlur={field.onBlur}
-                          onSubmitEditing={() => signupForm.control.setFocus('email')}
+                          onSubmitEditing={() => signupEmailRef.current?.focus()}
                           returnKeyType="next"
                         />
                       </View>
@@ -340,7 +359,10 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
-                          ref={field.ref}
+                          ref={signupEmailRef}
+                          nativeID="signup-email-input"
+                          aria-label="Signup Email"
+                          accessibilityLabel="Signup Email"
                           style={styles.input}
                           placeholder="Enter your Email"
                           placeholderTextColor="#94A3B8"
@@ -349,9 +371,9 @@ export default function LoginScreen() {
                           autoCorrect={false}
                           textContentType="emailAddress"
                           value={field.value ?? ''}
-                          onChangeText={field.onChange}
+                          onChangeText={(val) => field.onChange(val)}
                           onBlur={field.onBlur}
-                          onSubmitEditing={() => signupForm.control.setFocus('phone')}
+                          onSubmitEditing={() => signupPhoneRef.current?.focus()}
                           returnKeyType="next"
                         />
                       </View>
@@ -370,7 +392,10 @@ export default function LoginScreen() {
                         <Text style={styles.countryCode}>+977  ›</Text>
                         <View style={styles.phoneDivider} />
                         <TextInput
-                          ref={field.ref}
+                          ref={signupPhoneRef}
+                          nativeID="signup-phone-input"
+                          aria-label="Phone Number"
+                          accessibilityLabel="Phone Number"
                           style={styles.phoneInput}
                           placeholder="9800000000"
                           placeholderTextColor="#94A3B8"
@@ -378,9 +403,9 @@ export default function LoginScreen() {
                           maxLength={10}
                           textContentType="telephoneNumber"
                           value={field.value ?? ''}
-                          onChangeText={(text) => field.onChange(text.replace(/[^0-9]/g, ''))}
+                          onChangeText={(val) => field.onChange(val.replace(/[^0-9]/g, ''))}
                           onBlur={field.onBlur}
-                          onSubmitEditing={() => signupForm.control.setFocus('password')}
+                          onSubmitEditing={() => signupPassRef.current?.focus()}
                           returnKeyType="next"
                         />
                       </View>
@@ -397,14 +422,17 @@ export default function LoginScreen() {
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
                         <TextInput
-                          ref={field.ref}
+                          ref={signupPassRef}
+                          nativeID="signup-password-input"
+                          aria-label="Create Password"
+                          accessibilityLabel="Create Password"
                           style={styles.input}
                           placeholder="Min 8 chars, uppercase, number"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry
                           textContentType="newPassword"
                           value={field.value ?? ''}
-                          onChangeText={field.onChange}
+                          onChangeText={(val) => field.onChange(val)}
                           onBlur={field.onBlur}
                           onSubmitEditing={signupForm.handleSubmit(onSignupSubmit)}
                           returnKeyType="done"
