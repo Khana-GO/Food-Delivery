@@ -19,18 +19,44 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullNameError, setFullNameError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
     let valid = true;
-    if (!email.includes('@')) {
+
+    if (fullName.trim().split(/\s+/).filter(Boolean).length < 2) {
+      setFullNameError('Please enter your first and last name.');
+      valid = false;
+    } else {
+      setFullNameError('');
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setEmailError('Please enter a valid email address.');
       valid = false;
     } else {
       setEmailError('');
     }
+
+    if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters long.');
+      valid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    if (confirmPassword !== password) {
+      setConfirmPasswordError('Passwords do not match.');
+      valid = false;
+    } else {
+      setConfirmPasswordError('');
+    }
+
     return valid;
   };
 
@@ -77,12 +103,14 @@ export default function RegisterScreen() {
               placeholder="Enter your full name"
               value={fullName}
               onChangeText={setFullName}
+              error={fullNameError}
               leftIcon={<Text style={styles.icon}>👤</Text>}
+              rightIcon={fullNameError ? <Text style={styles.icon}>⚠️</Text> : undefined}
             />
 
             <Input
-              label="Email or Phone Number"
-              placeholder="john@gmail.com"
+              label="Email Address"
+              placeholder="john@example.com"
               value={email}
               onChangeText={setEmail}
               error={emailError}
@@ -97,6 +125,7 @@ export default function RegisterScreen() {
               placeholder="Create a password"
               value={password}
               onChangeText={setPassword}
+              error={passwordError}
               isPassword
               leftIcon={<Text style={styles.icon}>🔒</Text>}
             />
@@ -106,6 +135,7 @@ export default function RegisterScreen() {
               placeholder="Confirm your password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              error={confirmPasswordError}
               isPassword
               leftIcon={<Text style={styles.icon}>🔒</Text>}
             />
