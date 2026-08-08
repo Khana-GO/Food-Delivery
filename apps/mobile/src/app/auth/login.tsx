@@ -81,10 +81,8 @@ export default function LoginScreen() {
  const [tab, setTab]         = useState<Tab>('login');
  const [loading, setLoading] = useState(false);
  
- // Refs for focusing next inputs easily
+ // Refs for focusing next inputs easily (only login password ref needed)
  const loginPassRef = useRef<TextInput>(null);
-  // Refs for focusing next inputs easily (only login password ref needed)
-  const loginPassRef = useRef<TextInput>(null);
  
  const handleSocialLogin = async (provider: 'GOOGLE' | 'FACEBOOK') => {
     setLoading(true);
@@ -307,7 +305,6 @@ export default function LoginScreen() {
                 <SocialSection label="Or Login Using:" onSocialLogin={handleSocialLogin} />
               </View>
             ) : (
-              /* ── SIGNUP FORM ── */
               <View style={styles.form}>
                 <Text style={styles.label}>Full Name</Text>
                 <Controller
@@ -316,18 +313,19 @@ export default function LoginScreen() {
                   render={({ field, fieldState }) => (
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
-                 <TextInput
-                     style={styles.input}
-                     placeholder="Enter your Name"
-                     placeholderTextColor="#94A3B8"
-                     autoCapitalize="words"
-                     textContentType="name"
-                     value={field.value ?? ''}
-                     onChangeText={field.onChange}
-                     onBlur={field.onBlur}
-                     onSubmitEditing={() => signupForm.control.setFocus('email')}
-                     returnKeyType="next"
-                   />
+                        <TextInput
+                          ref={field.ref}
+                          style={styles.input}
+                          placeholder="Enter your Name"
+                          placeholderTextColor="#94A3B8"
+                          autoCapitalize="words"
+                          textContentType="name"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          onBlur={field.onBlur}
+                          onSubmitEditing={() => signupForm.control.setFocus('email')}
+                          returnKeyType="next"
+                        />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
                     </>
@@ -341,21 +339,21 @@ export default function LoginScreen() {
                   render={({ field, fieldState }) => (
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
-                 <TextInput
-                     ref={signupEmailRef}
-                     style={styles.input}
-                     placeholder="Enter your Email"
-                     placeholderTextColor="#94A3B8"
-                     keyboardType="email-address"
-                     autoCapitalize="none"
-                     autoCorrect={false}
-                     textContentType="emailAddress"
-                     value={field.value ?? ''}
-                     onChangeText={field.onChange}
-                     onBlur={field.onBlur}
-                     onSubmitEditing={() => signupForm.control.setFocus('phone')}
-                     returnKeyType="next"
-                   />
+                        <TextInput
+                          ref={field.ref}
+                          style={styles.input}
+                          placeholder="Enter your Email"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          textContentType="emailAddress"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          onBlur={field.onBlur}
+                          onSubmitEditing={() => signupForm.control.setFocus('phone')}
+                          returnKeyType="next"
+                        />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
                     </>
@@ -371,20 +369,20 @@ export default function LoginScreen() {
                       <View style={[styles.phoneInputBox, fieldState.error && styles.inputError]}>
                         <Text style={styles.countryCode}>+977  ›</Text>
                         <View style={styles.phoneDivider} />
-                 <TextInput
-                     ref={signupPhoneRef}
-                     style={styles.phoneInput}
-                     placeholder="9800000000"
-                     placeholderTextColor="#94A3B8"
-                     keyboardType="number-pad"
-                     maxLength={10}
-                     textContentType="telephoneNumber"
-                     value={field.value ?? ''}
-                     onChangeText={(text) => field.onChange(text.replace(/[^0-9]/g, ''))}
-                     onBlur={field.onBlur}
-                     onSubmitEditing={() => signupForm.control.setFocus('password')}
-                     returnKeyType="next"
-                   />
+                        <TextInput
+                          ref={field.ref}
+                          style={styles.phoneInput}
+                          placeholder="9800000000"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="number-pad"
+                          maxLength={10}
+                          textContentType="telephoneNumber"
+                          value={field.value ?? ''}
+                          onChangeText={(text) => field.onChange(text.replace(/[^0-9]/g, ''))}
+                          onBlur={field.onBlur}
+                          onSubmitEditing={() => signupForm.control.setFocus('password')}
+                          returnKeyType="next"
+                        />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
                     </>
@@ -398,19 +396,19 @@ export default function LoginScreen() {
                   render={({ field, fieldState }) => (
                     <>
                       <View style={[styles.inputBox, fieldState.error && styles.inputError]}>
-                 <TextInput
-                     ref={signupPassRef}
-                     style={styles.input}
-                     placeholder="Min 8 chars, uppercase, number"
-                     placeholderTextColor="#94A3B8"
-                     secureTextEntry
-                     textContentType="newPassword"
-                     value={field.value ?? ''}
-                     onChangeText={field.onChange}
-                     onBlur={field.onBlur}
-                     onSubmitEditing={signupForm.handleSubmit(onSignupSubmit)}
-                     returnKeyType="done"
-                   />
+                        <TextInput
+                          ref={field.ref}
+                          style={styles.input}
+                          placeholder="Min 8 chars, uppercase, number"
+                          placeholderTextColor="#94A3B8"
+                          secureTextEntry
+                          textContentType="newPassword"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          onBlur={field.onBlur}
+                          onSubmitEditing={signupForm.handleSubmit(onSignupSubmit)}
+                          returnKeyType="done"
+                        />
                       </View>
                       {fieldState.error && <Text style={styles.errorText}>{fieldState.error.message}</Text>}
                     </>
