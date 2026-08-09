@@ -14,6 +14,9 @@ import { DATABASE } from '../db/database.constants';
 import { usersTable, type NewUsersTable, type UsersTable } from '../db/schema/user.schema';
 import { UserRole } from '@food_delivery/types';
 import * as schema from '../db/schema';
+import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
+
 
 @Injectable()
 export class UsersService {
@@ -22,6 +25,7 @@ export class UsersService {
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
+    private configService: ConfigService,
   ) {}
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -145,6 +149,7 @@ export class UsersService {
         throw new BadRequestException('Email and password are required');
       }
 
+
       const normalizedPhone = data.phone?.trim();
       if (!normalizedPhone) {
         throw new BadRequestException('Phone number is required');
@@ -163,10 +168,15 @@ export class UsersService {
         throw new ConflictException('Phone number already registered');
       }
 
+     const saltRounds =  Number(this.configService.get<string>('SALT_ROUNDS', '10')) || 10;
+
+      const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+
       const [newUser] = await db
         .insert(usersTable)
         .values({
           ...data,
+          password: hashedPassword,
           phone: normalizedPhone,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -207,7 +217,7 @@ export class UsersService {
         .where(eq(usersTable.id, userId))
         .returning();
 
-      // ✅ Check if any row was updated by checking the returned array
+      //  Check if any row was updated by checking the returned array
       if (!result || result.length === 0) {
         throw new InternalServerErrorException('Failed to verify user');
       }

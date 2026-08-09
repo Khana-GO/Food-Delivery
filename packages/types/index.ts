@@ -16,6 +16,7 @@ export interface User {
     firstName: string,
     lastName: string,
     role : UserRole,
+    imageUrl?: string | null,
     createdAt: Date
 }
 

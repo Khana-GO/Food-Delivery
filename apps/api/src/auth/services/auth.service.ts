@@ -59,7 +59,7 @@ import { eq } from 'drizzle-orm/sql/expressions/conditions';
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
         email,
-        password: await bcrypt.hash(dto.password, this.saltRounds()),
+        password: dto.password,
         phone: normalizedPhone,
         verificationToken: this.hashToken(otp),
         verificationTokenExpiry: this.expiryInMinutes(10),
