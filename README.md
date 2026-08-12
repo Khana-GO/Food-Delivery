@@ -4,9 +4,8 @@ A complete cross-platform Food Delivery application built using a modern TypeScr
 
 The project consists of:
 
-* **Mobile App** – Built with Expo and React Native (Expo Router, Zustand, React Query, NativeWind, Reanimated).
 * **Backend API** – Built with NestJS (PostgreSQL, Drizzle ORM, JWT Authentication).
-* **Shared Package** – Common TypeScript types shared between the frontend and backend.
+* **Shared Package** – Common TypeScript types for backend services.
 
 ---
 
@@ -16,8 +15,7 @@ The project consists of:
 food_delivery/
 │
 ├── apps/
-│   ├── api/          # NestJS Backend
-│   └── mobile/       # Expo React Native App
+│   └── api/          # NestJS Backend
 │
 ├── packages/
 │   └── types/        # Shared TypeScript Types
@@ -32,20 +30,12 @@ food_delivery/
 
 # Tech Stack
 
-## Mobile
-
-* React Native
-* Expo
-* Expo Router
-* TypeScript
-* React Query
-* Axios
-
 ## Backend
 
 * NestJS
 * TypeScript
 * REST API
+* Drizzle ORM / PostgreSQL
 
 ## Shared
 

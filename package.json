@@ -6,8 +6,7 @@
   "main": "index.js",
   "scripts": {
     "dev:api": "pnpm --filter api run start:dev",
-    "dev:mobile": "pnpm --filter mobile run start",
-    "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:mobile\"",
+    "dev": "pnpm dev:api",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
