@@ -15,7 +15,7 @@ export const reviewsTable = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
 
-  customerId: uuid('customer_id')
+    customerId: uuid('customer_id')
       .notNull()
       .references(() => usersTable.id, {
         onDelete: 'cascade',

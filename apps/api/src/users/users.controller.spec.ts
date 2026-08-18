@@ -39,7 +39,10 @@ describe('UsersController', () => {
   });
 
   it('keeps the create user endpoint restricted to admin role', () => {
-    const methodRoles = Reflect.getMetadata(ROLES_KEY, UsersController.prototype.create);
+    const methodRoles = Reflect.getMetadata(
+      ROLES_KEY,
+      UsersController.prototype.create,
+    );
     const classRoles = Reflect.getMetadata(ROLES_KEY, UsersController);
 
     expect(methodRoles).toEqual([UserRole.ADMIN]);

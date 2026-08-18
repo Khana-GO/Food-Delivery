@@ -81,21 +81,15 @@ export const ordersTable = pgTable('orders', {
     .notNull()
     .default('PENDING'),
 
-  orderStatus: orderStatusEnum('order_status')
-    .notNull()
-    .default('PENDING'),
+  orderStatus: orderStatusEnum('order_status').notNull().default('PENDING'),
 
   estimatedDeliveryTime: timestamp('estimated_delivery_time'),
 
   deliveredAt: timestamp('delivered_at'),
 
-  createdAt: timestamp('created_at')
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export type Order = typeof ordersTable.$inferSelect;

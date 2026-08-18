@@ -11,12 +11,15 @@ import {
 import { eq, sql, and, or, like, desc, count } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
-import { usersTable, type NewUsersTable, type UsersTable } from '../db/schema/user.schema';
+import {
+  usersTable,
+  type NewUsersTable,
+  type UsersTable,
+} from '../db/schema/user.schema';
 import { UserRole } from '@food_delivery/types';
 import * as schema from '../db/schema';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-
 
 @Injectable()
 export class UsersService {
@@ -36,7 +39,9 @@ export class UsersService {
     this.logger.error(`[${context}] Database error:`, error);
 
     if (error?.code === '23505') {
-      throw new ConflictException('Duplicate entry. This record already exists.');
+      throw new ConflictException(
+        'Duplicate entry. This record already exists.',
+      );
     }
     if (error?.code === '23503') {
       throw new BadRequestException('Related record not found.');
@@ -149,7 +154,6 @@ export class UsersService {
         throw new BadRequestException('Email and password are required');
       }
 
-
       const normalizedPhone = data.phone?.trim();
       if (!normalizedPhone) {
         throw new BadRequestException('Phone number is required');
@@ -168,7 +172,8 @@ export class UsersService {
         throw new ConflictException('Phone number already registered');
       }
 
-     const saltRounds =  Number(this.configService.get<string>('SALT_ROUNDS', '10')) || 10;
+      const saltRounds =
+        Number(this.configService.get<string>('SALT_ROUNDS', '10')) || 10;
 
       const hashedPassword = await bcrypt.hash(data.password, saltRounds);
 
@@ -226,7 +231,11 @@ export class UsersService {
     }, 'markAsVerified');
   }
 
-  async setResetToken(userId: string, tokenHash: string, expiry: Date): Promise<void> {
+  async setResetToken(
+    userId: string,
+    tokenHash: string,
+    expiry: Date,
+  ): Promise<void> {
     await this.handleDbOperation(async () => {
       await this.findByIdOrThrow(userId);
 
@@ -248,7 +257,11 @@ export class UsersService {
     }, 'setResetToken');
   }
 
-  async setVerificationToken(id: string, tokenHash: string, expiry: Date): Promise<void> {
+  async setVerificationToken(
+    id: string,
+    tokenHash: string,
+    expiry: Date,
+  ): Promise<void> {
     await this.handleDbOperation(async () => {
       await this.findByIdOrThrow(id);
 
@@ -265,7 +278,9 @@ export class UsersService {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new InternalServerErrorException('Failed to set verification token');
+        throw new InternalServerErrorException(
+          'Failed to set verification token',
+        );
       }
 
       this.logger.log(`Verification token set for user: ${id}`);
@@ -321,7 +336,9 @@ export class UsersService {
       const user = await this.findByIdOrThrow(id);
 
       if (user.verificationAttempts >= 5) {
-        throw new BadRequestException('Too many verification attempts. Please request a new code.');
+        throw new BadRequestException(
+          'Too many verification attempts. Please request a new code.',
+        );
       }
 
       const result = await this.db
@@ -334,7 +351,9 @@ export class UsersService {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new InternalServerErrorException('Failed to increment verification attempts');
+        throw new InternalServerErrorException(
+          'Failed to increment verification attempts',
+        );
       }
     }, 'incrementVerificationAttempts');
   }
@@ -344,7 +363,9 @@ export class UsersService {
       const user = await this.findByIdOrThrow(id);
 
       if (user.resetAttempts >= 5) {
-        throw new BadRequestException('Too many reset attempts. Please try again later.');
+        throw new BadRequestException(
+          'Too many reset attempts. Please try again later.',
+        );
       }
 
       const result = await this.db
@@ -357,7 +378,9 @@ export class UsersService {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new InternalServerErrorException('Failed to increment reset attempts');
+        throw new InternalServerErrorException(
+          'Failed to increment reset attempts',
+        );
       }
     }, 'incrementResetAttempts');
   }
@@ -389,14 +412,16 @@ export class UsersService {
   // Admin CRUD Operations
   // ──────────────────────────────────────────────────────────────────────────
 
-  async findAll(options: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    role?: UserRole;
-    isVerified?: boolean;
-    isOnline?: boolean;
-  } = {}): Promise<{
+  async findAll(
+    options: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      role?: UserRole;
+      isVerified?: boolean;
+      isOnline?: boolean;
+    } = {},
+  ): Promise<{
     data: UsersTable[];
     total: number;
     page: number;
@@ -404,7 +429,14 @@ export class UsersService {
     totalPages: number;
   }> {
     return this.handleDbOperation(async () => {
-      const { page = 1, limit = 10, search, role, isVerified, isOnline } = options;
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        role,
+        isVerified,
+        isOnline,
+      } = options;
 
       if (page < 1) throw new BadRequestException('Page must be at least 1');
       if (limit < 1 || limit > 100) {
@@ -438,7 +470,8 @@ export class UsersService {
 
       conditions.push(sql`${usersTable.deletedAt} IS NULL`);
 
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
 
       const [countResult] = await this.db
         .select({ total: count() })
@@ -510,7 +543,12 @@ export class UsersService {
         const admins = await this.db
           .select()
           .from(usersTable)
-          .where(and(eq(usersTable.role, 'ADMIN'), sql`${usersTable.deletedAt} IS NULL`));
+          .where(
+            and(
+              eq(usersTable.role, 'ADMIN'),
+              sql`${usersTable.deletedAt} IS NULL`,
+            ),
+          );
 
         if (admins.length <= 1) {
           throw new BadRequestException('Cannot remove the last admin user');
@@ -530,7 +568,9 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to update user role');
       }
 
-      this.logger.log(`User ${userId} role changed from ${user.role} to ${newRole}`);
+      this.logger.log(
+        `User ${userId} role changed from ${user.role} to ${newRole}`,
+      );
       return updated;
     }, 'changeRole');
   }
@@ -547,7 +587,12 @@ export class UsersService {
         const admins = await this.db
           .select()
           .from(usersTable)
-          .where(and(eq(usersTable.role, 'ADMIN'), sql`${usersTable.deletedAt} IS NULL`));
+          .where(
+            and(
+              eq(usersTable.role, 'ADMIN'),
+              sql`${usersTable.deletedAt} IS NULL`,
+            ),
+          );
 
         if (admins.length <= 1) {
           throw new BadRequestException('Cannot delete the last admin user');
@@ -575,11 +620,16 @@ export class UsersService {
   async restore(id: string): Promise<UsersTable> {
     return this.handleDbOperation(async () => {
       const user = await this.db.query.usersTable.findFirst({
-        where: and(eq(usersTable.id, id), sql`${usersTable.deletedAt} IS NOT NULL`),
+        where: and(
+          eq(usersTable.id, id),
+          sql`${usersTable.deletedAt} IS NOT NULL`,
+        ),
       });
 
       if (!user) {
-        throw new NotFoundException(`User with ID ${id} not found or not deleted`);
+        throw new NotFoundException(
+          `User with ID ${id} not found or not deleted`,
+        );
       }
 
       const originalEmail = user.email.replace(/-deleted-.*$/, '');
@@ -611,17 +661,27 @@ export class UsersService {
         const admins = await this.db
           .select()
           .from(usersTable)
-          .where(and(eq(usersTable.role, 'ADMIN'), sql`${usersTable.deletedAt} IS NULL`));
+          .where(
+            and(
+              eq(usersTable.role, 'ADMIN'),
+              sql`${usersTable.deletedAt} IS NULL`,
+            ),
+          );
 
         if (admins.length <= 1) {
           throw new BadRequestException('Cannot delete the last admin user');
         }
       }
 
-      const result = await this.db.delete(usersTable).where(eq(usersTable.id, id)).returning();
+      const result = await this.db
+        .delete(usersTable)
+        .where(eq(usersTable.id, id))
+        .returning();
 
       if (!result || result.length === 0) {
-        throw new InternalServerErrorException('Failed to permanently delete user');
+        throw new InternalServerErrorException(
+          'Failed to permanently delete user',
+        );
       }
 
       this.logger.log(`User hard deleted: ${user.email} (ID: ${id})`);

@@ -35,7 +35,10 @@ export class UpdateUserDto {
   @MaxLength(255, { message: 'Email must not exceed 255 characters' })
   email?: string;
 
-  @ApiPropertyOptional({ example: '+1234567890', description: 'User phone number' })
+  @ApiPropertyOptional({
+    example: '+1234567890',
+    description: 'User phone number',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^\+?[1-9]\d{1,14}$/, {

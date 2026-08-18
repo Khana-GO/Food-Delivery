@@ -4,16 +4,16 @@ import { eq, and, lt } from 'drizzle-orm';
 import * as crypto from 'crypto';
 import { DATABASE } from '../db/database.constants';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
-import * as schema from '../db/schema'
+import * as schema from '../db/schema';
 import { sessionsTable } from '../db/schema';
 // import your DB provider
 
 @Injectable()
 export class SessionsService {
- constructor(
-     @Inject(DATABASE)
-     private readonly db: NeonDatabase<typeof schema>,
-   ) {}
+  constructor(
+    @Inject(DATABASE)
+    private readonly db: NeonDatabase<typeof schema>,
+  ) {}
 
   private readonly revokedTokens = new Set<string>();
   private readonly revokedUsers = new Set<string>();

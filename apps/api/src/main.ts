@@ -6,7 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'], 
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   const configService = app.get(ConfigService);
@@ -38,7 +38,9 @@ async function bootstrap() {
       .setVersion('1.0')
       .addBearerAuth()
       .build();
-    SwaggerModule.setup('docs', app, () => SwaggerModule.createDocument(app, config));
+    SwaggerModule.setup('docs', app, () =>
+      SwaggerModule.createDocument(app, config),
+    );
   }
 
   const port = configService.get<number>('PORT') || 3000;
@@ -46,7 +48,8 @@ async function bootstrap() {
   await app.listen(port);
   const logger = new Logger('Bootstrap');
   logger.log(`Server is running on port ${port}`);
-  if (configService.get<string>('NODE_ENV') !== 'production') logger.log(`Swagger docs available at /docs`);
+  if (configService.get<string>('NODE_ENV') !== 'production')
+    logger.log(`Swagger docs available at /docs`);
 }
 
 bootstrap();

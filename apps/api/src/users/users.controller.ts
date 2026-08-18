@@ -53,7 +53,9 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
-  async getProfile(@CurrentUser() currentUser: JwtPayload): Promise<UserResponseDto> {
+  async getProfile(
+    @CurrentUser() currentUser: JwtPayload,
+  ): Promise<UserResponseDto> {
     const user = await this.usersService.findByIdOrThrow(currentUser.sub);
     return new UserResponseDto(user);
   }
@@ -70,7 +72,10 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input' })
-  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'Email already registered' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Email already registered',
+  })
   async updateProfile(
     @CurrentUser() currentUser: JwtPayload,
     @Body() updateUserDto: UpdateUserDto,
@@ -94,9 +99,18 @@ export class UsersController {
     description: 'User created successfully',
     type: UserResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'Email already registered' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input data' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Email already registered',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const user = await this.usersService.create(createUserDto);
     return new UserResponseDto(user);
@@ -108,18 +122,52 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all users with pagination and filters (Admin only)' })
-  @ApiQuery({ name: 'page', required: false, example: 1, description: 'Page number' })
-  @ApiQuery({ name: 'limit', required: false, example: 10, description: 'Items per page' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search by name or email' })
-  @ApiQuery({ name: 'role', required: false, enum: UserRole, description: 'Filter by role' })
-  @ApiQuery({ name: 'isVerified', required: false, example: true, description: 'Filter by verification status' })
-  @ApiQuery({ name: 'isOnline', required: false, example: true, description: 'Filter by online status' })
+  @ApiOperation({
+    summary: 'Get all users with pagination and filters (Admin only)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 10,
+    description: 'Items per page',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by name or email',
+  })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    enum: UserRole,
+    description: 'Filter by role',
+  })
+  @ApiQuery({
+    name: 'isVerified',
+    required: false,
+    example: true,
+    description: 'Filter by verification status',
+  })
+  @ApiQuery({
+    name: 'isOnline',
+    required: false,
+    example: true,
+    description: 'Filter by online status',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Users fetched successfully',
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -152,7 +200,10 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async findOne(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<UserResponseDto> {
@@ -174,9 +225,18 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
-  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'Email already registered' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input data' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Email already registered',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -199,8 +259,14 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Cannot remove last admin' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Cannot remove last admin',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async changeRole(
     @Body() changeRoleDto: ChangeRoleDto,
   ): Promise<UserResponseDto> {
@@ -225,8 +291,14 @@ export class UsersController {
     description: 'User deleted successfully',
   })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Cannot delete last admin' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Cannot delete last admin',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async delete(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<{ message: string }> {
@@ -247,8 +319,14 @@ export class UsersController {
     description: 'User restored successfully',
     type: UserResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found or not deleted' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found or not deleted',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async restore(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<UserResponseDto> {
@@ -270,8 +348,14 @@ export class UsersController {
     description: 'User permanently deleted',
   })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Cannot delete last admin' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Cannot delete last admin',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async hardDelete(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<{ message: string }> {
@@ -290,7 +374,10 @@ export class UsersController {
     status: HttpStatus.OK,
     description: 'Deleted users fetched successfully',
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async getDeletedUsers(): Promise<UserResponseDto[]> {
     const users = await this.usersService.findDeleted();
     return users.map((user) => new UserResponseDto(user));
@@ -307,7 +394,10 @@ export class UsersController {
     status: HttpStatus.OK,
     description: 'User statistics retrieved successfully',
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden - Admin only' })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
   async getUserStats() {
     return this.usersService.getStatistics();
   }

@@ -42,7 +42,9 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<Request & { user?: JwtPayload }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: JwtPayload }>();
     // console.log('Request headers:', request.headers); // Log the request headers for debugging
     const authHeader = request.headers.authorization;
 
@@ -65,11 +67,15 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     if (payload.type === 'refresh') {
-      throw new UnauthorizedException('Refresh tokens cannot access protected routes');
+      throw new UnauthorizedException(
+        'Refresh tokens cannot access protected routes',
+      );
     }
 
     if (this.sessionsService.isTokenRevoked(token, payload.sub)) {
-      throw new UnauthorizedException('Session was revoked. Please log in again.');
+      throw new UnauthorizedException(
+        'Session was revoked. Please log in again.',
+      );
     }
 
     request.user = payload;

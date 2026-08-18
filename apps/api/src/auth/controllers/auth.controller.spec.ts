@@ -11,7 +11,10 @@ describe('AuthController', () => {
     const authService = { logout } as unknown as AuthService;
     const controller = new AuthController(authService);
 
-    const result = await controller.logout({} as any, 'Bearer refresh-token-from-header');
+    const result = await controller.logout(
+      {} as any,
+      'Bearer refresh-token-from-header',
+    );
 
     expect(logout).toHaveBeenCalledWith('refresh-token-from-header');
     expect(result).toEqual({ message: 'Logged out successfully' });

@@ -36,9 +36,7 @@ export const orderItemsTable = pgTable('order_items', {
     scale: 2,
   }).notNull(),
 
-  createdAt: timestamp('created_at')
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 export type OrderItem = typeof orderItemsTable.$inferSelect;
 export type NewOrderItem = typeof orderItemsTable.$inferInsert;

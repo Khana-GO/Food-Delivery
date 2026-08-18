@@ -1,10 +1,4 @@
-import {
-  integer,
-  pgTable,
-  real,
-  timestamp,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { integer, pgTable, real, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { cartsTable } from './cart.schema';
 import { menuItemsTable } from './menu.items.schema';
@@ -24,20 +18,13 @@ export const cartItemsTable = pgTable('cart_items', {
       onDelete: 'cascade',
     }),
 
-  quantity: integer('quantity')
-    .notNull()
-    .default(1),
+  quantity: integer('quantity').notNull().default(1),
 
-  price: real('price')
-    .notNull(),
+  price: real('price').notNull(),
 
-  createdAt: timestamp('created_at')
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export type CartItem = typeof cartItemsTable.$inferSelect;

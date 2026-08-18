@@ -24,7 +24,10 @@ export class CreateUserDto {
   @MaxLength(100, { message: 'Last name must not exceed 100 characters' })
   lastName!: string;
 
-  @ApiProperty({ example: 'john.doe@example.com', description: 'User email address' })
+  @ApiProperty({
+    example: 'john.doe@example.com',
+    description: 'User email address',
+  })
   @IsEmail({}, { message: 'Please provide a valid email address' })
   @MaxLength(255, { message: 'Email must not exceed 255 characters' })
   email!: string;
@@ -38,11 +41,14 @@ export class CreateUserDto {
     {
       message:
         'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-    }
+    },
   )
   password!: string;
 
-  @ApiPropertyOptional({ example: '+1234567890', description: 'User phone number' })
+  @ApiPropertyOptional({
+    example: '+1234567890',
+    description: 'User phone number',
+  })
   @IsString()
   @Matches(/^\+?[1-9]\d{1,14}$/, {
     message: 'Please provide a valid phone number with country code',

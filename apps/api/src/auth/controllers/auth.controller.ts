@@ -1,5 +1,10 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { RegisterUserDto } from '../dto/register.dto';
 import { LoginUserDto } from '../dto/login.dto';
@@ -14,8 +19,7 @@ import { LogoutDto } from '../dto/logout.dto';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { Public } from '../decorators/public.decorator';
 
-
-@Throttle({ default: { limit: 5, ttl: 60_000 } })  // 5 request in per minute from single ip
+@Throttle({ default: { limit: 5, ttl: 60_000 } }) // 5 request in per minute from single ip
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -55,22 +59,17 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
-
-
-    @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
-    @Get('me')
-    @ApiOperation({ summary: 'Get current authenticated user profile' })
-    @ApiResponse({ status: 200, description: 'Authenticated user profile' })
-    getMe(@CurrentUser() user: JwtPayload) {
-      return {
-        message: 'Authenticated successfully',
-        user,
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @ApiOperation({ summary: 'Get current authenticated user profile' })
+  @ApiResponse({ status: 200, description: 'Authenticated user profile' })
+  getMe(@CurrentUser() user: JwtPayload) {
+    return {
+      message: 'Authenticated successfully',
+      user,
     };
   }
-
-
-  
 
   @Throttle({ default: { limit: 3, ttl: 60_000 } }) // stricter: sends an email
   @Post('resend-verification-code')
@@ -79,30 +78,34 @@ export class AuthController {
     return this.authService.resendVerificationCode(dto.email);
   }
 
-// logout for single device
-@Post('logout')
-@ApiOperation({ summary: 'Logout current device/session' })
-async logout(@Body() dto: LogoutDto, @Req() req: { headers?: Record<string, string | undefined> } | string | undefined) {
-  const authorizationHeader = typeof req === 'string' ? req : req?.headers?.authorization;
-  const accessToken = this.extractBearerToken(authorizationHeader);
-  const refreshToken = dto?.refreshToken || '';
-  return this.authService.logout(refreshToken, accessToken);
-}
-
-@UseGuards(JwtAuthGuard)
-@Post('logout-all')
-@ApiOperation({ summary: 'Logout from all devices' })
-async logoutAllDevices(@CurrentUser() user: { sub: string }) {
-  return this.authService.logoutAllDevices(user.sub); // ← sub, not id
-}
-
-private extractBearerToken(authorization?: string): string {
-  if (!authorization) {
-    return '';
+  // logout for single device
+  @Post('logout')
+  @ApiOperation({ summary: 'Logout current device/session' })
+  async logout(
+    @Body() dto: LogoutDto,
+    @Req()
+    req: { headers?: Record<string, string | undefined> } | string | undefined,
+  ) {
+    const authorizationHeader =
+      typeof req === 'string' ? req : req?.headers?.authorization;
+    const accessToken = this.extractBearerToken(authorizationHeader);
+    const refreshToken = dto?.refreshToken || '';
+    return this.authService.logout(refreshToken, accessToken);
   }
 
-  const [type, token] = authorization.split(' ');
-  return type === 'Bearer' && token ? token : '';
-}
+  @UseGuards(JwtAuthGuard)
+  @Post('logout-all')
+  @ApiOperation({ summary: 'Logout from all devices' })
+  async logoutAllDevices(@CurrentUser() user: { sub: string }) {
+    return this.authService.logoutAllDevices(user.sub); // ← sub, not id
+  }
 
+  private extractBearerToken(authorization?: string): string {
+    if (!authorization) {
+      return '';
+    }
+
+    const [type, token] = authorization.split(' ');
+    return type === 'Bearer' && token ? token : '';
+  }
 }

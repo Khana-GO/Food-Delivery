@@ -9,11 +9,7 @@ import { AuthService } from './services/auth.service';
 import { SessionsModule } from '../sessions/session.module';
 
 @Module({
-  imports: [
-    forwardRef(() => UsersModule),
-    MailModule,
-    SessionsModule,
-  ],
+  imports: [forwardRef(() => UsersModule), MailModule, SessionsModule],
   controllers: [AuthController, RefreshController],
   providers: [AuthService, JwtAuthGuard, RolesGuard],
   exports: [AuthService, JwtAuthGuard, RolesGuard],

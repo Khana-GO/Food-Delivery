@@ -11,6 +11,9 @@ import { UsersModule } from './users/users.module';
 import { MenuCategoriesModule } from './menu-categories/menu-categories.module';
 import { OrderModule } from './order/order.module';
 import { NotificationModule } from './notification/notification.module';
+import { Cloudinary } from './cloudinary/cloudinary';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { ClodinaryService } from './cloudinary/clodinary.service';
 
 @Module({
   imports: [
@@ -23,10 +26,15 @@ import { NotificationModule } from './notification/notification.module';
       useFactory: (config: ConfigService): JwtModuleOptions => {
         const secret = config.get<string>('JWT_SECRET');
         if (!secret || secret.length < 32) {
-          throw new Error('JWT_SECRET must be set to a value of at least 32 characters');
+          throw new Error(
+            'JWT_SECRET must be set to a value of at least 32 characters',
+          );
         }
         const expiresIn = config.get<string | number>('JWT_EXPIRES_IN') ?? '1h';
-        return { secret, signOptions: { expiresIn: expiresIn as SignOptions['expiresIn'] } };
+        return {
+          secret,
+          signOptions: { expiresIn: expiresIn as SignOptions['expiresIn'] },
+        };
       },
     }),
     DbModule,
@@ -36,8 +44,9 @@ import { NotificationModule } from './notification/notification.module';
     MenuCategoriesModule,
     OrderModule,
     NotificationModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, Cloudinary, ClodinaryService],
 })
 export class AppModule {}
