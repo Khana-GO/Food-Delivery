@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   Inject,
   Injectable,
@@ -20,6 +21,7 @@ import { UserRole } from '@food_delivery/types';
 import * as schema from '../db/schema';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
+import { CloudinaryService } from '../cloudinary/clodinary.service';
 
 @Injectable()
 export class UsersService {
@@ -29,6 +31,8 @@ export class UsersService {
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
     private configService: ConfigService,
+    private readonly cloudinaryService: CloudinaryService,
+
   ) {}
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -76,6 +80,88 @@ export class UsersService {
       this.handleDatabaseError(error, context);
     }
   }
+
+
+  async uploadProfileImage(
+  userId: string,
+  file: Express.Multer.File,
+): Promise<UsersTable> {
+  const user = await this.findByIdOrThrow(userId);
+
+  const uploadedImage =
+    await this.cloudinaryService.uploadImage(
+      file,
+      `khanago/users/${userId}`,
+    );
+
+  const [updatedUser] = await this.db
+    .update(usersTable)
+    .set({
+      imageUrl: uploadedImage.url,
+      imagePublicId: uploadedImage.publicId,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId))
+    .returning();
+
+  if (!updatedUser) {
+    // Database update failed after Cloudinary upload.
+    // Remove orphaned Cloudinary image.
+    await this.cloudinaryService.deleteImage(
+      uploadedImage.publicId,
+    );
+
+    throw new InternalServerErrorException(
+      'Failed to update profile image',
+    );
+  }
+
+  // Delete old image AFTER successful database update.
+  if (
+    user.imagePublicId &&
+    user.imagePublicId !== uploadedImage.publicId
+  ) {
+    await this.cloudinaryService.deleteImage(
+      user.imagePublicId,
+    );
+  }
+
+  return updatedUser;
+}
+
+  async deleteProfileImage(
+  userId: string,
+): Promise<UsersTable> {
+  const user = await this.findByIdOrThrow(userId);
+
+  if (!user.imagePublicId) {
+    throw new BadRequestException('No profile image to delete');
+  }
+
+  // Delete the image from Cloudinary first. If this fails the
+  // database still points to a valid image, so the request is safe.
+  await this.cloudinaryService.deleteImage(
+    user.imagePublicId,
+  );
+
+  const [updatedUser] = await this.db
+    .update(usersTable)
+    .set({
+      imageUrl: null,
+      imagePublicId: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId))
+    .returning();
+
+  if (!updatedUser) {
+    throw new InternalServerErrorException(
+      'Failed to delete profile image',
+    );
+  }
+
+  return updatedUser;
+}
 
   // ──────────────────────────────────────────────────────────────────────────
   // Auth Service Dependencies

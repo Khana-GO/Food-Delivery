@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
-    "types": ["node", "jest"],
+    "types": ["node", "jest", "multer"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],

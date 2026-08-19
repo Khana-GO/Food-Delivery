@@ -11,9 +11,7 @@ import { UsersModule } from './users/users.module';
 import { MenuCategoriesModule } from './menu-categories/menu-categories.module';
 import { OrderModule } from './order/order.module';
 import { NotificationModule } from './notification/notification.module';
-import { Cloudinary } from './cloudinary/cloudinary';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
-import { ClodinaryService } from './cloudinary/clodinary.service';
 
 @Module({
   imports: [
@@ -47,6 +45,6 @@ import { ClodinaryService } from './cloudinary/clodinary.service';
     CloudinaryModule,
   ],
   controllers: [AppController],
-  providers: [AppService, Cloudinary, ClodinaryService],
+  providers: [AppService],
 })
 export class AppModule {}

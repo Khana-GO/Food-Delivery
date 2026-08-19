@@ -7,6 +7,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@food_delivery/types';
 import { DATABASE } from '../db/database.constants';
+import { CloudinaryService } from '../cloudinary/clodinary.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -15,7 +17,13 @@ describe('UsersController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [UsersService, Reflector, { provide: DATABASE, useValue: {} }],
+      providers: [
+        UsersService,
+        Reflector,
+        { provide: DATABASE, useValue: {} },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
+        { provide: CloudinaryService, useValue: {} },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })

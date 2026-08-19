@@ -52,6 +52,10 @@ export const usersTable = pgTable(
       length: 500,
     }),
 
+    imagePublicId: varchar('image_public_id', {
+      length: 255,
+    }),
+
     pushToken: text('push_token'),
 
     lastLoginAt: timestamp('last_login_at'),

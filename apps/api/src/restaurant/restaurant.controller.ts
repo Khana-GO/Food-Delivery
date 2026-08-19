@@ -1,53 +1,261 @@
 import {
   Controller,
-  Get,
   Post,
-  Body,
-  Patch,
-  Param,
+  Get,
+  Put,
   Delete,
+  Patch,
+  Body,
+  Param,
+  Query,
   UseGuards,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
-import { UserRole } from '@food_delivery/types';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { RestaurantService } from './restaurant.service';
-import { CreateRestaurantDto } from './dto/create-restaurant.dto';
-import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '@food_delivery/types';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { RestaurantsService } from './restaurant.service';
+import { RestaurantResponseDto } from './dto/restarurant-response.dto';
 
-@Controller('restaurant')
+@ApiTags('Restaurants')
+@ApiBearerAuth()
+@Controller('restaurants')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
-export class RestaurantController {
-  constructor(private readonly restaurantService: RestaurantService) {}
+export class RestaurantsController {
+  constructor(private readonly restaurantsService: RestaurantsService) {}
 
+  // ─── CREATE ───
   @Post()
-  create(@Body() createRestaurantDto: CreateRestaurantDto) {
-    return this.restaurantService.create(createRestaurantDto);
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @ApiOperation({ summary: 'Create a new restaurant' })
+  async create(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateRestaurantDto,
+  ): Promise<RestaurantResponseDto> {
+    return this.restaurantsService.create(user.sub, dto);
   }
 
+  // ─── FIND ALL ───
   @Get()
-  findAll() {
-    return this.restaurantService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.restaurantService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateRestaurantDto: UpdateRestaurantDto,
+  // @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Get all restaurants with pagination and filters' })
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('cuisineType') cuisineType?: string,
+    @Query('isOpen') isOpen?: string,
+    @Query('isVerified') isVerified?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
-    return this.restaurantService.update(id, updateRestaurantDto);
+    return this.restaurantsService.findAll({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search,
+      cuisineType,
+      isOpen: isOpen ? isOpen === 'true' : undefined,
+      isVerified: isVerified ? isVerified === 'true' : undefined,
+      sortBy,
+      sortOrder,
+    });
   }
 
+  // ─── MY RESTAURANTS ───
+  @Get('my')
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @ApiOperation({ summary: 'Get restaurants owned by the current user' })
+  async getMyRestaurants(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<RestaurantResponseDto[]> {
+    return this.restaurantsService.findByOwner(user.sub);
+  }
+
+  // ─── FIND BY ID ───
+  @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
+  @ApiOperation({ summary: 'Get restaurant by ID' })
+  async findById(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<RestaurantResponseDto> {
+    return this.restaurantsService.findById(id);
+  }
+
+  // ─── FIND BY SLUG ───
+  @Get('slug/:slug')
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Get restaurant by slug' })
+  async findBySlug(
+    @Param('slug') slug: string,
+  ): Promise<RestaurantResponseDto> {
+    return this.restaurantsService.findBySlug(slug);
+  }
+
+  // ─── UPDATE ───
+  @Put(':id')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update restaurant' })
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateRestaurantDto,
+  ): Promise<RestaurantResponseDto> {
+    return this.restaurantsService.update(id, dto);
+  }
+
+  // ─── UPLOAD IMAGES ───
+  @Post(':id/images')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Upload restaurant images (logo and cover)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        logo: { type: 'string', format: 'binary' },
+        cover: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'logo', maxCount: 1 },
+      { name: 'cover', maxCount: 1 },
+    ]),
+  )
+  async uploadImages(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFiles()
+    files?: { logo?: Express.Multer.File[]; cover?: Express.Multer.File[] },
+  ): Promise<{ logoUrl?: string; coverImageUrl?: string }> {
+    const logoFile = files?.logo?.[0];
+    const coverFile = files?.cover?.[0];
+
+    if (!logoFile && !coverFile) {
+      throw new BadRequestException(
+        'At least one image (logo or cover) is required',
+      );
+    }
+
+    return this.restaurantsService.uploadImages(id, logoFile, coverFile);
+  }
+
+  // ─── UPDATE IMAGES ───
+  @Put(':id/images')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Update restaurant images (replaces existing images)',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        logo: { type: 'string', format: 'binary' },
+        cover: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'logo', maxCount: 1 },
+      { name: 'cover', maxCount: 1 },
+    ]),
+  )
+  async updateImages(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFiles()
+    files?: { logo?: Express.Multer.File[]; cover?: Express.Multer.File[] },
+  ): Promise<{ logoUrl?: string; coverImageUrl?: string }> {
+    const logoFile = files?.logo?.[0];
+    const coverFile = files?.cover?.[0];
+
+    if (!logoFile && !coverFile) {
+      throw new BadRequestException(
+        'At least one image (logo or cover) is required',
+      );
+    }
+
+    return this.restaurantsService.updateImages(id, logoFile, coverFile);
+  }
+
+  // ─── DELETE LOGO ───
+  @Delete(':id/logo')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete restaurant logo' })
+  async deleteLogo(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<{ message: string }> {
+    return this.restaurantsService.deleteImage(id, 'logo');
+  }
+
+  // ─── DELETE COVER ───
+  @Delete(':id/cover')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete restaurant cover image' })
+  async deleteCover(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<{ message: string }> {
+    return this.restaurantsService.deleteImage(id, 'cover');
+  }
+
+  // ─── TOGGLE OPEN ───
+  @Patch(':id/toggle-open')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Toggle restaurant open/closed status' })
+  async toggleOpen(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<{ isOpen: boolean }> {
+    return this.restaurantsService.toggleOpen(id);
+  }
+
+  // ─── TOGGLE VERIFICATION ───
+  @Patch(':id/toggle-verify')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Toggle restaurant verification status (Admin only)',
+  })
+  async toggleVerification(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<{ isVerified: boolean }> {
+    return this.restaurantsService.toggleVerification(id);
+  }
+
+  // ─── SOFT DELETE ───
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.restaurantService.remove(id);
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Soft delete restaurant' })
+  async delete(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<{ message: string }> {
+    return this.restaurantsService.delete(id);
+  }
+
+  // ─── RESTORE ───
+  @Put(':id/restore')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Restore a soft-deleted restaurant (Admin only)' })
+  async restore(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<RestaurantResponseDto> {
+    return this.restaurantsService.restore(id);
   }
 }

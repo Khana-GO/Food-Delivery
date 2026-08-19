@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { SessionsModule } from '../sessions/session.module';
-import { RestaurantService } from './restaurant.service';
-import { RestaurantController } from './restaurant.controller';
+import { RestaurantsController } from './restaurant.controller';
+import { RestaurantsService } from './restaurant.service';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
-  imports: [AuthModule, SessionsModule],
-  controllers: [RestaurantController],
-  providers: [RestaurantService],
+  imports: [AuthModule, SessionsModule, CloudinaryModule],
+  controllers: [RestaurantsController],
+  providers: [RestaurantsService],
+  exports: [RestaurantsService],
 })
 export class RestaurantModule {}

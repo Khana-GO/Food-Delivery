@@ -12,6 +12,11 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -33,6 +38,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '@food_delivery/types';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -86,6 +92,56 @@ export class UsersController {
     return new UserResponseDto(user);
   }
 
+  // update profile image
+  @Post('profile/image')
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.RESTAURANT_OWNER,
+    UserRole.DRIVER,
+    UserRole.ADMIN,
+  )
+  @UseInterceptors(FileInterceptor('image'))
+  async uploadProfileImage(
+    @CurrentUser() currentUser: JwtPayload,
+
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 5 * 1024 * 1024,
+          }),
+
+          new FileTypeValidator({
+            fileType: /^image\/(jpeg|png|webp)$/,
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<UserResponseDto> {
+    const user = await this.usersService.uploadProfileImage(
+      currentUser.sub,
+      file,
+    );
+
+    return new UserResponseDto(user);
+  }
+
+  @Delete('profile/image')
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.RESTAURANT_OWNER,
+    UserRole.DRIVER,
+    UserRole.ADMIN,
+  )
+  @HttpCode(HttpStatus.OK)
+  async deleteProfileImage(
+    @CurrentUser() currentUser: JwtPayload,
+  ): Promise<UserResponseDto> {
+    const user = await this.usersService.deleteProfileImage(currentUser.sub);
+
+    return new UserResponseDto(user);
+  }
   // ──────────────────────────────────────────────────────────────────────────
   // Admin: Create User
   // ──────────────────────────────────────────────────────────────────────────

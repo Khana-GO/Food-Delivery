@@ -1,83 +1,108 @@
-import { Multer } from 'multer';
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import { Readable } from 'stream';
 
 @Injectable()
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
 
   constructor(private readonly configService: ConfigService) {
+    const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
+
+    const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
+
+    const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new Error('Cloudinary environment variables are not configured');
+    }
+
     cloudinary.config({
-      cloud_name: this.configService.getOrThrow<string>(
-        'CLOUDINARY_CLOUD_NAME',
-      ),
-
-      api_key: this.configService.getOrThrow<string>('CLOUDINARY_API_KEY'),
-
-      api_secret: this.configService.getOrThrow<string>(
-        'CLOUDINARY_API_SECRET',
-      ),
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
     });
   }
 
   async uploadImage(
     file: Express.Multer.File,
     folder: string,
-  ): Promise<UploadApiResponse> {
+  ): Promise<{
+    url: string;
+    publicId: string;
+  }> {
     if (!file) {
-      throw new InternalServerErrorException('File is required');
+      throw new BadRequestException('Image file is required');
+    }
+
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are allowed');
     }
 
     try {
-      return await new Promise<UploadApiResponse>((resolve, reject) => {
+      const result = await new Promise<UploadApiResponse>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder,
-
             resource_type: 'image',
-
             transformation: [
               {
-                width: 1200,
-                height: 1200,
-                crop: 'limit',
-                quality: 'auto',
-                fetch_format: 'auto',
+                width: 500,
+                height: 500,
+                crop: 'fill',
+                gravity: 'face',
               },
             ],
           },
-
           (error, result) => {
             if (error) {
-              this.logger.error('Cloudinary upload failed', error);
-
-              return reject(error);
+              reject(
+                new InternalServerErrorException('Failed to upload image'),
+              );
+              return;
             }
 
             if (!result) {
-              return reject(new Error('Cloudinary returned no result'));
+              reject(
+                new InternalServerErrorException(
+                  'Cloudinary returned no result',
+                ),
+              );
+              return;
             }
 
             resolve(result);
           },
         );
 
-        Readable.from(file.buffer).pipe(uploadStream);
+        uploadStream.end(file.buffer);
       });
-    } catch (error) {
-      this.logger.error('Failed to upload image to Cloudinary', error);
 
-      throw new InternalServerErrorException('Image upload failed');
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+      };
+    } catch (error) {
+      this.logger.error('Cloudinary upload failed', error);
+
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Failed to upload image');
     }
   }
 
   async deleteImage(publicId: string): Promise<void> {
+    if (!publicId) {
+      return;
+    }
+
     try {
       await cloudinary.uploader.destroy(publicId);
     } catch (error) {
@@ -86,7 +111,7 @@ export class CloudinaryService {
         error,
       );
 
-      throw new InternalServerErrorException('Image deletion failed');
+      throw new InternalServerErrorException('Failed to delete image');
     }
   }
 }
