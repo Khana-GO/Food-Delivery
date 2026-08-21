@@ -12,6 +12,7 @@ import { MenuCategoriesModule } from './menu-categories/menu-categories.module';
 import { OrderModule } from './order/order.module';
 import { NotificationModule } from './notification/notification.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { MenuModule } from './menu/menu.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     OrderModule,
     NotificationModule,
     CloudinaryModule,
+    MenuModule,
   ],
   controllers: [AppController],
   providers: [AppService],
