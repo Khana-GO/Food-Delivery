@@ -24,19 +24,13 @@ import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CategoriesService } from './menu-categories.service';
 import { CreateCategoryDto } from './dto/create-menu-category.dto';
 import { UpdateCategoryDto } from './dto/update-menu-category.dto';
-import { NeonDatabase } from 'drizzle-orm/neon-serverless';
-import * as schema from '../db/schema';
-import { eq } from 'drizzle-orm/sql/expressions/conditions';
 
 @ApiTags('Categories')
 @ApiBearerAuth()
 @Controller('categories')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CategoriesController {
-  constructor(
-    private readonly categoriesService: CategoriesService,
-    private readonly db: NeonDatabase<typeof schema>,
-  ) {}
+  constructor(private readonly categoriesService: CategoriesService) {}
 
   // ─── CREATE ───
   @Post()
@@ -46,7 +40,9 @@ export class CategoriesController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateCategoryDto,
   ): Promise<CategoryResponseDto> {
-    const restaurantId = await this.getRestaurantId(user.sub);
+    const restaurantId = await this.categoriesService.getRestaurantIdByUserId(
+      user.sub,
+    );
     return this.categoriesService.create(restaurantId, dto);
   }
 
@@ -94,18 +90,5 @@ export class CategoriesController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
     return this.categoriesService.delete(id);
-  }
-
-  // ─── Helper ───
-  private async getRestaurantId(userId: string): Promise<string> {
-    const restaurant = await this.db.query.restaurantsTable.findFirst({
-      where: eq(schema.restaurantsTable.ownerId, userId),
-    });
-
-    if (!restaurant) {
-      throw new BadRequestException('You do not have a restaurant registered');
-    }
-
-    return restaurant.id;
   }
 }

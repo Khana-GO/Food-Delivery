@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
@@ -41,6 +42,19 @@ export class CategoriesService {
         'An error occurred while processing your request',
       );
     }
+  }
+
+  // ─── Helper ───
+  async getRestaurantIdByUserId(userId: string): Promise<string> {
+    const restaurant = await this.db.query.restaurantsTable.findFirst({
+      where: eq(schema.restaurantsTable.ownerId, userId),
+    });
+
+    if (!restaurant) {
+      throw new BadRequestException('You do not have a restaurant registered');
+    }
+
+    return restaurant.id;
   }
 
   // ─── CREATE ───

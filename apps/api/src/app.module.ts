@@ -8,11 +8,12 @@ import { DbModule } from './db/database.module';
 import { AuthModule } from './auth/auth.module';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { UsersModule } from './users/users.module';
-import { MenuCategoriesModule } from './menu-categories/menu-categories.module';
 import { OrderModule } from './order/order.module';
 import { NotificationModule } from './notification/notification.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { MenuModule } from './menu/menu.module';
+import { CategoriesModule } from './menu-categories/menu-categories.module';
+import { SessionsModule } from './sessions/session.module';
 
 @Module({
   imports: [
@@ -40,11 +41,12 @@ import { MenuModule } from './menu/menu.module';
     AuthModule,
     RestaurantModule,
     UsersModule,
-    MenuCategoriesModule,
+    CategoriesModule,
     OrderModule,
     NotificationModule,
     CloudinaryModule,
     MenuModule,
+    SessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
