@@ -4,15 +4,24 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  Inject,
 } from '@nestjs/common';
-import { Inject } from '@nestjs/common';
-import { eq, and, sql, desc, ilike } from 'drizzle-orm';
+import { eq, and, or, ilike, desc, asc, sql } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { MenuItemResponseDto } from './dto/menu-item-response.dto';
-import * as schema from '../db/schema';
+import {
+  menuItemsTable,
+  restaurantsTable,
+  type MenuItem,
+  type NewMenuItem,
+} from '../db/schema';
+import type * as schema from '../db/schema';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { CreateMenuItemDto } from './dto/create-menu.dto';
+import { UpdateMenuItemDto } from './dto/update-menu.dto';
+
+const SORTABLE_COLUMNS = ['createdAt', 'updatedAt', 'name', 'price'] as const;
 
 @Injectable()
 export class MenuItemsService {
@@ -34,7 +43,8 @@ export class MenuItemsService {
       this.logger.error(`[${context}] Error:`, error);
       if (
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
       ) {
         throw error;
       }
@@ -57,6 +67,21 @@ export class MenuItemsService {
     }
   }
 
+  // ─── Helper: Resolve restaurant for current owner ───
+  async getRestaurantIdForUser(userId: string): Promise<string> {
+    const [restaurant] = await this.db
+      .select({ id: restaurantsTable.id })
+      .from(restaurantsTable)
+      .where(eq(restaurantsTable.ownerId, userId))
+      .limit(1);
+
+    if (!restaurant) {
+      throw new BadRequestException('You do not have a restaurant registered');
+    }
+
+    return restaurant.id;
+  }
+
   // ─── CREATE ───
   async create(
     restaurantId: string,
@@ -64,7 +89,6 @@ export class MenuItemsService {
     file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
-      // Upload image if provided
       let imageUrl: string | undefined;
 
       if (file) {
@@ -75,19 +99,19 @@ export class MenuItemsService {
         imageUrl = result.url;
       }
 
+      const values: NewMenuItem = {
+        restaurantId,
+        categoryId: dto.categoryId,
+        name: dto.name,
+        description: dto.description,
+        price: dto.price.toString(),
+        imageUrl: imageUrl ?? dto.imageUrl,
+        isAvailable: dto.isAvailable ?? true,
+      };
+
       const [item] = await this.db
-        .insert(schema.menuItemsTable)
-        .values({
-          restaurantId,
-          categoryId: dto.categoryId,
-          name: dto.name,
-          description: dto.description,
-          price: dto.price.toString(),
-          imageUrl: imageUrl || dto.imageUrl,
-          isAvailable: dto.isAvailable ?? true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .insert(menuItemsTable)
+        .values(values)
         .returning();
 
       if (!item) {
@@ -129,15 +153,24 @@ export class MenuItemsService {
         sortOrder = 'DESC',
       } = options;
 
-      const conditions: any[] = [
-        eq(schema.menuItemsTable.restaurantId, restaurantId),
-        sql`${schema.menuItemsTable.deletedAt} IS NULL`,
-      ];
+      const safeSortBy = (SORTABLE_COLUMNS as readonly string[]).includes(
+        sortBy,
+      )
+        ? sortBy
+        : 'createdAt';
+      const sortColumn = menuItemsTable[
+        safeSortBy as keyof typeof menuItemsTable
+      ] as never;
+
+      const conditions = [eq(menuItemsTable.restaurantId, restaurantId)];
 
       if (search) {
         const searchTerm = `%${search}%`;
         conditions.push(
-          sql`${menuItemsTable.name} ILIKE ${searchTerm} OR ${menuItemsTable.description} ILIKE ${searchTerm}`,
+          or(
+            ilike(menuItemsTable.name, searchTerm),
+            ilike(menuItemsTable.description, searchTerm),
+          )!,
         );
       }
 
@@ -149,15 +182,14 @@ export class MenuItemsService {
         conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
       }
 
-      const whereClause =
-        conditions.length > 0 ? and(...conditions) : undefined;
+      const whereClause = and(...conditions);
 
       const [countResult] = await this.db
         .select({ total: sql<number>`count(*)` })
         .from(menuItemsTable)
         .where(whereClause);
 
-      const total = countResult?.total || 0;
+      const total = Number(countResult?.total ?? 0);
       const totalPages = Math.ceil(total / limit);
       const offset = (page - 1) * limit;
 
@@ -165,9 +197,7 @@ export class MenuItemsService {
         .select()
         .from(menuItemsTable)
         .where(whereClause)
-        .orderBy(
-          sql`${menuItemsTable[sortBy as keyof typeof menuItemsTable]} ${sql.raw(sortOrder)}`,
-        )
+        .orderBy(sortOrder === 'ASC' ? asc(sortColumn) : desc(sortColumn))
         .limit(limit)
         .offset(offset);
 
@@ -187,10 +217,7 @@ export class MenuItemsService {
     isAvailable?: boolean,
   ): Promise<MenuItemResponseDto[]> {
     return this.handleDbOperation(async () => {
-      const conditions: any[] = [
-        eq(menuItemsTable.categoryId, categoryId),
-        sql`${menuItemsTable.deletedAt} IS NULL`,
-      ];
+      const conditions = [eq(menuItemsTable.categoryId, categoryId)];
 
       if (isAvailable !== undefined) {
         conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
@@ -199,7 +226,7 @@ export class MenuItemsService {
       const items = await this.db
         .select()
         .from(menuItemsTable)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .where(and(...conditions))
         .orderBy(desc(menuItemsTable.createdAt));
 
       return items.map((item) => new MenuItemResponseDto(item));
@@ -210,10 +237,7 @@ export class MenuItemsService {
   async findById(id: string): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
       const item = await this.db.query.menuItemsTable.findFirst({
-        where: and(
-          eq(menuItemsTable.id, id),
-          sql`${menuItemsTable.deletedAt} IS NULL`,
-        ),
+        where: eq(menuItemsTable.id, id),
       });
 
       if (!item) {
@@ -233,10 +257,9 @@ export class MenuItemsService {
     return this.handleDbOperation(async () => {
       const existing = await this.findById(id);
 
-      let imageUrl = existing.imageUrl;
+      let imageUrl: string | undefined = existing.imageUrl;
 
       if (file) {
-        // Delete old image if exists
         if (existing.imageUrl) {
           const publicId = this.extractPublicId(existing.imageUrl);
           if (publicId) {
@@ -251,9 +274,12 @@ export class MenuItemsService {
       }
 
       const updateData: Partial<NewMenuItem> = {
-        ...dto,
-        price: dto.price?.toString(),
-        imageUrl: file ? imageUrl : dto.imageUrl,
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
+        ...(dto.isAvailable !== undefined && { isAvailable: dto.isAvailable }),
+        ...(dto.price !== undefined && { price: dto.price.toString() }),
+        ...(imageUrl !== undefined && { imageUrl }),
         updatedAt: new Date(),
       };
 
@@ -300,7 +326,6 @@ export class MenuItemsService {
     return this.handleDbOperation(async () => {
       const item = await this.findById(id);
 
-      // Delete image from Cloudinary if exists
       if (item.imageUrl) {
         const publicId = this.extractPublicId(item.imageUrl);
         if (publicId) {
@@ -321,22 +346,22 @@ export class MenuItemsService {
     items: CreateMenuItemDto[],
   ): Promise<MenuItemResponseDto[]> {
     return this.handleDbOperation(async () => {
-      const createdItems = [];
+      const createdItems: MenuItem[] = [];
 
       for (const dto of items) {
+        const values: NewMenuItem = {
+          restaurantId,
+          categoryId: dto.categoryId,
+          name: dto.name,
+          description: dto.description,
+          price: dto.price.toString(),
+          imageUrl: dto.imageUrl,
+          isAvailable: dto.isAvailable ?? true,
+        };
+
         const [item] = await this.db
           .insert(menuItemsTable)
-          .values({
-            restaurantId,
-            categoryId: dto.categoryId,
-            name: dto.name,
-            description: dto.description,
-            price: dto.price.toString(),
-            imageUrl: dto.imageUrl,
-            isAvailable: dto.isAvailable ?? true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          })
+          .values(values)
           .returning();
 
         if (item) {
@@ -378,7 +403,7 @@ export class MenuItemsService {
     }, 'bulkDelete');
   }
 
-  // ─── GET BY CATEGORIES (Grouped) ───
+  // ─── GET GROUPED BY CATEGORY ───
   async getGroupedByCategory(
     restaurantId: string,
   ): Promise<{ categoryId: string; items: MenuItemResponseDto[] }[]> {
@@ -390,13 +415,11 @@ export class MenuItemsService {
           and(
             eq(menuItemsTable.restaurantId, restaurantId),
             eq(menuItemsTable.isAvailable, true),
-            sql`${menuItemsTable.deletedAt} IS NULL`,
           ),
         )
         .orderBy(desc(menuItemsTable.createdAt));
 
-      // Group by categoryId
-      const grouped = items.reduce(
+      const grouped = items.reduce<Record<string, MenuItemResponseDto[]>>(
         (acc, item) => {
           const categoryId = item.categoryId;
           if (!acc[categoryId]) {
@@ -405,12 +428,12 @@ export class MenuItemsService {
           acc[categoryId].push(new MenuItemResponseDto(item));
           return acc;
         },
-        {} as Record<string, MenuItemResponseDto[]>,
+        {},
       );
 
-      return Object.entries(grouped).map(([categoryId, items]) => ({
+      return Object.entries(grouped).map(([categoryId, groupedItems]) => ({
         categoryId,
-        items,
+        items: groupedItems,
       }));
     }, 'getGroupedByCategory');
   }

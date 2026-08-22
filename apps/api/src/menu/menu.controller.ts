@@ -1,4 +1,3 @@
-import { restaurantsTable, RestaurantsTable } from './../db/schema/restaurant.schema';
 import {
   Controller,
   Post,
@@ -35,19 +34,13 @@ import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CreateMenuItemDto } from './dto/create-menu.dto';
 import { UpdateMenuItemDto } from './dto/update-menu.dto';
 import { MenuItemsService } from './menu.service';
-import { eq } from 'drizzle-orm/sql';
-import { NeonDatabase } from 'drizzle-orm/neon-serverless';
-import * as schema from '../db/schema';
 
 @ApiTags('Menu Items')
 @ApiBearerAuth()
 @Controller('menu-items')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class MenuItemsController {
-  constructor(
-    private readonly menuItemsService: MenuItemsService,
-    private readonly db: NeonDatabase<typeof schema>,
-  ) {}
+  constructor(private readonly menuItemsService: MenuItemsService) {}
 
   // ─── CREATE ───
   @Post()
@@ -73,8 +66,9 @@ export class MenuItemsController {
     @Body() dto: CreateMenuItemDto,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
-    // Get restaurant ID from user's restaurant
-    const restaurantId = await this.getRestaurantId(user.sub);
+    const restaurantId = await this.menuItemsService.getRestaurantIdForUser(
+      user.sub,
+    );
     return this.menuItemsService.create(restaurantId, dto, file);
   }
 
@@ -82,7 +76,7 @@ export class MenuItemsController {
   @Get('restaurant/:restaurantId')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'Get all menu items for a restaurant' })
-  async findByRestaurant(
+  findByRestaurant(
     @Param('restaurantId', new ParseUUIDPipe()) restaurantId: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -107,7 +101,7 @@ export class MenuItemsController {
   @Get('restaurant/:restaurantId/grouped')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get menu items grouped by category' })
-  async getGroupedByCategory(
+  getGroupedByCategory(
     @Param('restaurantId', new ParseUUIDPipe()) restaurantId: string,
   ) {
     return this.menuItemsService.getGroupedByCategory(restaurantId);
@@ -117,7 +111,7 @@ export class MenuItemsController {
   @Get('category/:categoryId')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get menu items by category' })
-  async findByCategory(
+  findByCategory(
     @Param('categoryId', new ParseUUIDPipe()) categoryId: string,
     @Query('isAvailable') isAvailable?: string,
   ) {
@@ -193,7 +187,9 @@ export class MenuItemsController {
     @CurrentUser() user: JwtPayload,
     @Body() items: CreateMenuItemDto[],
   ): Promise<MenuItemResponseDto[]> {
-    const restaurantId = await this.getRestaurantId(user.sub);
+    const restaurantId = await this.menuItemsService.getRestaurantIdForUser(
+      user.sub,
+    );
     return this.menuItemsService.bulkCreate(restaurantId, items);
   }
 
@@ -202,32 +198,12 @@ export class MenuItemsController {
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Bulk delete menu items' })
   @HttpCode(HttpStatus.OK)
-  async bulkDelete(
+  bulkDelete(
     @Body('ids') ids: string[],
   ): Promise<{ message: string; deleted: number }> {
     if (!ids || ids.length === 0) {
       throw new BadRequestException('Please provide at least one ID');
     }
     return this.menuItemsService.bulkDelete(ids);
-  }
-
-  // ─── Helper ───
-  // In MenuItemsController, replace the placeholder method with:
-
-  private async getRestaurantId(userId: string): Promise<string> {
-    // Option 1: If the user has a "restaurantId" field
-    // const user = await this.usersService.findById(userId);
-    // return user.restaurantId;
-
-    // Option 2: Find restaurant by ownerId
-    const restaurant = await this.db.restaurantsTable.findFirst({
-      where: eq(RestaurantsTable.ownerId, userId),
-    });
-
-    if (!restaurant) {
-      throw new BadRequestException('You do not have a restaurant registered');
-    }
-
-    return restaurant.id;
   }
 }
