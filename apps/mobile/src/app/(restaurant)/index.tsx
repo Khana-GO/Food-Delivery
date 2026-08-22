@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,55 +10,30 @@ import {
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { Image } from 'expo-image';
 
 const { width } = Dimensions.get('window');
 
-// ──────────────────────────────────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────────────────────────────────
-
-interface Order {
-  id: string;
-  customer: string;
-  items: string;
-  total: number;
-  time: string;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-}
-
-interface StatItem {
-  id: string;
-  label: string;
-  value: string | number;
-  icon:React.ComponentProps<typeof Feather>['icon'];
-  color: string;
-  bgColor: string;
-  
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────────────────────────────────────
-
 export default function RestaurantDashboard() {
   const { user } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
+  const { data: restaurants, isLoading, refetch } = useMyRestaurants();
 
-  // ─── Mock Data ───
-  const stats: StatItem[] = [
+  // ─── Stats ───
+  const stats = [
     {
       id: '1',
-      label: 'Today\'s Orders',
-      value: 24,
-      icon: 'shopping-bag',
+      label: 'Total Restaurants',
+      value: restaurants?.length || 0,
+      icon: 'store',
       color: '#E23744',
       bgColor: '#FEE2E2',
     },
     {
       id: '2',
-      label: 'Total Revenue',
-      value: 'Rs. 12,450',
-      icon: 'dollar-sign',
+      label: 'Total Orders',
+      value: 24,
+      icon: 'shopping-bag',
       color: '#16A34A',
       bgColor: '#DCFCE7',
     },
@@ -72,15 +47,48 @@ export default function RestaurantDashboard() {
     },
     {
       id: '4',
-      label: 'Rating',
-      value: '4.8 ⭐',
-      icon: 'star',
+      label: 'Total Revenue',
+      value: 'Rs. 12,450',
+      icon: 'dollar-sign',
       color: '#8B5CF6',
       bgColor: '#EDE9FE',
     },
   ];
 
-  const recentOrders: Order[] = [
+  // ─── Quick Actions ───
+  const quickActions = [
+    {
+      id: '1',
+      label: 'Add Restaurant',
+      icon: 'plus',
+      route: '/(restaurant)/restaurant/create',
+      color: '#E23744',
+    },
+    {
+      id: '2',
+      label: 'Add Menu Item',
+      icon: 'menu',
+      route: '/(restaurant)/menu/create',
+      color: '#16A34A',
+    },
+    {
+      id: '3',
+      label: 'View Orders',
+      icon: 'shopping-bag',
+      route: '/(restaurant)/orders/index',
+      color: '#F59E0B',
+    },
+    {
+      id: '4',
+      label: 'Analytics',
+      icon: 'bar-chart-2',
+      route: '/(restaurant)/analytics',
+      color: '#8B5CF6',
+    },
+  ];
+
+  // ─── Recent Orders ───
+  const recentOrders = [
     {
       id: '1',
       customer: 'Anish Sharma',
@@ -105,23 +113,9 @@ export default function RestaurantDashboard() {
       time: '28 min ago',
       status: 'ready',
     },
-    {
-      id: '4',
-      customer: 'Hari Lama',
-      items: '1x Biryani, 1x Raita',
-      total: 560,
-      time: '45 min ago',
-      status: 'delivered',
-    },
   ];
 
-  // ─── Handlers ───
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
-  };
-
-  const getStatusColor = (status: Order['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
         return 'bg-orange-100 text-orange-600';
@@ -131,51 +125,35 @@ export default function RestaurantDashboard() {
         return 'bg-green-100 text-green-600';
       case 'delivered':
         return 'bg-gray-100 text-gray-600';
-      case 'cancelled':
-        return 'bg-red-100 text-red-600';
       default:
         return 'bg-gray-100 text-gray-600';
     }
   };
 
-  const getStatusLabel = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'preparing':
-        return 'Preparing';
-      case 'ready':
-        return 'Ready';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
-    }
+  const getStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  // ─── Render ───
   return (
     <View className="flex-1 bg-gray-50">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
       >
-        {/* Header */}
-        <View className="bg-primary px-6 pt-12 pb-6">
+        {/* ─── Header ─── */}
+        <View className="px-6 pt-12 pb-6 bg-primary">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-white/80 text-sm">Good Morning,</Text>
-              <Text className="text-white text-2xl font-bold">
-                {user?.firstName || 'Restaurant'}!
+              <Text className="text-sm text-white/80">Good Morning,</Text>
+              <Text className="text-2xl font-bold text-white">
+                {user?.firstName || 'Restaurant Owner'}!
               </Text>
-              <Text className="text-white/70 text-xs mt-1">Welcome back to your dashboard</Text>
+              <Text className="mt-1 text-xs text-white/70">
+                Welcome back to your dashboard
+              </Text>
             </View>
             <TouchableOpacity
-              className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+              className="items-center justify-center w-10 h-10 rounded-full bg-white/20"
               onPress={() => router.push('/(restaurant)/notifications' as any)}
             >
               <Feather name="bell" size={20} color="#FFF" />
@@ -184,8 +162,8 @@ export default function RestaurantDashboard() {
           </View>
         </View>
 
-        {/* Stats Grid */}
-        <View className="flex-row flex-wrap px-4 -mt-4 gap-3">
+        {/* ─── Stats Grid ─── */}
+        <View className="flex-row flex-wrap gap-3 px-4 -mt-4">
           {stats.map((stat) => (
             <View
               key={stat.id}
@@ -194,62 +172,105 @@ export default function RestaurantDashboard() {
             >
               <View className="flex-row items-center justify-between">
                 <View
-                  className="w-10 h-10 rounded-full items-center justify-center"
+                  className="items-center justify-center w-10 h-10 rounded-full"
                   style={{ backgroundColor: stat.bgColor }}
                 >
                   <Feather name={stat.icon} size={18} color={stat.color} />
                 </View>
               </View>
-              <Text className="text-xl font-bold text-black mt-3">{stat.value}</Text>
+              <Text className="mt-3 text-xl font-bold text-black">{stat.value}</Text>
               <Text className="text-xs text-gray-500 mt-0.5">{stat.label}</Text>
             </View>
           ))}
         </View>
 
-        {/* Quick Actions */}
+        {/* ─── Quick Actions ─── */}
         <View className="px-4 mt-4">
-          <Text className="text-base font-bold text-black mb-3">Quick Actions</Text>
-          <View className="flex-row gap-3">
-            <TouchableOpacity
-              className="flex-1 bg-white rounded-xl p-4 items-center border border-gray-100 shadow-sm"
-              onPress={() => router.push('/(restaurant)/menu/index' as any)}
-            >
-              <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center">
-                <Feather name="plus" size={22} color="#E23744" />
-              </View>
-              <Text className="text-xs font-semibold text-black mt-2 text-center">Add Menu Item</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="flex-1 bg-white rounded-xl p-4 items-center border border-gray-100 shadow-sm"
-              onPress={() => router.push('/(restaurant)/orders/index' as any)}
-            >
-              <View className="w-12 h-12 rounded-full bg-orange-50 items-center justify-center">
-                <Feather name="clipboard" size={22} color="#F59E0B" />
-              </View>
-              <Text className="text-xs font-semibold text-black mt-2 text-center">View Orders</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="flex-1 bg-white rounded-xl p-4 items-center border border-gray-100 shadow-sm"
-              onPress={() => router.push('/(restaurant)/restaurant/profile' as any)}
-            >
-              <View className="w-12 h-12 rounded-full bg-green-50 items-center justify-center">
-                <Feather name="settings" size={22} color="#16A34A" />
-              </View>
-              <Text className="text-xs font-semibold text-black mt-2 text-center">Settings</Text>
-            </TouchableOpacity>
+          <Text className="mb-3 text-base font-bold text-black">Quick Actions</Text>
+          <View className="flex-row flex-wrap gap-3">
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                className="flex-1 min-w-[45%] bg-white rounded-xl p-4 items-center border border-gray-100 shadow-sm"
+                onPress={() => router.push(action.route as any)}
+              >
+                <View
+                  className="items-center justify-center w-12 h-12 rounded-full"
+                  style={{ backgroundColor: `${action.color}15` }}
+                >
+                  <Feather name={action.icon} size={22} color={action.color} />
+                </View>
+                <Text className="mt-2 text-xs font-semibold text-center text-black">
+                  {action.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        {/* Recent Orders */}
+        {/* ─── My Restaurants ─── */}
+        <View className="px-4 mt-6">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-base font-bold text-black">My Restaurants</Text>
+              <TouchableOpacity onPress={() => router.push('/(restaurant)/restaurant/index' as any)}>
+              <Text className="text-sm font-semibold text-primary">See all</Text>
+            </TouchableOpacity>
+          </View>
+
+          {restaurants && restaurants.length > 0 ? (
+            <View className="flex-row flex-wrap gap-3">
+              {restaurants.slice(0, 2).map((restaurant) => (
+                <TouchableOpacity
+                  key={restaurant.id}
+                  className="flex-1 min-w-[45%] bg-white rounded-xl p-4 border border-gray-100 shadow-sm"
+                  onPress={() => router.push(`/(restaurant)/restaurant/${restaurant.id}` as any)}
+                >
+                  <View className="items-center justify-center w-16 h-16 rounded-xl bg-primary/10">
+                    {restaurant.logoUrl ? (
+                      <Image source={{ uri: restaurant.logoUrl }} className="w-full h-full rounded-xl" />
+                    ) : (
+                      <Text className="text-2xl font-bold text-primary">
+                        {restaurant.name.charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                  <Text className="mt-2 text-sm font-bold text-black">{restaurant.name}</Text>
+                  <Text className="text-xs text-gray-500">{restaurant.cuisineType}</Text>
+                  <View className="flex-row items-center gap-1 mt-1">
+                    <View className={`w-1.5 h-1.5 rounded-full ${restaurant.isOpen ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <Text className={`text-xs ${restaurant.isOpen ? 'text-green-500' : 'text-red-500'}`}>
+                      {restaurant.isOpen ? 'Open' : 'Closed'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View className="items-center p-8 bg-white border border-gray-100 rounded-xl">
+              <Feather name="store" size={48} color="#D1D5DB" />
+              <Text className="mt-2 text-sm text-center text-gray-500">
+                No restaurants yet. Create your first restaurant!
+              </Text>
+              <TouchableOpacity
+                className="px-6 py-2 mt-4 rounded-lg bg-primary"
+                onPress={() => router.push('/(restaurant)/restaurant/create' as any)}
+              >
+                <Text className="font-semibold text-white">Create Restaurant</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* ─── Recent Orders ─── */}
         <View className="px-4 mt-6">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-base font-bold text-black">Recent Orders</Text>
             <TouchableOpacity onPress={() => router.push('/(restaurant)/orders/index' as any)}>
-              <Text className="text-sm text-primary font-semibold">See all</Text>
+              <Text className="text-sm font-semibold text-primary">See all</Text>
             </TouchableOpacity>
           </View>
 
-          <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <View className="overflow-hidden bg-white border border-gray-100 rounded-xl">
             {recentOrders.map((order, index) => (
               <TouchableOpacity
                 key={order.id}
@@ -280,7 +301,6 @@ export default function RestaurantDashboard() {
           </View>
         </View>
 
-        {/* Bottom Spacer */}
         <View className="h-6" />
       </ScrollView>
     </View>

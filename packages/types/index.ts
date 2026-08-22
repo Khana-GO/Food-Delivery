@@ -42,3 +42,64 @@ export interface JwtPayload {
   // iat?: number; // Issued at time (optional)
   // exp?: number; // Expiration time (optional)
 }
+
+
+export interface Restaurant {
+  id: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  phone?: string;
+  email?: string;
+  address: string;
+  wardNumber?: number;
+  latitude: number;
+  longitude: number;
+  cuisineType: string;
+  openingTime?: string;
+  closingTime?: string;
+  deliveryFee: number;
+  minimumOrderAmount: number;
+  estimatedDeliveryTime?: number;
+  isOpen: boolean;
+  isActive: boolean;
+  isVerified: boolean;
+  averageRating: number;
+  totalReviews: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRestaurantPayload {
+  name: string;
+  slug: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  address: string;
+  wardNumber?: number;
+  latitude: number;
+  longitude: number;
+  cuisineType: string;
+  openingTime?: string;
+  closingTime?: string;
+  deliveryFee?: number;
+  minimumOrderAmount?: number;
+  estimatedDeliveryTime?: number;
+}
+
+export interface RestaurantFormData extends CreateRestaurantPayload {
+  logo?: File | string | null;
+  cover?: File | string | null;
+}
+
+export interface RestaurantResponse {
+  data: Restaurant[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

@@ -13,7 +13,7 @@ export default function RestaurantLayout() {
 
   if (isInitializing) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="items-center justify-center flex-1 bg-white">
         <ActivityIndicator size="large" color="#E23744" />
       </View>
     );
@@ -28,6 +28,7 @@ export default function RestaurantLayout() {
         tabBarItemStyle,
       }}
     >
+      {/* ─── TAB 1: Dashboard ─── */}
       <Tabs.Screen
         name="index"
         options={{
@@ -36,14 +37,18 @@ export default function RestaurantLayout() {
           ),
         }}
       />
+
+      {/* ─── TAB 2: Restaurants (List of all restaurants) ─── */}
       <Tabs.Screen
-        name="restaurant/profile"
+        name="restaurant/index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="store" label="Restaurant" focused={focused} size={iconSize} labelSize={labelSize} />
+            <TabIcon name="store" label="Restaurants" focused={focused} size={iconSize} labelSize={labelSize} />
           ),
         }}
       />
+
+      {/* ─── TAB 3: Menu ─── */}
       <Tabs.Screen
         name="menu/index"
         options={{
@@ -52,6 +57,8 @@ export default function RestaurantLayout() {
           ),
         }}
       />
+
+      {/* ─── TAB 4: Orders ─── */}
       <Tabs.Screen
         name="orders/index"
         options={{
@@ -60,27 +67,23 @@ export default function RestaurantLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="earnings"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name="dollar-sign" label="Earnings" focused={focused} size={iconSize} labelSize={labelSize} />
-          ),
-        }}
-      />
 
-
+      {/* ─── TAB 5: Profile ─── */}
       <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="profile" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} />
+            <TabIcon name="user" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} />
           ),
         }}
       />
 
-      {/* Secondary pages reachable via /navigation, hidden from tab bar */}
+      {/* ─── HIDDEN SCREENS (Accessible via navigation) ─── */}
+      <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
+      <Tabs.Screen name="restaurant/create" options={{ href: null }} />
+      <Tabs.Screen name="restaurant/[id]/edit" options={{ href: null }} />
       <Tabs.Screen name="analytics" options={{ href: null }} />
+      <Tabs.Screen name="earnings" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="categories/index" options={{ href: null }} />
       <Tabs.Screen name="categories/create" options={{ href: null }} />
@@ -88,7 +91,7 @@ export default function RestaurantLayout() {
       <Tabs.Screen name="menu/create" options={{ href: null }} />
       <Tabs.Screen name="menu/[id]/edit" options={{ href: null }} />
       <Tabs.Screen name="orders/[id]" options={{ href: null }} />
-      <Tabs.Screen name="restaurant/settings" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }
