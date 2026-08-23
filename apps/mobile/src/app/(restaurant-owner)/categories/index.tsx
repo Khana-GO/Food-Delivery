@@ -1,162 +1,169 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable, FlatList, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCategories } from '@/hooks/category/useCategories';
+import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
+import { CategoryCard } from '@/components/category/CategoryCard';
+import type { Category } from '@food_delivery/types';
 import {
-  ScreenHeader,
   SearchInput,
   EmptyState,
   ConfirmDialog,
+  LoadingScreen,
   ContentWidth,
   useResponsive,
 } from '@/components/owner/kit';
 
-interface Category {
-  id: string;
-  name: string;
-  itemCount: number;
-  isActive: boolean;
-}
-
-const INITIAL: Category[] = [
-  { id: '1', name: 'Appetizers', itemCount: 12, isActive: true },
-  { id: '2', name: 'Main Course', itemCount: 18, isActive: true },
-  { id: '3', name: 'Beverages', itemCount: 8, isActive: false },
-  { id: '4', name: 'Desserts', itemCount: 10, isActive: true },
-];
-
 export default function CategoriesScreen() {
+  const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
-  const [categories, setCategories] = useState(INITIAL);
+  const {
+    data: categories,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useCategories();
+  const { mutate: deleteCategory, isPending: isDeleting } = useDeleteCategory();
+
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
+  const errorMessage = isError
+    ? (error as any)?.response?.data?.message ||
+      "Couldn't load your categories. Check your connection and try again."
+    : null;
+
   const filtered = useMemo(
     () =>
-      categories.filter((c) => c.name.toLowerCase().includes(search.trim().toLowerCase())),
-    [categories, search]
+      categories?.filter((c) =>
+        c.name.toLowerCase().includes(search.trim().toLowerCase()),
+      ) ?? [],
+    [categories, search],
   );
 
-  const toggleStatus = (id: string) =>
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c))
-    );
+  const withItemsCount = categories?.filter((c) => (c.itemCount ?? 0) > 0).length ?? 0;
+  const emptyCount = (categories?.length ?? 0) - withItemsCount;
+
+  const handleEdit = (category: Category) =>
+    router.push(`/(restaurant-owner)/categories/${category.id}/edit` as never);
+
+  const handleCreate = () => router.push('/(restaurant-owner)/categories/create');
 
   const confirmDelete = () => {
     if (!deleteTarget) return;
-    setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-    setDeleteTarget(null);
-    Alert.alert('Deleted', 'The category was removed.');
+    deleteCategory(deleteTarget.id, {
+      onSettled: () => setDeleteTarget(null),
+    });
   };
 
+  if (isLoading && !categories) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <View className="flex-1 bg-gray-50">
-      <ScreenHeader
-        title="Categories"
-        subtitle={`${categories.length} groups · ${categories.filter((c) => c.isActive).length} active`}
-        right={
-          <Pressable
-            onPress={() => router.push('/(restaurant-owner)/categories/create')}
-            className="flex-row items-center rounded-full bg-green-600 px-4 py-2.5 active:bg-green-700"
-          >
-            <Feather name="plus" size={15} color="#FFFFFF" />
-            <Text className="ml-1 text-xs font-bold text-white">New</Text>
-          </Pressable>
-        }
-      />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, gap: 12, ...ContentWidth(isTablet ? 720 : 9999) }}
-      >
-        <SearchInput value={search} onChange={setSearch} placeholder="Search categories…" />
-
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon="grid"
-            title="No categories"
-            message={
-              search
-                ? `Nothing matches “${search}”.`
-                : 'Group your dishes into categories so customers can browse easily.'
-            }
-            actionLabel="Create Category"
-            onAction={() => router.push('/(restaurant-owner)/categories/create')}
-          />
-        ) : (
-          filtered.map((cat) => (
-            <View
-              key={cat.id}
-              className="flex-row items-center rounded-2xl border border-gray-100 bg-white p-4 shadow-sm shadow-gray-100"
-            >
-              {/* icon tile */}
-              <View
-                className={`h-12 w-12 items-center justify-center rounded-xl ${
-                  cat.isActive ? 'bg-green-50' : 'bg-slate-100'
-                }`}
-              >
-                <Feather name="grid" size={19} color={cat.isActive ? '#16A34A' : '#94A3B8'} />
-              </View>
-
-              <View className="ml-3 flex-1">
-                <Text className="text-sm font-bold text-gray-900">{cat.name}</Text>
-                <Text className="mt-0.5 text-xs text-gray-400">{cat.itemCount} items</Text>
-                <View className="mt-1.5 flex-row items-center gap-1">
-                  <View
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      cat.isActive ? 'bg-green-500' : 'bg-red-400'
-                    }`}
-                  />
-                  <Text
-                    className={`text-[11px] font-semibold ${
-                      cat.isActive ? 'text-green-600' : 'text-red-500'
-                    }`}
-                  >
-                    {cat.isActive ? 'Visible to customers' : 'Hidden'}
-                  </Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center gap-2">
-                <Pressable
-                  onPress={() => toggleStatus(cat.id)}
-                  className={`rounded-lg px-2.5 py-1.5 active:opacity-80 ${
-                    cat.isActive ? 'bg-red-50' : 'bg-green-50'
-                  }`}
-                >
-                  <Text
-                    className={`text-[11px] font-bold ${
-                      cat.isActive ? 'text-red-500' : 'text-green-600'
-                    }`}
-                  >
-                    {cat.isActive ? 'Hide' : 'Show'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => router.push(`/(restaurant-owner)/categories/${cat.id}/edit` as never)}
-                  className="h-9 w-9 items-center justify-center rounded-lg bg-slate-100 active:bg-slate-200"
-                >
-                  <Feather name="edit-2" size={14} color="#475569" />
-                </Pressable>
-                <Pressable
-                  onPress={() => setDeleteTarget(cat)}
-                  className="h-9 w-9 items-center justify-center rounded-lg bg-red-50 active:bg-red-100"
-                >
-                  <Feather name="trash-2" size={14} color="#DC2626" />
-                </Pressable>
-              </View>
+    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+      {/* ─── Header ─── */}
+      <View className="bg-white px-4 pb-3 pt-3">
+        <View style={{ maxWidth: isTablet ? 688 : undefined, alignSelf: 'center', width: '100%' }}>
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-xl font-extrabold tracking-tight text-gray-900">Categories</Text>
+              <Text className="mt-0.5 text-xs text-gray-500">
+                Organise your menu into sections
+              </Text>
             </View>
-          ))
+            <Pressable
+              onPress={handleCreate}
+              className="h-11 flex-row items-center rounded-full bg-green-600 px-4 active:bg-green-700"
+            >
+              <Feather name="plus" size={16} color="#FFFFFF" />
+              <Text className="ml-1 text-sm font-bold text-white">Add</Text>
+            </Pressable>
+          </View>
+
+          {/* mini stats */}
+          <View className="mt-3 flex-row gap-3">
+            <View className="flex-1 rounded-xl bg-red-50 p-3">
+              <Text className="text-lg font-extrabold text-primary">{categories?.length ?? 0}</Text>
+              <Text className="text-[11px] font-medium text-red-400">Total categories</Text>
+            </View>
+            <View className="flex-1 rounded-xl bg-green-50 p-3">
+              <Text className="text-lg font-extrabold text-green-600">{withItemsCount}</Text>
+              <Text className="text-[11px] font-medium text-green-500">With items</Text>
+            </View>
+            <View className="flex-1 rounded-xl bg-slate-100 p-3">
+              <Text className="text-lg font-extrabold text-slate-600">{Math.max(emptyCount, 0)}</Text>
+              <Text className="text-[11px] font-medium text-slate-400">Empty</Text>
+            </View>
+          </View>
+
+          <View className="mt-3">
+            <SearchInput value={search} onChange={setSearch} placeholder="Search categories…" />
+          </View>
+        </View>
+      </View>
+
+      {/* ─── List ─── */}
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        numColumns={isTablet ? 2 : 1}
+        columnWrapperStyle={isTablet ? { gap: 12 } : undefined}
+        contentContainerStyle={{ padding: 16, gap: 12, ...ContentWidth(isTablet ? 960 : 9999) }}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        ListHeaderComponent={
+          isError ? (
+            <View className="mb-3 flex-row items-center rounded-2xl border border-red-200 bg-red-50 p-4">
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-white">
+                <Feather name="alert-circle" size={16} color="#DC2626" />
+              </View>
+              <Text className="ml-3 flex-1 text-xs leading-4 text-red-600">
+                {errorMessage}
+              </Text>
+              <Pressable
+                hitSlop={8}
+                onPress={() => refetch()}
+                className="ml-2 rounded-full bg-red-500 px-3 py-1.5 active:bg-red-600"
+              >
+                <Text className="text-[11px] font-bold text-white">Retry</Text>
+              </Pressable>
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          isLoading || isError ? null : (
+            <EmptyState
+              icon="grid"
+              title={search ? 'No matches found' : 'No categories yet'}
+              message={
+                search
+                  ? `Nothing matches “${search}”.`
+                  : 'Group your dishes into sections like Appetizers, Mains and Drinks.'
+              }
+              actionLabel={search ? undefined : 'Create Category'}
+              onAction={search ? undefined : handleCreate}
+            />
+          )
+        }
+        renderItem={({ item }) => (
+          <CategoryCard
+            category={item}
+            onEdit={handleEdit}
+            onDelete={setDeleteTarget}
+          />
         )}
-        <View className="h-1" />
-      </ScrollView>
+      />
 
       <ConfirmDialog
         visible={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
+        busy={isDeleting}
         title="Delete category?"
-        message={`“${deleteTarget?.name}” will be removed. Items in it will become uncategorised.`}
+        message={`“${deleteTarget?.name}” will be permanently removed.`}
         confirmLabel="Delete"
         icon="trash-2"
         tone="danger"

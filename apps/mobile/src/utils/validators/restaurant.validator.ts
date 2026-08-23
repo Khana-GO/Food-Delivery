@@ -20,10 +20,10 @@ export const createRestaurantSchema = z.object({
   longitude: z.number().min(-180).max(180),
   cuisineType: z.string().min(1, 'Cuisine type is required'),
   openingTime: z.string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, 'Opening time must be in HH:MM:SS format')
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, 'Opening time must be in HH:MM or HH:MM:SS format')
     .optional(),
   closingTime: z.string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, 'Closing time must be in HH:MM:SS format')
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, 'Closing time must be in HH:MM or HH:MM:SS format')
     .optional(),
   deliveryFee: z.number().min(0).max(200).optional(),
   minimumOrderAmount: z.number().min(0).optional(),

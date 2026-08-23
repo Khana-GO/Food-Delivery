@@ -1,23 +1,12 @@
-import {
-  IsString,
-  IsNotEmpty,
-  MaxLength,
-  IsOptional,
-  IsNumber,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCategoryDto {
-  @ApiProperty({ example: 'Appetizers' })
+  @ApiProperty({ example: 'Appetizers', maxLength: 100 })
   @IsString()
-  @IsNotEmpty()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsNotEmpty({ message: 'Category name is required' })
   @MaxLength(100)
   name!: string;
-
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  displayOrder?: number = 0;
 }

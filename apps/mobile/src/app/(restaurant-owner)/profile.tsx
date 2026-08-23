@@ -50,7 +50,7 @@ export default function OwnerProfile() {
       rows: [
         {
           id: 'restaurants',
-          icon: 'store',
+          icon: 'package',
           label: 'My Restaurants',
           sub: 'Manage locations & hours',
           tint: 'brand',

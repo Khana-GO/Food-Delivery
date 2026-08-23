@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { restaurantService } from '@/services/restaurant/restaurant.service';
 import { useRestaurantStore } from '@/stores/restaurantStore';
-import { router } from 'expo-router';
 import { CreateRestaurantPayload } from '@food_delivery/types';
+import { toast } from '@/components/ui/toast';
 
 export const useCreateRestaurant = () => {
   const queryClient = useQueryClient();
@@ -11,17 +11,22 @@ export const useCreateRestaurant = () => {
   return useMutation({
     mutationFn: (data: CreateRestaurantPayload) => {
       setLoading(true);
+      setError(null);
       return restaurantService.create(data);
     },
     onSuccess: (data) => {
       addRestaurant(data);
       queryClient.invalidateQueries({ queryKey: ['restaurants', 'my'] });
       setLoading(false);
-      router.replace('/(restaurant-owner)/profile');
+      toast.success('Now add your logo and cover photo.', 'Restaurant created');
     },
     onError: (error: any) => {
       setLoading(false);
       setError(error?.response?.data?.message || 'Failed to create restaurant');
+      toast.error(
+        error?.response?.data?.message || 'Failed to create restaurant',
+        'Could not create',
+      );
     },
   });
 };

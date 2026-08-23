@@ -3,11 +3,12 @@ import {
   Logger,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, and, sql, desc, count } from 'drizzle-orm';
+import { eq, and, inArray, desc, asc, count, isNull } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { CategoryResponseDto } from './dto/category-response.dto';
@@ -34,7 +35,9 @@ export class CategoriesService {
       this.logger.error(`[${context}] Error:`, error);
       if (
         error instanceof NotFoundException ||
-        error instanceof ConflictException
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
       ) {
         throw error;
       }
@@ -45,9 +48,18 @@ export class CategoriesService {
   }
 
   // ─── Helper ───
+  /**
+   * Resolves the restaurant managed by the given owner.
+   * Deterministic: oldest active restaurant first, soft-deleted excluded —
+   * the same restaurant every caller gets for a given user.
+   */
   async getRestaurantIdByUserId(userId: string): Promise<string> {
     const restaurant = await this.db.query.restaurantsTable.findFirst({
-      where: eq(schema.restaurantsTable.ownerId, userId),
+      where: and(
+        eq(schema.restaurantsTable.ownerId, userId),
+        isNull(schema.restaurantsTable.deletedAt),
+      ),
+      orderBy: [asc(schema.restaurantsTable.createdAt)],
     });
 
     if (!restaurant) {
@@ -55,6 +67,21 @@ export class CategoriesService {
     }
 
     return restaurant.id;
+  }
+
+  /**
+   * Ensures the category belongs to the requesting owner's restaurant.
+   * Admins bypass this check by passing no `ownerRestaurantId`.
+   */
+  private assertOwnership(
+    categoryRestaurantId: string,
+    ownerRestaurantId?: string,
+  ): void {
+    if (ownerRestaurantId && categoryRestaurantId !== ownerRestaurantId) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this category',
+      );
+    }
   }
 
   // ─── CREATE ───
@@ -80,8 +107,6 @@ export class CategoriesService {
         .values({
           name: dto.name,
           restaurantId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         })
         .returning();
 
@@ -107,30 +132,39 @@ export class CategoriesService {
         orderBy: [desc(schema.menuCategoriesTable.createdAt)],
       });
 
+      if (categories.length === 0) {
+        return [];
+      }
+
       if (!includeItemCount) {
         return categories.map((cat) => new CategoryResponseDto(cat));
       }
 
-      // Get item count for each category
-      const result: CategoryResponseDto[] = [];
-
-      for (const category of categories) {
-        const [countResult] = await this.db
-          .select({ total: count() })
-          .from(schema.menuItemsTable)
-          .where(
-            and(
-              eq(schema.menuItemsTable.categoryId, category.id),
-              eq(schema.menuItemsTable.isAvailable, true),
+      // Single grouped query for item counts across all categories
+      const itemCounts = await this.db
+        .select({
+          categoryId: schema.menuItemsTable.categoryId,
+          total: count(),
+        })
+        .from(schema.menuItemsTable)
+        .where(
+          and(
+            inArray(
+              schema.menuItemsTable.categoryId,
+              categories.map((c) => c.id),
             ),
-          );
+            eq(schema.menuItemsTable.isAvailable, true),
+          ),
+        )
+        .groupBy(schema.menuItemsTable.categoryId);
 
-        const dto = new CategoryResponseDto(category);
-        dto.itemCount = countResult?.total || 0;
-        result.push(dto);
-      }
+      const countMap = new Map(itemCounts.map((r) => [r.categoryId, r.total]));
 
-      return result;
+      return categories.map((cat) => {
+        const dto = new CategoryResponseDto(cat);
+        dto.itemCount = countMap.get(cat.id) ?? 0;
+        return dto;
+      });
     }, 'findByRestaurant');
   }
 
@@ -153,9 +187,11 @@ export class CategoriesService {
   async update(
     id: string,
     dto: UpdateCategoryDto,
+    ownerRestaurantId?: string,
   ): Promise<CategoryResponseDto> {
     return this.handleDbOperation(async () => {
       const existing = await this.findById(id);
+      this.assertOwnership(existing.restaurantId, ownerRestaurantId);
 
       // Check if new name conflicts with another category in the same restaurant
       if (dto.name && dto.name !== existing.name) {
@@ -174,7 +210,7 @@ export class CategoriesService {
       const [updated] = await this.db
         .update(schema.menuCategoriesTable)
         .set({
-          ...dto,
+          ...(dto.name ? { name: dto.name } : {}),
           updatedAt: new Date(),
         })
         .where(eq(schema.menuCategoriesTable.id, id))
@@ -190,9 +226,13 @@ export class CategoriesService {
   }
 
   // ─── DELETE ───
-  async delete(id: string): Promise<{ message: string }> {
+  async delete(
+    id: string,
+    ownerRestaurantId?: string,
+  ): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const category = await this.findById(id);
+      this.assertOwnership(category.restaurantId, ownerRestaurantId);
 
       // Check if category has menu items
       const [countResult] = await this.db

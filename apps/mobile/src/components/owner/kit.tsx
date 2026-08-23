@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Modal,
   TextInput as RNTextInput,
   ActivityIndicator,
+  Animated,
+  Easing,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -493,13 +495,104 @@ export function Field({
 }) {
   return (
     <View className="mb-4">
-      <Text className="mb-1.5 text-[13px] font-semibold text-gray-700">
+      <Text className="mb-1.5 text-sm font-semibold text-slate-700">
         {label}
         {required ? <Text className="text-primary"> *</Text> : null}
       </Text>
       {children}
       {error ? <Text className="mt-1 text-xs font-medium text-red-500">{error}</Text> : null}
     </View>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Toggle switch — large, accessible thumb with an in-progress spinner
+// ──────────────────────────────────────────────────────────────────────────
+
+const TOGGLE_W = 60;
+const TOGGLE_H = 34;
+const THUMB = 28;
+const PADDING = 3;
+
+export function Toggle({
+  checked,
+  onChange,
+  disabled,
+  loading = false,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  const progress = useRef(new Animated.Value(checked ? 1 : 0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(progress, {
+      toValue: checked ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [checked, progress]);
+
+  const translateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [PADDING, TOGGLE_W - THUMB - PADDING],
+  });
+
+  return (
+    <Pressable
+      onPress={() => onChange(!checked)}
+      disabled={disabled || loading}
+      hitSlop={8}
+      accessibilityRole="switch"
+      accessibilityState={{ checked, busy: loading, disabled: disabled || loading }}
+      style={{
+        width: TOGGLE_W,
+        height: TOGGLE_H,
+        borderRadius: TOGGLE_H / 2,
+        padding: PADDING,
+        justifyContent: 'center',
+        backgroundColor: checked ? GREEN : '#CBD5E1',
+        opacity: disabled || loading ? 0.75 : 1,
+      }}
+    >
+      {loading && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: (TOGGLE_W - TOGGLE_H) / 2 + PADDING,
+            top: PADDING,
+            height: THUMB,
+            width: THUMB,
+            borderRadius: THUMB / 2,
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2,
+          }}
+        >
+          <ActivityIndicator size="small" color={checked ? '#FFFFFF' : '#64748B'} />
+        </View>
+      )}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: 0,
+          width: THUMB,
+          height: THUMB,
+          borderRadius: THUMB / 2,
+          transform: [{ translateX }],
+          backgroundColor: '#FFFFFF',
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.18,
+          shadowRadius: 4,
+          elevation: 3,
+        }}
+      />
+    </Pressable>
   );
 }
 

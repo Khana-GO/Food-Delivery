@@ -6,12 +6,18 @@ import {
   ScrollView,
   Pressable,
   Image,
-  Switch,
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
-import { Field, PrimaryButton, ContentWidth, useResponsive, GREEN } from '@/components/owner/kit';
+import {
+  Field,
+  PrimaryButton,
+  ContentWidth,
+  useResponsive,
+  GREEN,
+  Toggle,
+} from '@/components/owner/kit';
 
 export interface MenuItemFormValues {
   name: string;
@@ -172,11 +178,10 @@ export function MenuForm({ initial, categories, submitLabel, onSubmit }: MenuFor
               : 'Hidden from customers until you turn this on.'}
           </Text>
         </View>
-        <Switch
-          value={form.isAvailable}
-          onValueChange={(v) => setForm((p) => ({ ...p, isAvailable: v }))}
-          trackColor={{ false: '#E2E8F0', true: '#16A34A' }}
-          thumbColor="#FFFFFF"
+        <Toggle
+          checked={form.isAvailable}
+          onChange={(v) => setForm((p) => ({ ...p, isAvailable: v }))}
+          loading={saving}
         />
       </View>
 

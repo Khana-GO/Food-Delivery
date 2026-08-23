@@ -61,18 +61,6 @@ export class CreateRestaurantDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: 'https://example.com/logo.jpg' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  logoUrl?: string;
-
-  @ApiPropertyOptional({ example: 'https://example.com/cover.jpg' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  coverImageUrl?: string;
-
   @ApiPropertyOptional({ example: '9812345678' })
   @IsOptional()
   @IsString()
@@ -154,9 +142,4 @@ export class CreateRestaurantDto {
   @Max(120)
   @Type(() => Number)
   estimatedDeliveryTime?: number;
-
-  @ApiProperty({ example: false, default: false })
-  @IsBoolean()
-  @IsOptional()
-  isVerified?: boolean = false;
 }

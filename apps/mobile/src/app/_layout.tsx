@@ -4,6 +4,8 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ToastHost } from '@/components/ui/toast';
+import '@/lib/imageInterop';
 import '../../global.css';
 
 const queryClient = new QueryClient({
@@ -42,14 +44,17 @@ function AppNavigator() {
 
   //  Simplified: Just render all screens without conditionals
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(customer)" />
-      <Stack.Screen name="(driver)" />
-      <Stack.Screen name="(restaurant-owner)" />
-      <Stack.Screen name="(admin)" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(customer)" />
+        <Stack.Screen name="(driver)" />
+        <Stack.Screen name="(restaurant-owner)" />
+        <Stack.Screen name="(admin)" />
+      </Stack>
+      <ToastHost />
+    </>
   );
 }

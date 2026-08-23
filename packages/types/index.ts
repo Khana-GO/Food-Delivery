@@ -44,8 +44,29 @@ export interface JwtPayload {
 }
 
 
-export interface Restaurant {
-  id: string;
+// Mirrors CuisineType enum in apps/api restaurant controller.
+// Keep in sync when the backend adds new cuisines.
+export const CUISINE_TYPES = [
+  'Nepali',
+  'Newari',
+  'Thakali',
+  'Indian',
+  'Chinese',
+  'Tibetan',
+  'Italian',
+  'Fast Food',
+  'Continental',
+  'Street Food',
+  'Bakeries',
+  'Desserts',
+  'Drinks',
+] as const;
+
+export type CuisineType = (typeof CUISINE_TYPES)[number];
+
+export const WARD_NUMBERS = Array.from({ length: 35 }, (_, i) => i + 1);
+
+export interface Restaurant {  id: string;
   ownerId: string;
   name: string;
   slug: string;
@@ -98,6 +119,32 @@ export interface RestaurantFormData extends CreateRestaurantPayload {
 
 export interface RestaurantResponse {
   data: Restaurant[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+
+export interface Category {
+  id: string;
+  name: string;
+  restaurantId: string;
+  itemCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCategoryPayload {
+  name: string;
+}
+
+export interface UpdateCategoryPayload {
+  name?: string;
+}
+
+export interface CategoryResponse {
+  data: Category[];
   total: number;
   page: number;
   limit: number;

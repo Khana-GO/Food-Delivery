@@ -46,7 +46,7 @@ export default function RestaurantDashboard() {
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const stats = [
-    { icon: 'store' as const, label: 'Restaurants', value: restaurants?.length ?? 0, tone: 'brand' as const },
+    { icon: 'package' as const, label: 'Restaurants', value: restaurants?.length ?? 0, tone: 'brand' as const },
     { icon: 'shopping-bag' as const, label: "Today's Orders", value: 24, trend: '+12%', tone: 'green' as const },
     { icon: 'clock' as const, label: 'Pending', value: 8, tone: 'amber' as const },
     { icon: 'trending-up' as const, label: "Today's Revenue", value: rs(12450), trend: '+8%', tone: 'green' as const },
@@ -72,8 +72,8 @@ export default function RestaurantDashboard() {
         <View className="bg-primary" style={{ paddingTop: insets.top }}>
           <View className="overflow-hidden rounded-b-[32px] bg-primary px-5 pb-16 pt-3">
             {/* decorative circles */}
-            <View className="absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10" />
-            <View className="absolute right-16 top-10 h-24 w-24 rounded-full bg-green-400/20" />
+            <View className="absolute rounded-full -right-10 -top-14 h-44 w-44 bg-white/10" />
+            <View className="absolute w-24 h-24 rounded-full right-16 top-10 bg-green-400/20" />
 
             <View className="flex-row items-center justify-between">
               <View className="flex-1 pr-3">
@@ -81,16 +81,16 @@ export default function RestaurantDashboard() {
                 <Text className="mt-0.5 text-2xl font-extrabold tracking-tight text-white">
                   {user?.firstName || 'Owner'} {user?.lastName?.charAt(0) ? `${user.lastName.charAt(0)}.` : ''}
                 </Text>
-                <View className="mt-2 flex-row items-center">
+                <View className="flex-row items-center mt-2">
                   <View className="h-1.5 w-1.5 rounded-full bg-green-300" />
                   <Text className="ml-1.5 text-xs font-medium text-white/85">
-                    Your store is live on FoodHub
+                    Your store is live on KhanaGo
                   </Text>
                 </View>
               </View>
               <Pressable
                 onPress={() => router.push('/(restaurant-owner)/notifications')}
-                className="relative h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/30"
+                className="relative items-center justify-center rounded-full h-11 w-11 bg-white/15 active:bg-white/30"
               >
                 <Feather name="bell" size={19} color="#FFFFFF" />
                 <View className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-amber-300" />
@@ -100,7 +100,7 @@ export default function RestaurantDashboard() {
         </View>
 
         {/* ─── Stats overlapping the hero ─── */}
-        <View className="-mt-10 flex-row flex-wrap justify-center gap-3 px-4">
+        <View className="flex-row flex-wrap justify-center gap-3 px-4 -mt-10">
           {stats.map((s) => (
             <View
               key={s.label}
@@ -121,7 +121,7 @@ export default function RestaurantDashboard() {
                 <Pressable
                   key={a.label}
                   onPress={() => router.push(a.route as never)}
-                  className="grow flex-col rounded-2xl border border-gray-100 bg-white p-4 shadow-sm shadow-gray-100 active:opacity-80"
+                  className="flex-col p-4 bg-white border border-gray-100 shadow-sm grow rounded-2xl shadow-gray-100 active:opacity-80"
                   style={{ width: isTablet ? undefined : '47.5%', minWidth: 150, maxWidth: isTablet ? 250 : undefined }}
                 >
                   <View className={`h-10 w-10 items-center justify-center rounded-xl ${a.bg}`}>
@@ -149,18 +149,18 @@ export default function RestaurantDashboard() {
                     onPress={() => router.push(`/(restaurant-owner)/restaurant/${r.id}` as never)}
                     className="flex-row items-center rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm shadow-gray-100 active:bg-gray-50"
                   >
-                    <View className="h-14 w-14 overflow-hidden rounded-xl bg-red-50">
+                    <View className="overflow-hidden h-14 w-14 rounded-xl bg-red-50">
                       {r.logoUrl ? (
-                        <Image source={{ uri: r.logoUrl }} className="h-full w-full" contentFit="cover" />
+                        <Image source={{ uri: r.logoUrl }} className="w-full h-full" contentFit="cover" />
                       ) : (
-                        <View className="h-full w-full items-center justify-center">
+                        <View className="items-center justify-center w-full h-full">
                           <Text className="text-xl font-extrabold text-primary">
                             {r.name.charAt(0).toUpperCase()}
                           </Text>
                         </View>
                       )}
                     </View>
-                    <View className="mx-3 flex-1">
+                    <View className="flex-1 mx-3">
                       <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
                         {r.name}
                       </Text>
@@ -187,8 +187,8 @@ export default function RestaurantDashboard() {
                 ))}
               </View>
             ) : (
-              <View className="items-center rounded-2xl border border-dashed border-green-300 bg-green-50/50 px-6 py-7">
-                <View className="h-14 w-14 items-center justify-center rounded-full bg-white">
+              <View className="items-center px-6 border border-green-300 border-dashed rounded-2xl bg-green-50/50 py-7">
+                <View className="items-center justify-center bg-white rounded-full h-14 w-14">
                   <Feather name="plus" size={24} color="#16A34A" />
                 </View>
                 <Text className="mt-3 text-sm font-bold text-gray-900">Add your first restaurant</Text>
@@ -212,7 +212,7 @@ export default function RestaurantDashboard() {
               actionLabel="See all"
               onAction={() => router.push('/(restaurant-owner)/orders')}
             />
-            <View className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100">
+            <View className="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-2xl shadow-gray-100">
               {RECENT_ORDERS.map((o, i) => (
                 <Pressable
                   key={o.id}
@@ -236,7 +236,7 @@ export default function RestaurantDashboard() {
                       color={o.status === 'pending' ? '#D97706' : o.status === 'preparing' ? '#EA580C' : '#2563EB'}
                     />
                   </View>
-                  <View className="mx-3 flex-1">
+                  <View className="flex-1 mx-3">
                     <View className="flex-row items-center justify-between">
                       <Text className="flex-1 text-sm font-bold text-gray-900" numberOfLines={1}>
                         {o.customer}

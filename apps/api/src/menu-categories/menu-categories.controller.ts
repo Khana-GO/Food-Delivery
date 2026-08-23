@@ -11,7 +11,6 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
-  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CategoryResponseDto } from './dto/category-response.dto';
@@ -32,6 +31,20 @@ import { UpdateCategoryDto } from './dto/update-menu-category.dto';
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+  /**
+   * Resolves the restaurant owned by the requester when they are a
+   * restaurant owner. Used to scope mutations to their own restaurant.
+   * Admins bypass ownership scoping.
+   */
+  private async resolveOwnerScope(
+    user: JwtPayload,
+  ): Promise<string | undefined> {
+    if (user.role !== UserRole.RESTAURANT_OWNER) {
+      return undefined;
+    }
+    return this.categoriesService.getRestaurantIdByUserId(user.sub);
+  }
+
   // ─── CREATE ───
   @Post()
   @Roles(UserRole.RESTAURANT_OWNER)
@@ -44,6 +57,27 @@ export class CategoriesController {
       user.sub,
     );
     return this.categoriesService.create(restaurantId, dto);
+  }
+
+  // ─── MY CATEGORIES ───
+  @Get('my')
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @ApiOperation({
+    summary: "Get categories for the authenticated owner's restaurant",
+  })
+  async findMine(
+    @CurrentUser() user: JwtPayload,
+    @Query('includeItemCount') includeItemCount?: string,
+  ): Promise<CategoryResponseDto[]> {
+    // Same resolution as create/update/delete → reads can never
+    // point at a different restaurant than writes.
+    const restaurantId = await this.categoriesService.getRestaurantIdByUserId(
+      user.sub,
+    );
+    return this.categoriesService.findByRestaurant(
+      restaurantId,
+      includeItemCount === 'true',
+    );
   }
 
   // ─── GET ALL (By Restaurant) ───
@@ -75,10 +109,12 @@ export class CategoriesController {
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update category' })
   async update(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateCategoryDto,
   ): Promise<CategoryResponseDto> {
-    return this.categoriesService.update(id, dto);
+    const ownerRestaurantId = await this.resolveOwnerScope(user);
+    return this.categoriesService.update(id, dto, ownerRestaurantId);
   }
 
   // ─── DELETE ───
@@ -87,8 +123,10 @@ export class CategoriesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete category' })
   async delete(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    return this.categoriesService.delete(id);
+    const ownerRestaurantId = await this.resolveOwnerScope(user);
+    return this.categoriesService.delete(id, ownerRestaurantId);
   }
 }

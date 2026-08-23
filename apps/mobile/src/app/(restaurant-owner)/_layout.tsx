@@ -64,7 +64,7 @@ export default function RestaurantLayout() {
         name="restaurant/index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="store" label="Stores" focused={focused} size={iconSize} labelSize={labelSize} />
+            <TabIcon name="package" label="Stores" focused={focused} size={iconSize} labelSize={labelSize} />
           ),
         }}
       />
@@ -88,6 +88,7 @@ export default function RestaurantLayout() {
       <Tabs.Screen name="categories/[id]/edit" options={{ href: null }} />
       <Tabs.Screen name="restaurant/create" options={{ href: null }} />
       <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
+      <Tabs.Screen name="restaurant/[id]/edit" options={{ href: null }} />
       <Tabs.Screen name="analytics" options={{ href: null }} />
       <Tabs.Screen name="earnings" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />

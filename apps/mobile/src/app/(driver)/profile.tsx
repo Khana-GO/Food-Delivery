@@ -103,7 +103,7 @@ export default function DriverProfile() {
     },
     {
       id: '5',
-      icon: 'car',
+      icon: 'tool',
       label: 'Vehicle Details',
       onPress: handleVehicleDetails,
     },

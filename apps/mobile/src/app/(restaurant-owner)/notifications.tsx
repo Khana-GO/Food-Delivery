@@ -19,7 +19,7 @@ const TYPE_META: Record<
   { icon: React.ComponentProps<typeof Feather>['name']; chip: string; color: string }
 > = {
   order: { icon: 'shopping-bag', chip: 'bg-red-50', color: '#E23744' },
-  restaurant: { icon: 'store', chip: 'bg-green-50', color: '#16A34A' },
+  restaurant: { icon: 'package', chip: 'bg-green-50', color: '#16A34A' },
   menu: { icon: 'book-open', chip: 'bg-slate-100', color: '#475569' },
   system: { icon: 'bell', chip: 'bg-amber-50', color: '#D97706' },
 };

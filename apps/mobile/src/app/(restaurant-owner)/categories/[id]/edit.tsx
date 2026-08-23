@@ -1,34 +1,68 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { ScreenHeader, ConfirmDialog } from '@/components/owner/kit';
-import { CategoryForm } from '@/components/owner/CategoryForm';
+import {
+  ScreenHeader,
+  ConfirmDialog,
+  LoadingScreen,
+  EmptyState,
+} from '@/components/owner/kit';
+import { CategoryForm } from '@/components/category/CategoryForm';
+import { useCategory } from '@/hooks/category/useCategory';
+import { useUpdateCategory } from '@/hooks/category/useUpdateCategory';
+import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
 
 export default function EditCategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [showDelete, setShowDelete] = useState(false);
 
+  const { data: category, isLoading: isLoadingCategory } = useCategory(id);
+  const { mutateAsync: updateCategory, isPending: isUpdating } = useUpdateCategory();
+  const { mutate: deleteCategory, isPending: isDeleting } = useDeleteCategory();
+
+  if (isLoadingCategory) {
+    return <LoadingScreen />;
+  }
+
+  if (!category) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <ScreenHeader title="Edit Category" />
+        <View className="p-4">
+          <EmptyState
+            icon="folder"
+            title="Category not found"
+            message="It may have been deleted. Head back and refresh your categories."
+            actionLabel="Go Back"
+            onAction={() => router.back()}
+          />
+        </View>
+      </View>
+    );
+  }
+
   const handleUpdate = async ({ name }: { name: string }) => {
-    // TODO: call real update mutation with `id`
-    await new Promise((r) => setTimeout(r, 700));
-    Alert.alert('Success', `“${name}” updated.`);
-    router.back();
+    try {
+      await updateCategory({ id, data: { name } });
+    } catch {
+      // Errors surface through the store/alerts; keep the user on the form.
+    }
   };
 
-  const confirmDelete = async () => {
-    setShowDelete(false);
-    // TODO: call real delete mutation with `id`
-    await new Promise((r) => setTimeout(r, 400));
-    Alert.alert('Deleted', 'The category was removed.');
-    router.back();
-  };
+  const confirmDelete = () =>
+    deleteCategory(id, {
+      onSuccess: () => {
+        setShowDelete(false);
+        router.back();
+      },
+    });
 
   return (
     <View className="flex-1 bg-gray-50">
       <ScreenHeader
         title="Edit Category"
-        subtitle={`ID · ${id}`}
+        subtitle={category.name}
         right={
           <Pressable
             onPress={() => setShowDelete(true)}
@@ -39,18 +73,21 @@ export default function EditCategoryScreen() {
           </Pressable>
         }
       />
+
       <CategoryForm
-        initial={{ name: 'Appetizers', isActive: true }}
-        submitLabel="Save Changes"
+        initialData={{ name: category.name }}
         onSubmit={handleUpdate}
+        isLoading={isUpdating}
+        submitLabel="Save Changes"
       />
 
       <ConfirmDialog
         visible={showDelete}
         onClose={() => setShowDelete(false)}
         onConfirm={confirmDelete}
+        busy={isDeleting}
         title="Delete category?"
-        message="Items in this category will become uncategorised."
+        message={`“${category.name}” will be permanently removed.`}
         confirmLabel="Delete"
         icon="trash-2"
         tone="danger"

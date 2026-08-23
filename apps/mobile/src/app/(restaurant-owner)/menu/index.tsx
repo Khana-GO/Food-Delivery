@@ -120,9 +120,10 @@ export default function MenuScreen() {
             <View className="flex-row gap-2">
               <Pressable
                 onPress={() => router.push('/(restaurant-owner)/categories')}
-                className="h-11 w-11 items-center justify-center rounded-full border border-gray-200 active:bg-gray-50"
+                className="h-11 flex-row items-center rounded-full border border-gray-200 px-3.5 active:bg-gray-50"
               >
-                <Feather name="grid" size={18} color="#475569" />
+                <Feather name="grid" size={15} color="#475569" />
+                <Text className="ml-1.5 text-sm font-bold text-slate-600">Categories</Text>
               </Pressable>
               <Pressable
                 onPress={() => router.push('/(restaurant-owner)/menu/create')}

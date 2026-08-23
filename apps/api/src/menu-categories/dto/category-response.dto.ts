@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CategoryResponseDto {
   @ApiProperty()
@@ -11,15 +11,12 @@ export class CategoryResponseDto {
   restaurantId!: string;
 
   @ApiProperty()
-  displayOrder!: number;
-
-  @ApiProperty()
   createdAt!: Date;
 
   @ApiProperty()
   updatedAt!: Date;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   itemCount?: number;
 
   constructor(partial: Partial<CategoryResponseDto>) {

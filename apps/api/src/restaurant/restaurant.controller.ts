@@ -79,6 +79,13 @@ export class RestaurantsController {
     });
   }
 
+  // ─── AVAILABLE CUISINE TYPES ───
+  @Get('cuisines')
+  @ApiOperation({ summary: 'Get the fixed list of supported cuisine types' })
+  getCuisines(): string[] {
+    return this.restaurantsService.getCuisines();
+  }
+
   // ─── MY RESTAURANTS ───
   @Get('my')
   @Roles(UserRole.RESTAURANT_OWNER)
@@ -112,12 +119,13 @@ export class RestaurantsController {
   // ─── UPDATE ───
   @Put(':id')
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update restaurant' })
+  @ApiOperation({ summary: 'Update restaurant text details' })
   async update(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateRestaurantDto,
   ): Promise<RestaurantResponseDto> {
-    return this.restaurantsService.update(id, dto);
+    return this.restaurantsService.update(id, user, dto);
   }
 
   // ─── UPLOAD IMAGES ───
@@ -141,6 +149,7 @@ export class RestaurantsController {
     ]),
   )
   async uploadImages(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
     @UploadedFiles()
     files?: { logo?: Express.Multer.File[]; cover?: Express.Multer.File[] },
@@ -154,7 +163,7 @@ export class RestaurantsController {
       );
     }
 
-    return this.restaurantsService.uploadImages(id, logoFile, coverFile);
+    return this.restaurantsService.uploadImages(id, user, logoFile, coverFile);
   }
 
   // ─── UPDATE IMAGES ───
@@ -180,6 +189,7 @@ export class RestaurantsController {
     ]),
   )
   async updateImages(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
     @UploadedFiles()
     files?: { logo?: Express.Multer.File[]; cover?: Express.Multer.File[] },
@@ -193,7 +203,7 @@ export class RestaurantsController {
       );
     }
 
-    return this.restaurantsService.updateImages(id, logoFile, coverFile);
+    return this.restaurantsService.updateImages(id, user, logoFile, coverFile);
   }
 
   // ─── DELETE LOGO ───
@@ -201,9 +211,10 @@ export class RestaurantsController {
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete restaurant logo' })
   async deleteLogo(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    return this.restaurantsService.deleteImage(id, 'logo');
+    return this.restaurantsService.deleteImage(id, user, 'logo');
   }
 
   // ─── DELETE COVER ───
@@ -211,9 +222,10 @@ export class RestaurantsController {
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete restaurant cover image' })
   async deleteCover(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    return this.restaurantsService.deleteImage(id, 'cover');
+    return this.restaurantsService.deleteImage(id, user, 'cover');
   }
 
   // ─── TOGGLE OPEN ───
@@ -221,9 +233,10 @@ export class RestaurantsController {
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Toggle restaurant open/closed status' })
   async toggleOpen(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ isOpen: boolean }> {
-    return this.restaurantsService.toggleOpen(id);
+    return this.restaurantsService.toggleOpen(id, user);
   }
 
   // ─── TOGGLE VERIFICATION ───
@@ -244,9 +257,10 @@ export class RestaurantsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete restaurant' })
   async delete(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    return this.restaurantsService.delete(id);
+    return this.restaurantsService.delete(id, user);
   }
 
   // ─── RESTORE ───

@@ -76,7 +76,7 @@ export default function RestaurantsListScreen() {
         ListEmptyComponent={
           isLoading ? null : (
             <EmptyState
-              icon="store"
+              icon="package"
               title={search ? 'No matches found' : 'No restaurants yet'}
               message={
                 search
@@ -100,7 +100,7 @@ export default function RestaurantsListScreen() {
               {item.coverImageUrl ? (
                 <Image source={{ uri: item.coverImageUrl }} className="h-full w-full" contentFit="cover" />
               ) : (
-                <View className="h-full w-full items-center justify-center bg-gradient-to-b from-green-50 to-white">
+                <View className="h-full w-full items-center justify-center bg-green-50">
                   <Feather name="image" size={22} color="#BBF7D0" />
                 </View>
               )}
@@ -160,7 +160,7 @@ export default function RestaurantsListScreen() {
                 </View>
                 {item.isVerified && (
                   <View className="flex-row items-center gap-1">
-                    <Feather name="shield-check" size={12} color="#16A34A" />
+                    <Feather name="shield" size={12} color="#16A34A" />
                     <Text className="text-[11px] font-semibold text-green-600">Verified</Text>
                   </View>
                 )}

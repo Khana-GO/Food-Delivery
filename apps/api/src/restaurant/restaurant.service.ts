@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
@@ -14,11 +15,13 @@ import {
   restaurantsTable,
   type NewRestaurantsTable,
 } from '../db/schema/restaurant.schema';
-import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { CreateRestaurantDto, CuisineType } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import * as schema from '../db/schema';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { RestaurantResponseDto } from './dto/restarurant-response.dto';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { UserRole } from '@food_delivery/types';
 
 @Injectable()
 export class RestaurantsService {
@@ -29,6 +32,22 @@ export class RestaurantsService {
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
+  /**
+   * Owners may only mutate their own restaurants.
+   * Admins bypass this check (role is already enforced by @Roles).
+   */
+  private assertOwnership(
+    restaurant: Pick<RestaurantResponseDto, 'ownerId'>,
+    user: JwtPayload,
+  ): void {
+    if (user.role === UserRole.ADMIN) return;
+    if (restaurant.ownerId !== user.sub) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this restaurant',
+      );
+    }
+  }
 
   private async handleDbOperation<T>(
     operation: () => Promise<T>,
@@ -41,6 +60,7 @@ export class RestaurantsService {
       if (
         error instanceof NotFoundException ||
         error instanceof ConflictException ||
+        error instanceof ForbiddenException ||
         error instanceof BadRequestException
       ) {
         throw error;
@@ -62,6 +82,11 @@ export class RestaurantsService {
     } catch {
       return null;
     }
+  }
+
+  // ─── AVAILABLE CUISINE TYPES ───
+  getCuisines(): string[] {
+    return Object.values(CuisineType);
   }
 
   // ─── CREATE ───
@@ -242,10 +267,12 @@ export class RestaurantsService {
   // ─── UPDATE ───
   async update(
     id: string,
+    user: JwtPayload,
     dto: UpdateRestaurantDto,
   ): Promise<RestaurantResponseDto> {
     return this.handleDbOperation(async () => {
       const restaurant = await this.findById(id);
+      this.assertOwnership(restaurant, user);
 
       if (dto.slug && dto.slug !== restaurant.slug) {
         const existing = await this.db.query.restaurantsTable.findFirst({
@@ -282,11 +309,13 @@ export class RestaurantsService {
   // ─── UPLOAD IMAGES ───
   async uploadImages(
     restaurantId: string,
+    user: JwtPayload,
     logoFile?: Express.Multer.File,
     coverFile?: Express.Multer.File,
   ): Promise<{ logoUrl?: string; coverImageUrl?: string }> {
     return this.handleDbOperation(async () => {
       const restaurant = await this.findById(restaurantId);
+      this.assertOwnership(restaurant, user);
 
       let logoUrl = restaurant.logoUrl;
       let coverImageUrl = restaurant.coverImageUrl;
@@ -320,11 +349,13 @@ export class RestaurantsService {
   // ─── UPDATE IMAGES ───
   async updateImages(
     restaurantId: string,
+    user: JwtPayload,
     logoFile?: Express.Multer.File,
     coverFile?: Express.Multer.File,
   ): Promise<{ logoUrl?: string; coverImageUrl?: string }> {
     return this.handleDbOperation(async () => {
       const restaurant = await this.findById(restaurantId);
+      this.assertOwnership(restaurant, user);
 
       let logoUrl = restaurant.logoUrl;
       let coverImageUrl = restaurant.coverImageUrl;
@@ -366,10 +397,12 @@ export class RestaurantsService {
   // ─── DELETE IMAGE ───
   async deleteImage(
     restaurantId: string,
+    user: JwtPayload,
     imageType: 'logo' | 'cover',
   ): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const restaurant = await this.findById(restaurantId);
+      this.assertOwnership(restaurant, user);
 
       const imageUrl =
         imageType === 'logo' ? restaurant.logoUrl : restaurant.coverImageUrl;
@@ -395,9 +428,10 @@ export class RestaurantsService {
   }
 
   // ─── TOGGLE OPEN ───
-  async toggleOpen(id: string): Promise<{ isOpen: boolean }> {
+  async toggleOpen(id: string, user: JwtPayload): Promise<{ isOpen: boolean }> {
     return this.handleDbOperation(async () => {
       const restaurant = await this.findById(id);
+      this.assertOwnership(restaurant, user);
       const [updated] = await this.db
         .update(restaurantsTable)
         .set({ isOpen: !restaurant.isOpen, updatedAt: new Date() })
@@ -439,9 +473,10 @@ export class RestaurantsService {
   }
 
   // ─── SOFT DELETE ───
-  async delete(id: string): Promise<{ message: string }> {
+  async delete(id: string, user: JwtPayload): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
-      await this.findById(id);
+      const restaurant = await this.findById(id);
+      this.assertOwnership(restaurant, user);
       await this.db
         .update(restaurantsTable)
         .set({ deletedAt: new Date(), updatedAt: new Date() })
