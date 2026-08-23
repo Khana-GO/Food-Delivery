@@ -17,7 +17,7 @@ export const useCreateRestaurant = () => {
       addRestaurant(data);
       queryClient.invalidateQueries({ queryKey: ['restaurants', 'my'] });
       setLoading(false);
-      router.replace('/(restaurant)/restaurant/profile');
+      router.replace('/(restaurant-owner)/profile');
     },
     onError: (error: any) => {
       setLoading(false);

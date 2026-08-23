@@ -48,7 +48,7 @@ function AppNavigator() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(customer)" />
       <Stack.Screen name="(driver)" />
-      <Stack.Screen name="(restaurant)" />
+      <Stack.Screen name="(restaurant-owner)" />
       <Stack.Screen name="(admin)" />
     </Stack>
   );

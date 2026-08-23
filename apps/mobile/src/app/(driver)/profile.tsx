@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface MenuItem {
   id: string;
-  icon: keyof typeof Feather.glyphMap;
+  icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   badge?: number;

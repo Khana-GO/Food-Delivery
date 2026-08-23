@@ -7,7 +7,7 @@ const roleHomeMap: Record<UserRole, string> = {
   ADMIN: '/(admin)',
   CUSTOMER: '/(customer)',
   DRIVER: '/(driver)',
-  RESTAURANT_OWNER: '/(restaurant)',
+  RESTAURANT_OWNER: '/(restaurant-owner)',
 };
 
 export function useProtectedRoute(allowedRoles: UserRole[] = []) {
