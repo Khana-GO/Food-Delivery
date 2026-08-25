@@ -3,20 +3,39 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq, and, lt } from 'drizzle-orm';
 import * as crypto from 'crypto';
 import { DATABASE } from '../db/database.constants';
-import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import * as schema from '../db/schema'
+import { NeonDatabase } from 'drizzle-orm/neon-serverless';
+import * as schema from '../db/schema';
 import { sessionsTable } from '../db/schema';
 // import your DB provider
 
 @Injectable()
 export class SessionsService {
- constructor(
-     @Inject(DATABASE)
-     private readonly db: NeonHttpDatabase<typeof schema>,
-   ) {}
+  constructor(
+    @Inject(DATABASE)
+    private readonly db: NeonDatabase<typeof schema>,
+  ) {}
+
+  private readonly revokedTokens = new Set<string>();
+  private readonly revokedUsers = new Set<string>();
 
   private hashToken(token: string) {
     return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  isTokenRevoked(token: string, userId?: string) {
+    if (userId && this.revokedUsers.has(userId)) {
+      return true;
+    }
+
+    return this.revokedTokens.has(this.hashToken(token));
+  }
+
+  revokeToken(token: string, userId?: string) {
+    if (userId) {
+      this.revokedUsers.add(userId);
+    }
+
+    this.revokedTokens.add(this.hashToken(token));
   }
 
   async create(
@@ -70,6 +89,7 @@ export class SessionsService {
   }
 
   async revokeAllForUser(userId: string) {
+    this.revokedUsers.add(userId);
     const removed = await this.db
       .delete(sessionsTable)
       .where(eq(sessionsTable.userId, userId))

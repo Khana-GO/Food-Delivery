@@ -1,8 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp } from 'drizzle-orm/pg-core';
 
 import { usersTable } from './user.schema';
 import { restaurantsTable } from './restaurant.schema';
@@ -22,13 +18,9 @@ export const cartsTable = pgTable('carts', {
       onDelete: 'cascade',
     }),
 
-  createdAt: timestamp('created_at')
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export type Cart = typeof cartsTable.$inferSelect;

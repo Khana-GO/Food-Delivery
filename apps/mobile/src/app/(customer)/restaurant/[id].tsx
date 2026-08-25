@@ -6,29 +6,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { useRestaurant } from '@/hooks/restaurant/useRestaurants';
 
 const { width } = Dimensions.get('window');
-
-const RESTAURANT_DATA = {
-  name: 'Himalayan Spice Kitchen',
-  cuisine: 'Authentic Nepalese · Momo · Thali',
-  rating: 4.8,
-  reviews: '2.4k',
-  deliveryTime: '25 min',
-  fee: 'Rs 60',
-  distance: '1.8 km',
-  description:
-    'Cozy family-run spot serving hand-folded momos, hearty dal bhat thali sets and Himalayan classics made with fresh local spices.',
-  isOpen: true,
-  emoji: '🏔️',
-  bgColor: '#F3F4F6',
-};
 
 const MENU_CATEGORIES = ['Momo', 'Thali', 'Drinks', 'Desserts'];
 
@@ -145,7 +133,8 @@ const MENU_ITEMS: Record<string, Array<{
 };
 
 export default function RestaurantDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { data: restaurant, isLoading } = useRestaurant(id);
   const [activeCategory, setActiveCategory] = useState('Momo');
   const [cart, setCart] = useState<Record<string, number>>({});
 
@@ -156,13 +145,29 @@ export default function RestaurantDetailScreen() {
   const items = MENU_ITEMS[activeCategory] || [];
   const totalInCart = Object.values(cart).reduce((a, b) => a + b, 0);
 
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
-      {/* Hero image */}
+      {/* Hero image (cover photo uploaded by the owner) */}
       <View style={styles.hero}>
-        <View style={styles.heroImageBg}>
-          <Text style={styles.heroEmoji}>{RESTAURANT_DATA.emoji}</Text>
-        </View>
+        {restaurant?.coverImageUrl ? (
+          <Image
+            source={{ uri: restaurant.coverImageUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={styles.heroImageBg}>
+            <Text style={styles.heroEmoji}>🏔️</Text>
+          </View>
+        )}
         <TouchableOpacity style={[styles.heroBtn, styles.heroBtnLeft]} onPress={() => router.back()}>
           <Text>←</Text>
         </TouchableOpacity>
@@ -177,35 +182,64 @@ export default function RestaurantDetailScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Info card */}
         <View style={styles.infoCard}>
-          <View style={styles.infoHeader}>
-            <Text style={styles.restaurantName}>{RESTAURANT_DATA.name}</Text>
-            <Badge label="Open" variant="success" />
+          <View style={styles.infoHeaderRow}>
+            {/* Logo uploaded by the owner */}
+            <View style={styles.logoWrap}>
+              {restaurant?.logoUrl ? (
+                <Image
+                  source={{ uri: restaurant.logoUrl }}
+                  style={styles.logoImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <Text style={styles.logoInitial}>
+                  {(restaurant?.name ?? 'R').charAt(0).toUpperCase()}
+                </Text>
+              )}
+            </View>
+            <View style={styles.infoHeaderCol}>
+              <View style={styles.infoHeader}>
+                <Text style={styles.restaurantName} numberOfLines={1}>
+                  {restaurant?.name ?? 'Restaurant'}
+                </Text>
+                <Badge
+                  label={restaurant?.isOpen ? 'Open' : 'Closed'}
+                  variant={restaurant?.isOpen ? 'success' : 'error'}
+                />
+              </View>
+              <Text style={styles.cuisine}>{restaurant?.cuisineType}</Text>
+            </View>
           </View>
-          <Text style={styles.cuisine}>{RESTAURANT_DATA.cuisine}</Text>
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>⭐ {RESTAURANT_DATA.rating}</Text>
-              <Text style={styles.statLabel}>{RESTAURANT_DATA.reviews} reviews</Text>
+              <Text style={styles.statValue}>
+                ⭐ {restaurant ? Number(restaurant.averageRating).toFixed(1) : '—'}
+              </Text>
+              <Text style={styles.statLabel}>{restaurant?.totalReviews ?? 0} reviews</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>⏱ {RESTAURANT_DATA.deliveryTime}</Text>
+              <Text style={styles.statValue}>
+                ⏱ {restaurant?.estimatedDeliveryTime ? `${restaurant.estimatedDeliveryTime} min` : '—'}
+              </Text>
               <Text style={styles.statLabel}>Delivery</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>🚴 {RESTAURANT_DATA.fee}</Text>
+              <Text style={styles.statValue}>🚴 Rs {Number(restaurant?.deliveryFee ?? 0)}</Text>
               <Text style={styles.statLabel}>Fee</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>📍 {RESTAURANT_DATA.distance}</Text>
-              <Text style={styles.statLabel}>Away</Text>
+              <Text style={styles.statValue}>🛒 Rs {Number(restaurant?.minimumOrderAmount ?? 0)}</Text>
+              <Text style={styles.statLabel}>Min order</Text>
             </View>
           </View>
 
-          <Text style={styles.description}>{RESTAURANT_DATA.description}</Text>
+          {restaurant?.description ? (
+            <Text style={styles.description}>{restaurant.description}</Text>
+          ) : null}
         </View>
 
         {/* Category tabs */}
@@ -293,6 +327,7 @@ export default function RestaurantDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
+  center: { alignItems: 'center', justifyContent: 'center' },
   hero: { height: 220, position: 'relative' },
   heroImageBg: {
     flex: 1,
@@ -324,6 +359,27 @@ const styles = StyleSheet.create({
     ...Shadow.md,
     marginBottom: 12,
   },
+  infoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 4,
+  },
+  infoHeaderCol: { flex: 1 },
+  logoWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.backgroundAlt,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    ...Shadow.sm,
+  },
+  logoImage: { width: '100%', height: '100%' },
+  logoInitial: { fontSize: 22, fontWeight: '800', color: Colors.primary },
   infoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
   restaurantName: { fontSize: 20, fontWeight: '800', color: Colors.textDark, flex: 1, marginRight: 8 },
   cuisine: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12 },

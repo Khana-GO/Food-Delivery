@@ -11,40 +11,41 @@ import type { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 
-// Makes this guard available for dependency injection
 @Injectable()
 export class RolesGuard implements CanActivate {
-
-  // Inject Reflector to read metadata added by @Roles()
   constructor(private readonly reflector: Reflector) {}
 
-  // This method runs before the controller method
   canActivate(context: ExecutionContext): boolean {
-
-    // Read the roles metadata from the current route or controller
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
-      [
-        context.getHandler(), // Current method
-        context.getClass(),   // Current controller
-      ],
+      [context.getHandler(), context.getClass()],
     );
 
-    // If no roles are specified, allow everyone
+    // No @Roles() → no role restriction
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    // Get the Express request and extract the authenticated user
-    // The AuthGuard should already have attached `user` to the request
-    const { user } = context
+    const request = context
       .switchToHttp()
       .getRequest<Request & { user: JwtPayload }>();
 
-    // Check whether the user's role is one of the allowed roles
-    // true  -> Access granted
-    // false -> Access denied (403 Forbidden)
-    if (!user?.role) throw new ForbiddenException('Insufficient permissions');
-    return requiredRoles.includes(user.role as UserRole);
+    const user = request.user;
+
+    if (!user) {
+      throw new ForbiddenException('User not authenticated');
+    }
+
+    if (!user.role) {
+      throw new ForbiddenException('User role not found');
+    }
+
+    if (!requiredRoles.includes(user.role as UserRole)) {
+      throw new ForbiddenException(
+        'You do not have permission to perform this action',
+      );
+    }
+
+    return true;
   }
 }

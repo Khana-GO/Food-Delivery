@@ -2,8 +2,8 @@
 
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { Pool } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from './schema';
 import { DATABASE } from './database.constants';
 
@@ -19,8 +19,10 @@ import { DATABASE } from './database.constants';
         if (!connectionString) {
           throw new Error('DATABASE_URL is not defined');
         }
-        const sql = neon(connectionString);
-        return drizzle(sql, { schema });
+        // The WebSocket driver supports interactive transactions. The HTTP driver
+        // cannot keep multiple queries on the same transaction connection.
+        const pool = new Pool({ connectionString });
+        return drizzle({ client: pool, schema });
       },
     },
   ],

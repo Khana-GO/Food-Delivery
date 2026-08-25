@@ -17,64 +17,72 @@ export const userRoleEnum = pgEnum('user_role', [
   'ADMIN',
 ]);
 
-export const usersTable = pgTable('users', {
-  id: uuid('id').defaultRandom().primaryKey(),
+export const usersTable = pgTable(
+  'users',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
 
-  firstName: varchar('first_name', {
-    length: 100,
-  }).notNull(),
+    firstName: varchar('first_name', {
+      length: 100,
+    }).notNull(),
 
-  lastName: varchar('last_name', {
-    length: 100,
-  }).notNull(),
+    lastName: varchar('last_name', {
+      length: 100,
+    }).notNull(),
 
-  email: varchar('email', {
-    length: 255,
-  })
-    .notNull()
-    .unique(),
+    email: varchar('email', {
+      length: 255,
+    })
+      .notNull()
+      .unique(),
 
-  password: varchar('password', {
-    length: 255,
-  }).notNull(),
+    password: varchar('password', {
+      length: 255,
+    }).notNull(),
 
-  phone: varchar('phone', {
-    length: 10,
-  }),
+    phone: varchar('phone', {
+      length: 10,
+    })
+      .notNull()
+      .unique(),
 
-  role: userRoleEnum().notNull().default('CUSTOMER'),
+    role: userRoleEnum().notNull().default('CUSTOMER'),
 
-  imageUrl: varchar('image_url', {
-    length: 500,
-  }),
+    imageUrl: varchar('image_url', {
+      length: 500,
+    }),
 
-  pushToken: text('push_token'),
+    imagePublicId: varchar('image_public_id', {
+      length: 255,
+    }),
 
-  lastLoginAt: timestamp('last_login_at'),
+    pushToken: text('push_token'),
 
-  isOnline: boolean('is_online').notNull().default(false),
+    lastLoginAt: timestamp('last_login_at'),
 
-  isVerified: boolean('is_verified').notNull().default(false),
-  verificationToken: text('verification_token'),
-  verificationTokenExpiry: timestamp('verification_token_expires_at'),
-  resetToken: varchar('reset_token', { length: 255 }),
-  resetTokenExpiry: timestamp('reset_token_expiry'),
+    isOnline: boolean('is_online').notNull().default(false),
 
+    isVerified: boolean('is_verified').notNull().default(false),
+    verificationToken: text('verification_token'),
+    verificationTokenExpiry: timestamp('verification_token_expires_at'),
+    resetToken: varchar('reset_token', { length: 255 }),
+    resetTokenExpiry: timestamp('reset_token_expiry'),
 
-  verificationAttempts: integer('verification_attempts').notNull().default(0),
-verificationLastSentAt: timestamp('verification_last_sent_at'),
+    verificationAttempts: integer('verification_attempts').notNull().default(0),
+    verificationLastSentAt: timestamp('verification_last_sent_at'),
 
-resetAttempts: integer('reset_attempts').notNull().default(0),
-resetLastSentAt: timestamp('reset_last_sent_at'),
+    resetAttempts: integer('reset_attempts').notNull().default(0),
+    resetLastSentAt: timestamp('reset_last_sent_at'),
 
-  verifiedAt: timestamp('verified_at'),
+    verifiedAt: timestamp('verified_at'),
 
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
 
-  deletedAt: timestamp('deleted_at'),
-  }, (table) => [
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => [
     index('users_verification_token_idx').on(table.verificationToken),
     index('users_reset_token_idx').on(table.resetToken),
   ],

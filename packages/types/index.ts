@@ -16,6 +16,7 @@ export interface User {
     firstName: string,
     lastName: string,
     role : UserRole,
+    imageUrl?: string | null,
     createdAt: Date
 }
 
@@ -40,4 +41,112 @@ export interface JwtPayload {
   role: UserRole;
   // iat?: number; // Issued at time (optional)
   // exp?: number; // Expiration time (optional)
+}
+
+
+// Mirrors CuisineType enum in apps/api restaurant controller.
+// Keep in sync when the backend adds new cuisines.
+export const CUISINE_TYPES = [
+  'Nepali',
+  'Newari',
+  'Thakali',
+  'Indian',
+  'Chinese',
+  'Tibetan',
+  'Italian',
+  'Fast Food',
+  'Continental',
+  'Street Food',
+  'Bakeries',
+  'Desserts',
+  'Drinks',
+] as const;
+
+export type CuisineType = (typeof CUISINE_TYPES)[number];
+
+export const WARD_NUMBERS = Array.from({ length: 35 }, (_, i) => i + 1);
+
+export interface Restaurant {  id: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  phone?: string;
+  email?: string;
+  address: string;
+  wardNumber?: number;
+  latitude: number;
+  longitude: number;
+  cuisineType: string;
+  openingTime?: string;
+  closingTime?: string;
+  deliveryFee: number;
+  minimumOrderAmount: number;
+  estimatedDeliveryTime?: number;
+  isOpen: boolean;
+  isActive: boolean;
+  isVerified: boolean;
+  averageRating: number;
+  totalReviews: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRestaurantPayload {
+  name: string;
+  slug: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  address: string;
+  wardNumber?: number;
+  latitude: number;
+  longitude: number;
+  cuisineType: string;
+  openingTime?: string;
+  closingTime?: string;
+  deliveryFee?: number;
+  minimumOrderAmount?: number;
+  estimatedDeliveryTime?: number;
+}
+
+export interface RestaurantFormData extends CreateRestaurantPayload {
+  logo?: File | string | null;
+  cover?: File | string | null;
+}
+
+export interface RestaurantResponse {
+  data: Restaurant[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+
+export interface Category {
+  id: string;
+  name: string;
+  restaurantId: string;
+  itemCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCategoryPayload {
+  name: string;
+}
+
+export interface UpdateCategoryPayload {
+  name?: string;
+}
+
+export interface CategoryResponse {
+  data: Category[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

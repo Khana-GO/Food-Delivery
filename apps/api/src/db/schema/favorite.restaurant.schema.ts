@@ -1,38 +1,31 @@
-import {
-  pgTable,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { pgTable, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
-import { usersTable } from "./user.schema";
-import { restaurantsTable } from "./restaurant.schema";
+import { usersTable } from './user.schema';
+import { restaurantsTable } from './restaurant.schema';
 
 export const favoriteRestaurantsTable = pgTable(
-  "favorite_restaurants",
+  'favorite_restaurants',
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuid('id').primaryKey().defaultRandom(),
 
-    userId: uuid("user_id")
+    userId: uuid('user_id')
       .notNull()
       .references(() => usersTable.id, {
-        onDelete: "cascade",
+        onDelete: 'cascade',
       }),
 
-    restaurantId: uuid("restaurant_id")
+    restaurantId: uuid('restaurant_id')
       .notNull()
       .references(() => restaurantsTable.id, {
-        onDelete: "cascade",
+        onDelete: 'cascade',
       }),
 
-    createdAt: timestamp("created_at")
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
-    unique("favorite_restaurants_user_restaurant_unique").on(
+    unique('favorite_restaurants_user_restaurant_unique').on(
       table.userId,
-      table.restaurantId
+      table.restaurantId,
     ),
-  ]
+  ],
 );

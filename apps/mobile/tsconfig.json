@@ -3,17 +3,16 @@
   "compilerOptions": {
     "module": "ESNext",
     "strict": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/assets/*": [
-        "./assets/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"]
     }
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "C:\\Users\\HI SPEED INFOSYS\\Desktop\\Projects\\food_delivery\\apps\\mobile\\nativewind-env.d.ts"
   ]
 }

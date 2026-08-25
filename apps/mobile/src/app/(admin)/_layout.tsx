@@ -1,41 +1,38 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet, View } from 'react-native';
-import { Colors } from '@/constants/theme';
-
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
-  return (
-    <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiFocused]}>{emoji}</Text>
-      <Text style={[styles.tabLabel, focused ? styles.tabLabelFocused : styles.tabLabelNormal]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
+import { View, ActivityIndicator } from 'react-native';
+import { TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminLayout() {
+  const { isInitializing } = useAuth();
+  useProtectedRoute(['ADMIN']);
+
+  const { iconSize, labelSize, tabBarStyle, tabBarItemStyle } = useTabBarConstants();
+
+  if (isInitializing) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#E23744" />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
+        tabBarStyle,
+        tabBarItemStyle,
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📊" label="Dashboard" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="restaurants"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🏪" label="Restaurants" focused={focused} />
+            <TabIcon name="bar-chart-2" label="Dashboard" focused={focused} size={iconSize} labelSize={labelSize} />
           ),
         }}
       />
@@ -43,32 +40,48 @@ export default function AdminLayout() {
         name="users"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👥" label="Users" focused={focused} />
+            <TabIcon name="users" label="Users" focused={focused} size={iconSize} labelSize={labelSize} />
           ),
         }}
       />
+      <Tabs.Screen
+        name="restaurants"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="home" label="Restaurants" focused={focused} size={iconSize} labelSize={labelSize} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="shopping-bag" label="Orders" focused={focused} size={iconSize} labelSize={labelSize} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="pie-chart" label="Analytics" focused={focused} size={iconSize} labelSize={labelSize} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="settings" label="Settings" focused={focused} size={iconSize} labelSize={labelSize} />
+          ),
+        }}
+      />
+
+      {/* Redirect + detail screens, hidden from the tab bar */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="user/[id]" options={{ href: null }} />
+      <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
+      <Tabs.Screen name="order/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: 68,
-    paddingBottom: 8,
-    paddingTop: 4,
-  },
-  tabIconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingTop: 4,
-  },
-  tabEmoji: { fontSize: 22, opacity: 0.45 },
-  tabEmojiFocused: { opacity: 1 },
-  tabLabel: { fontSize: 10, fontWeight: '500' },
-  tabLabelFocused: { color: Colors.primary, fontWeight: '700' },
-  tabLabelNormal: { color: Colors.textSecondary },
-});

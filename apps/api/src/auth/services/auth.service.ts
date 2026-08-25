@@ -1,27 +1,40 @@
-  import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-  import { ConfigService } from '@nestjs/config';
-  import { JwtService } from '@nestjs/jwt';
-  import * as bcrypt from 'bcrypt';
-  import * as crypto from 'crypto';
-  import { MailService } from '../../mail/mail.service';
-  import { UsersService } from '../../users/users.service';
-  import { ForgotPasswordDto } from '../dto/forgot-password.dto';
-  import { LoginUserDto } from '../dto/login.dto';
-  import { RegisterUserDto } from '../dto/register.dto';
-  import { ResetPasswordDto } from '../dto/reset-password.dto';
-  import { VerifyEmailDto } from '../dto/verify-email.dto';
-  import { ResendVerificationDto } from '../dto/resend-verification-code.dto';
-  import { SessionsService } from '../../sessions/sessions.service';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
+import { MailService } from '../../mail/mail.service';
+import { UsersService } from '../../users/users.service';
+import { ForgotPasswordDto } from '../dto/forgot-password.dto';
+import { LoginUserDto } from '../dto/login.dto';
+import { RegisterUserDto } from '../dto/register.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { SessionsService } from '../../sessions/sessions.service';
+import { Inject } from '@nestjs/common';
+import { NeonDatabase } from 'drizzle-orm/neon-serverless';
+import { DATABASE } from '../../db/database.constants';
+import * as schema from '../../db/schema';
+import { usersTable } from '../../db/schema';
+import { eq } from 'drizzle-orm/sql/expressions/conditions';
 
-  @Injectable()
-  export class AuthService {
-    constructor(
-      private readonly usersService: UsersService,
-      private readonly jwtService: JwtService,
-      private readonly mailService: MailService,
-      private readonly configService: ConfigService,
-      private readonly sessionService: SessionsService
-    ) {}
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
+    private readonly sessionService: SessionsService,
+    @Inject(DATABASE) private readonly db: NeonDatabase<typeof schema>,
+  ) {}
+
+  public readonly logger = new Logger(AuthService.name);
 
   async register(dto: RegisterUserDto) {
     const email = dto.email.trim().toLowerCase();
@@ -29,20 +42,44 @@
       throw new BadRequestException('Email already registered');
     }
 
-    const otp = this.generateOtp();
-    const user = await this.usersService.create({
-      firstName: dto.firstName.trim(),
-      lastName: dto.lastName.trim(),
-      email,
-      password: await bcrypt.hash(dto.password, this.saltRounds()),
-      phone: dto.phone?.trim(),
-      verificationToken: this.hashToken(otp),
-      verificationTokenExpiry: this.expiryInMinutes(10),
-      isVerified: false,
-    });
+    const normalizedPhone = dto.phone?.trim();
+    if (!normalizedPhone) {
+      throw new BadRequestException('Phone number is required');
+    }
 
-    await this.mailService.sendVerificationCode(user.email, otp);
-    return { message: 'Check your email for a verification code', email: user.email };
+    if (this.db?.query?.usersTable) {
+      const existingPhone = await this.db.query.usersTable.findFirst({
+        where: eq(usersTable.phone, normalizedPhone),
+      });
+
+      if (existingPhone) {
+        throw new BadRequestException('Phone number already registered');
+      }
+    }
+
+    const otp = this.generateOtp();
+    const user = await this.db.transaction(async (tx) => {
+      const createdUser = await this.usersService.create(
+        {
+          firstName: dto.firstName.trim(),
+          lastName: dto.lastName.trim(),
+          email,
+          password: dto.password,
+          phone: normalizedPhone,
+          verificationToken: this.hashToken(otp),
+          verificationTokenExpiry: this.expiryInMinutes(10),
+          isVerified: false,
+        },
+        tx,
+      );
+
+      await this.mailService.sendVerificationCode(createdUser.email, otp);
+      return createdUser;
+    });
+    return {
+      message: 'Check your email for a verification code',
+      email: user.email,
+    };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
@@ -73,50 +110,86 @@
   }
 
   async resendVerificationCode(email: string) {
-    const user = await this.usersService.findByEmail(email.trim().toLowerCase());
+    const user = await this.usersService.findByEmail(
+      email.trim().toLowerCase(),
+    );
     if (!user || user.isVerified) {
       return { message: 'If the account exists, a new code has been sent' };
     }
 
     // 60s cooldown
-    if (user.verificationLastSentAt && Date.now() - user.verificationLastSentAt.getTime() < 60_000) {
-      throw new BadRequestException('Please wait before requesting another code');
+    if (
+      user.verificationLastSentAt &&
+      Date.now() - user.verificationLastSentAt.getTime() < 60_000
+    ) {
+      throw new BadRequestException(
+        'Please wait before requesting another code',
+      );
     }
 
     const otp = this.generateOtp();
-    await this.usersService.setResetToken(user.id, this.hashToken(otp), this.expiryInMinutes(10));
+    await this.usersService.setVerificationToken(
+      user.id,
+      this.hashToken(otp),
+      this.expiryInMinutes(10),
+    );
     await this.mailService.sendVerificationCode(user.email, otp);
     return { message: 'If the account exists, a new code has been sent' };
   }
 
+  // backend/src/auth/auth.service.ts
+  // auth.service.ts
+  async login(dto: LoginUserDto) {
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(email);
 
-
-    async login(dto: LoginUserDto) {
-      const user = await this.usersService.findByEmail(dto.email);
-      if (!user?.password || !(await bcrypt.compare(dto.password, user.password))) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-      if (!user.isVerified) {
-        throw new UnauthorizedException('Please verify your email first');
-      }
-
-      await this.usersService.recordLogin(user.id);
-      return this.authResponse(user);
+    if (!user) {
+      throw new UnauthorizedException(
+        'No account found with this email. Please register first.',
+      );
     }
 
+    if (
+      !user.password ||
+      !(await bcrypt.compare(dto.password, user.password))
+    ) {
+      throw new UnauthorizedException(
+        'Invalid email or password. Please try again.',
+      );
+    }
 
+    if (!user.isVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in. Check your inbox for the verification code.',
+      );
+    }
 
+    await this.usersService.recordLogin(user.id);
+    return this.authResponse(user);
+  }
 
-  async refreshToken(refreshToken: string, meta?: { userAgent?: string; ipAddress?: string }) {
+  async refreshToken(
+    refreshToken: string,
+    meta?: { userAgent?: string; ipAddress?: string },
+  ) {
     try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string; type?: string; jti?: string }>(refreshToken);
-      if (payload.type !== 'refresh' || !payload.sub || !payload.jti) throw new Error('Invalid token type');
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        type?: string;
+        jti?: string;
+      }>(refreshToken);
+      if (payload.type !== 'refresh' || !payload.sub || !payload.jti)
+        throw new Error('Invalid token type');
 
-      const session = await this.sessionService.findValidByIdAndToken(payload.jti, refreshToken);
+      const session = await this.sessionService.findValidByIdAndToken(
+        payload.jti,
+        refreshToken,
+      );
       if (!session) throw new Error('Session revoked or expired');
 
       const user = await this.usersService.findById(payload.sub);
-      if (!user || user.deletedAt || !user.isVerified) throw new Error('User unavailable');
+      if (!user || user.deletedAt || !user.isVerified)
+        throw new Error('User unavailable');
 
       // rotate: kill old session, issue new one — prevents stolen refresh tokens from being reused indefinitely
       await this.sessionService.revoke(session.id);
@@ -126,36 +199,61 @@
     }
   }
 
+  async logout(refreshToken: string, accessToken?: string) {
+    const revokeToken = async (token: string, userId?: string) => {
+      if (!token) return;
 
-  async logout(refreshToken: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string; type?: string; jti?: string }>(refreshToken);
-
-      // refresh token with a session id (jti): revoke that exact session
-      if (payload.type === 'refresh' && payload.jti) {
-        const removed = await this.sessionService.revoke(payload.jti);
-        // if the jti didn't match a live session (already rotated/expired), fall back to token hash
-        if (removed === 0) {
-          await this.sessionService.revokeByToken(refreshToken);
-        }
-        return { message: 'Logged out successfully' };
+      try {
+        const payload = await this.jwtService.verifyAsync<{ sub?: string }>(
+          token,
+        );
+        this.sessionService.revokeToken?.(token, payload.sub);
+      } catch {
+        this.sessionService.revokeToken?.(token, userId);
       }
+    };
 
-      // access token (or refresh without jti): we can't pinpoint a single session,
-      // so revoke every session belonging to this user to guarantee cleanup
-      if (payload.sub) {
-        const removed = await this.sessionService.revokeAllForUser(payload.sub);
-        // also try the supplied token as a refresh token in case it actually is one
-        if (removed === 0) {
-          await this.sessionService.revokeByToken(refreshToken);
+    if (refreshToken) {
+      try {
+        const payload = await this.jwtService.verifyAsync<{
+          sub: string;
+          type?: string;
+          jti?: string;
+        }>(refreshToken);
+
+        if (payload.type === 'refresh' && payload.jti) {
+          if (typeof this.sessionService.revoke === 'function') {
+            const removed = await this.sessionService.revoke(payload.jti);
+            if (removed === 0) {
+              await this.sessionService.revokeByToken?.(refreshToken);
+            }
+          } else {
+            await this.sessionService.revokeByToken?.(refreshToken);
+          }
+          this.sessionService.revokeToken?.(refreshToken, payload.sub);
+        } else if (payload.sub) {
+          if (typeof this.sessionService.revokeAllForUser === 'function') {
+            const removed = await this.sessionService.revokeAllForUser(
+              payload.sub,
+            );
+            if (removed === 0) {
+              await this.sessionService.revokeByToken?.(refreshToken);
+            }
+          } else {
+            await this.sessionService.revokeByToken?.(refreshToken);
+          }
+          this.sessionService.revokeToken?.(refreshToken, payload.sub);
         }
-        return { message: 'Logged out successfully' };
+      } catch {
+        await this.sessionService.revokeByToken?.(refreshToken);
+        this.sessionService.revokeToken?.(refreshToken);
       }
-    } catch {
-      // token expired or invalid — fall through to hash-based revocation below
     }
 
-    await this.sessionService.revokeByToken(refreshToken);
+    if (accessToken) {
+      await revokeToken(accessToken);
+    }
+
     return { message: 'Logged out successfully' };
   }
 
@@ -165,20 +263,31 @@
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.usersService.findByEmail(dto.email.trim().toLowerCase());
+    const user = await this.usersService.findByEmail(
+      dto.email.trim().toLowerCase(),
+    );
     if (user) {
-      if (user.resetLastSentAt && Date.now() - user.resetLastSentAt.getTime() < 60_000) {
+      if (
+        user.resetLastSentAt &&
+        Date.now() - user.resetLastSentAt.getTime() < 60_000
+      ) {
         return { message: 'If the email exists, a code has been sent' };
       }
       const otp = this.generateOtp();
-      await this.usersService.setResetToken(user.id, this.hashToken(otp), this.expiryInMinutes(10));
+      await this.usersService.setResetToken(
+        user.id,
+        this.hashToken(otp),
+        this.expiryInMinutes(10),
+      );
       await this.mailService.sendPasswordResetCode(user.email, otp);
     }
     return { message: 'If the email exists, a code has been sent' };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.usersService.findByEmail(dto.email.trim().toLowerCase());
+    const user = await this.usersService.findByEmail(
+      dto.email.trim().toLowerCase(),
+    );
     if (!user || user.resetAttempts >= 5) {
       throw new BadRequestException('Invalid or expired code');
     }
@@ -193,7 +302,10 @@
       throw new BadRequestException('Invalid or expired code');
     }
 
-    await this.usersService.updatePassword(user.id, await bcrypt.hash(dto.newPassword, this.saltRounds()));
+    await this.usersService.updatePassword(
+      user.id,
+      await bcrypt.hash(dto.newPassword, this.saltRounds()),
+    );
     await this.usersService.clearResetToken(user.id); // invalidate so it can't be reused
     return { message: 'Password reset successfully' };
   }
@@ -206,18 +318,31 @@
     }
     const value = Number(match[1]);
     const unit = match[2];
-    const msPerUnit: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+    const msPerUnit: Record<string, number> = {
+      s: 1000,
+      m: 60_000,
+      h: 3_600_000,
+      d: 86_400_000,
+    };
     return new Date(Date.now() + value * msPerUnit[unit]);
   }
 
   private async authResponse(
-    user: { id: string; email: string; role: string; firstName: string; lastName: string },
+    user: {
+      id: string;
+      email: string;
+      role: string;
+      firstName: string;
+      lastName: string;
+    },
     meta?: { userAgent?: string; ipAddress?: string },
   ) {
     const sessionId = crypto.randomUUID();
 
-    const accessExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m';
-    const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
+    const accessExpiresIn =
+      this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m';
+    const refreshExpiresIn =
+      this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
 
     const accessToken = this.jwtService.sign(
       { sub: user.id, email: user.email, role: user.role },
@@ -240,39 +365,45 @@
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
     };
   }
   private generateOtp(): string {
     // 6-digit numeric, zero-padded, cryptographically random
     return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
-  } 
-
+  }
 
   private expiryInDays(days: number) {
     return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   }
 
-
   private hashToken(token: string) {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-
-    private expiryInMinutes(minutes: number) {
+  private expiryInMinutes(minutes: number) {
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
+  private saltRounds() {
+    const rounds = Number(this.configService.get<string>('SALT_ROUNDS') ?? 12);
+    return Number.isInteger(rounds) && rounds >= 10 && rounds <= 15
+      ? rounds
+      : 12;
+  }
 
-    private saltRounds() {
-      const rounds = Number(this.configService.get<string>('SALT_ROUNDS') ?? 12);
-      return Number.isInteger(rounds) && rounds >= 10 && rounds <= 15 ? rounds : 12;
-    }
-
-
-    async verifyResetCode(dto: { email: string; code: string }) {
-    const user = await this.usersService.findByEmail(dto.email.trim().toLowerCase());
-    if (!user || user.resetAttempts >= 5) throw new BadRequestException('Invalid or expired code');
+  async verifyResetCode(dto: { email: string; code: string }) {
+    const user = await this.usersService.findByEmail(
+      dto.email.trim().toLowerCase(),
+    );
+    if (!user || user.resetAttempts >= 5)
+      throw new BadRequestException('Invalid or expired code');
 
     const isValid =
       user.resetToken === this.hashToken(dto.code) &&
@@ -291,18 +422,26 @@
     );
     return { resetSessionToken };
   }
-
-  async resetPasswordWithSession(resetSessionToken: string, newPassword: string) {
+  async resetPasswordWithSession(
+    resetSessionToken: string,
+    newPassword: string,
+  ) {
     try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string; type?: string }>(resetSessionToken);
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        type?: string;
+      }>(resetSessionToken);
       if (payload.type !== 'reset-session') throw new Error();
-      await this.usersService.updatePassword(payload.sub, await bcrypt.hash(newPassword, this.saltRounds()));
+      await this.usersService.updatePassword(
+        payload.sub,
+        await bcrypt.hash(newPassword, this.saltRounds()),
+      );
       await this.usersService.clearResetToken(payload.sub);
       return { message: 'Password reset successfully' };
     } catch {
-      throw new UnauthorizedException('Invalid or expired session, please verify your code again');
+      throw new UnauthorizedException(
+        'Invalid or expired session, please verify your code again',
+      );
     }
   }
-
-
-  }
+}

@@ -1,13 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { DATABASE } from '../db/database.constants';
+import { CloudinaryService } from '../cloudinary/clodinary.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('UsersService', () => {
   let service: UsersService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsersService, { provide: DATABASE, useValue: {} }],
+      providers: [
+        UsersService,
+        { provide: DATABASE, useValue: {} },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
+        { provide: CloudinaryService, useValue: {} },
+      ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);

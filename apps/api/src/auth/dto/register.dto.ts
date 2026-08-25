@@ -7,7 +7,7 @@ import {
   Matches,
 } from 'class-validator';
 
-export class    RegisterUserDto {
+export class RegisterUserDto {
   @IsString()
   @Length(2, 100)
   firstName!: string;
@@ -22,17 +22,12 @@ export class    RegisterUserDto {
 
   @IsString()
   @MinLength(6)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-    {
-      message:
-        'Password must contain uppercase, lowercase and a number',
-    },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+    message: 'Password must contain uppercase, lowercase and a number',
+  })
   password!: string;
 
-  @IsOptional()
   @IsString()
   @Length(7, 10)
-  phone?: string;
+  phone!: string;
 }

@@ -1,40 +1,60 @@
-import React, { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider, router } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import React from 'react';
+import { Stack } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ToastHost } from '@/components/ui/toast';
+import '@/lib/imageInterop';
+import '../../global.css';
 
-// Keep the splash screen visible while fonts/assets load
-SplashScreen.preventAutoHideAsync();
-
-// Initialize the global React Query client for data fetching state
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
       refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
     },
   },
 });
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SafeAreaProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Slot />
-          </ThemeProvider>
+          <AppNavigator />
         </SafeAreaProvider>
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppNavigator() {
+  const { isInitializing } = useAuth();
+
+  if (isInitializing) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#E23744" />
+      </View>
+    );
+  }
+
+  //  Simplified: Just render all screens without conditionals
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(customer)" />
+        <Stack.Screen name="(driver)" />
+        <Stack.Screen name="(restaurant-owner)" />
+        <Stack.Screen name="(admin)" />
+      </Stack>
+      <ToastHost />
+    </>
   );
 }

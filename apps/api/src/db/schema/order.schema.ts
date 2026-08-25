@@ -6,18 +6,19 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { menuItemsTable } from './menu.items.schema';
+
 import { usersTable } from './user.schema';
 import { restaurantsTable } from './restaurant.schema';
+import { addressesTable } from './user.address.schema';
 
 export const orderStatusEnum = pgEnum('order_status', [
-  'PENDING', // waiting for payment
-  'CONFIRMED', // pyament confirmed
-  'PREPARING', // preparing
-  'READY', // ready for driver pickup
-  'PICKED_UP', // picked up by driver
-  'DELIVERED', // order delivered
-  'CANCELLED', // order cancelled
+  'PENDING',
+  'CONFIRMED',
+  'PREPARING',
+  'READY',
+  'PICKED_UP',
+  'DELIVERED',
+  'CANCELLED',
 ]);
 
 export const paymentMethodEnum = pgEnum('payment_method', [
@@ -35,25 +36,40 @@ export const paymentStatusEnum = pgEnum('payment_status', [
 export const ordersTable = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
 
-  itemId: uuid('item_id')
-    .notNull()
-    .references(() => menuItemsTable.id, {
-      onDelete: 'cascade',
-    }),
-
   customerId: uuid('customer_id')
     .notNull()
     .references(() => usersTable.id, {
       onDelete: 'cascade',
     }),
 
-  driverId: uuid('driver_id')
+  restaurantId: uuid('restaurant_id')
     .notNull()
-    .references(() => usersTable.id),
+    .references(() => restaurantsTable.id, {
+      onDelete: 'cascade',
+    }),
 
-  totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
+  driverId: uuid('driver_id').references(() => usersTable.id),
 
-  deliveryAddress: text('delivery_address').notNull(),
+  addressId: uuid('address_id')
+    .notNull()
+    .references(() => addressesTable.id),
+
+  subtotal: numeric('subtotal', {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+
+  deliveryFee: numeric('delivery_fee', {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+
+  totalAmount: numeric('total_amount', {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+
+  notes: text('notes'),
 
   paymentId: text('payment_id'),
 
@@ -61,21 +77,20 @@ export const ordersTable = pgTable('orders', {
     .notNull()
     .default('OFFLINE'),
 
-  orderStatus: orderStatusEnum('order_status').notNull().default('PENDING'),
-
   paymentStatus: paymentStatusEnum('payment_status')
     .notNull()
     .default('PENDING'),
 
-  restaurantId: uuid('restaurant_id')
-    .notNull()
-    .references(() => restaurantsTable.id),
+  orderStatus: orderStatusEnum('order_status').notNull().default('PENDING'),
+
+  estimatedDeliveryTime: timestamp('estimated_delivery_time'),
+
+  deliveredAt: timestamp('delivered_at'),
 
   createdAt: timestamp('created_at').notNull().defaultNow(),
 
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-
-export type OrdersTable = typeof ordersTable.$inferSelect;
-export type NewOrdersTable = typeof ordersTable.$inferInsert;
+export type Order = typeof ordersTable.$inferSelect;
+export type NewOrder = typeof ordersTable.$inferInsert;

@@ -8,6 +8,12 @@ import { DbModule } from './db/database.module';
 import { AuthModule } from './auth/auth.module';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { UsersModule } from './users/users.module';
+import { OrderModule } from './order/order.module';
+import { NotificationModule } from './notification/notification.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { MenuModule } from './menu/menu.module';
+import { CategoriesModule } from './menu-categories/menu-categories.module';
+import { SessionsModule } from './sessions/session.module';
 
 @Module({
   imports: [
@@ -20,16 +26,27 @@ import { UsersModule } from './users/users.module';
       useFactory: (config: ConfigService): JwtModuleOptions => {
         const secret = config.get<string>('JWT_SECRET');
         if (!secret || secret.length < 32) {
-          throw new Error('JWT_SECRET must be set to a value of at least 32 characters');
+          throw new Error(
+            'JWT_SECRET must be set to a value of at least 32 characters',
+          );
         }
         const expiresIn = config.get<string | number>('JWT_EXPIRES_IN') ?? '1h';
-        return { secret, signOptions: { expiresIn: expiresIn as SignOptions['expiresIn'] } };
+        return {
+          secret,
+          signOptions: { expiresIn: expiresIn as SignOptions['expiresIn'] },
+        };
       },
     }),
     DbModule,
     AuthModule,
     RestaurantModule,
     UsersModule,
+    CategoriesModule,
+    OrderModule,
+    NotificationModule,
+    CloudinaryModule,
+    MenuModule,
+    SessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

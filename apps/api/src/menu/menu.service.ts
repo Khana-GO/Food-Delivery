@@ -1,0 +1,440 @@
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+  Inject,
+} from '@nestjs/common';
+import { eq, and, or, ilike, desc, asc, sql } from 'drizzle-orm';
+import { NeonDatabase } from 'drizzle-orm/neon-serverless';
+import { DATABASE } from '../db/database.constants';
+import { MenuItemResponseDto } from './dto/menu-item-response.dto';
+import {
+  menuItemsTable,
+  restaurantsTable,
+  type MenuItem,
+  type NewMenuItem,
+} from '../db/schema';
+import type * as schema from '../db/schema';
+import { CloudinaryService } from '../cloudinary/clodinary.service';
+import { CreateMenuItemDto } from './dto/create-menu.dto';
+import { UpdateMenuItemDto } from './dto/update-menu.dto';
+
+const SORTABLE_COLUMNS = ['createdAt', 'updatedAt', 'name', 'price'] as const;
+
+@Injectable()
+export class MenuItemsService {
+  private readonly logger = new Logger(MenuItemsService.name);
+
+  constructor(
+    @Inject(DATABASE)
+    private readonly db: NeonDatabase<typeof schema>,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
+
+  private async handleDbOperation<T>(
+    operation: () => Promise<T>,
+    context: string,
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      this.logger.error(`[${context}] Error:`, error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An error occurred while processing your request',
+      );
+    }
+  }
+
+  private extractPublicId(url: string): string | null {
+    try {
+      const parts = url.split('/');
+      const uploadIndex = parts.indexOf('upload');
+      if (uploadIndex === -1) return null;
+      const pathParts = parts.slice(uploadIndex + 2);
+      const filename = pathParts.join('/');
+      return filename.replace(/\.[^/.]+$/, '');
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── Helper: Resolve restaurant for current owner ───
+  async getRestaurantIdForUser(userId: string): Promise<string> {
+    const [restaurant] = await this.db
+      .select({ id: restaurantsTable.id })
+      .from(restaurantsTable)
+      .where(eq(restaurantsTable.ownerId, userId))
+      .limit(1);
+
+    if (!restaurant) {
+      throw new BadRequestException('You do not have a restaurant registered');
+    }
+
+    return restaurant.id;
+  }
+
+  // ─── CREATE ───
+  async create(
+    restaurantId: string,
+    dto: CreateMenuItemDto,
+    file?: Express.Multer.File,
+  ): Promise<MenuItemResponseDto> {
+    return this.handleDbOperation(async () => {
+      let imageUrl: string | undefined;
+
+      if (file) {
+        const result = await this.cloudinaryService.uploadImage(
+          file,
+          `khanago/menu-items/${restaurantId}`,
+        );
+        imageUrl = result.url;
+      }
+
+      const values: NewMenuItem = {
+        restaurantId,
+        categoryId: dto.categoryId,
+        name: dto.name,
+        description: dto.description,
+        price: dto.price.toString(),
+        imageUrl: imageUrl ?? dto.imageUrl,
+        isAvailable: dto.isAvailable ?? true,
+      };
+
+      const [item] = await this.db
+        .insert(menuItemsTable)
+        .values(values)
+        .returning();
+
+      if (!item) {
+        throw new InternalServerErrorException('Failed to create menu item');
+      }
+
+      this.logger.log(`Menu item created: ${item.name} (ID: ${item.id})`);
+      return new MenuItemResponseDto(item);
+    }, 'create');
+  }
+
+  // ─── FIND ALL (By Restaurant) ───
+  async findByRestaurant(
+    restaurantId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      categoryId?: string;
+      isAvailable?: boolean;
+      sortBy?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    } = {},
+  ): Promise<{
+    data: MenuItemResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    return this.handleDbOperation(async () => {
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        categoryId,
+        isAvailable,
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
+      } = options;
+
+      const safeSortBy = (SORTABLE_COLUMNS as readonly string[]).includes(
+        sortBy,
+      )
+        ? sortBy
+        : 'createdAt';
+      const sortColumn = menuItemsTable[
+        safeSortBy as keyof typeof menuItemsTable
+      ] as never;
+
+      const conditions = [eq(menuItemsTable.restaurantId, restaurantId)];
+
+      if (search) {
+        const searchTerm = `%${search}%`;
+        conditions.push(
+          or(
+            ilike(menuItemsTable.name, searchTerm),
+            ilike(menuItemsTable.description, searchTerm),
+          )!,
+        );
+      }
+
+      if (categoryId) {
+        conditions.push(eq(menuItemsTable.categoryId, categoryId));
+      }
+
+      if (isAvailable !== undefined) {
+        conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
+      }
+
+      const whereClause = and(...conditions);
+
+      const [countResult] = await this.db
+        .select({ total: sql<number>`count(*)` })
+        .from(menuItemsTable)
+        .where(whereClause);
+
+      const total = Number(countResult?.total ?? 0);
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+
+      const items = await this.db
+        .select()
+        .from(menuItemsTable)
+        .where(whereClause)
+        .orderBy(sortOrder === 'ASC' ? asc(sortColumn) : desc(sortColumn))
+        .limit(limit)
+        .offset(offset);
+
+      return {
+        data: items.map((item) => new MenuItemResponseDto(item)),
+        total,
+        page,
+        limit,
+        totalPages,
+      };
+    }, 'findByRestaurant');
+  }
+
+  // ─── FIND ALL (By Category) ───
+  async findByCategory(
+    categoryId: string,
+    isAvailable?: boolean,
+  ): Promise<MenuItemResponseDto[]> {
+    return this.handleDbOperation(async () => {
+      const conditions = [eq(menuItemsTable.categoryId, categoryId)];
+
+      if (isAvailable !== undefined) {
+        conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
+      }
+
+      const items = await this.db
+        .select()
+        .from(menuItemsTable)
+        .where(and(...conditions))
+        .orderBy(desc(menuItemsTable.createdAt));
+
+      return items.map((item) => new MenuItemResponseDto(item));
+    }, 'findByCategory');
+  }
+
+  // ─── FIND BY ID ───
+  async findById(id: string): Promise<MenuItemResponseDto> {
+    return this.handleDbOperation(async () => {
+      const item = await this.db.query.menuItemsTable.findFirst({
+        where: eq(menuItemsTable.id, id),
+      });
+
+      if (!item) {
+        throw new NotFoundException(`Menu item with ID ${id} not found`);
+      }
+
+      return new MenuItemResponseDto(item);
+    }, 'findById');
+  }
+
+  // ─── UPDATE ───
+  async update(
+    id: string,
+    dto: UpdateMenuItemDto,
+    file?: Express.Multer.File,
+  ): Promise<MenuItemResponseDto> {
+    return this.handleDbOperation(async () => {
+      const existing = await this.findById(id);
+
+      let imageUrl: string | undefined = existing.imageUrl;
+
+      if (file) {
+        if (existing.imageUrl) {
+          const publicId = this.extractPublicId(existing.imageUrl);
+          if (publicId) {
+            await this.cloudinaryService.deleteImage(publicId);
+          }
+        }
+        const result = await this.cloudinaryService.uploadImage(
+          file,
+          `khanago/menu-items/${existing.restaurantId}`,
+        );
+        imageUrl = result.url;
+      }
+
+      const updateData: Partial<NewMenuItem> = {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
+        ...(dto.isAvailable !== undefined && { isAvailable: dto.isAvailable }),
+        ...(dto.price !== undefined && { price: dto.price.toString() }),
+        ...(imageUrl !== undefined && { imageUrl }),
+        updatedAt: new Date(),
+      };
+
+      const [updated] = await this.db
+        .update(menuItemsTable)
+        .set(updateData)
+        .where(eq(menuItemsTable.id, id))
+        .returning();
+
+      if (!updated) {
+        throw new InternalServerErrorException('Failed to update menu item');
+      }
+
+      this.logger.log(`Menu item updated: ${updated.name} (ID: ${id})`);
+      return new MenuItemResponseDto(updated);
+    }, 'update');
+  }
+
+  // ─── TOGGLE AVAILABILITY ───
+  async toggleAvailability(id: string): Promise<{ isAvailable: boolean }> {
+    return this.handleDbOperation(async () => {
+      const item = await this.findById(id);
+
+      const [updated] = await this.db
+        .update(menuItemsTable)
+        .set({
+          isAvailable: !item.isAvailable,
+          updatedAt: new Date(),
+        })
+        .where(eq(menuItemsTable.id, id))
+        .returning();
+
+      if (!updated) {
+        throw new InternalServerErrorException('Failed to toggle availability');
+      }
+
+      this.logger.log(`Menu item ${id} availability: ${updated.isAvailable}`);
+      return { isAvailable: updated.isAvailable };
+    }, 'toggleAvailability');
+  }
+
+  // ─── DELETE ───
+  async delete(id: string): Promise<{ message: string }> {
+    return this.handleDbOperation(async () => {
+      const item = await this.findById(id);
+
+      if (item.imageUrl) {
+        const publicId = this.extractPublicId(item.imageUrl);
+        if (publicId) {
+          await this.cloudinaryService.deleteImage(publicId);
+        }
+      }
+
+      await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
+
+      this.logger.log(`Menu item deleted: ${item.name} (ID: ${id})`);
+      return { message: 'Menu item deleted successfully' };
+    }, 'delete');
+  }
+
+  // ─── BULK CREATE ───
+  async bulkCreate(
+    restaurantId: string,
+    items: CreateMenuItemDto[],
+  ): Promise<MenuItemResponseDto[]> {
+    return this.handleDbOperation(async () => {
+      const createdItems: MenuItem[] = [];
+
+      for (const dto of items) {
+        const values: NewMenuItem = {
+          restaurantId,
+          categoryId: dto.categoryId,
+          name: dto.name,
+          description: dto.description,
+          price: dto.price.toString(),
+          imageUrl: dto.imageUrl,
+          isAvailable: dto.isAvailable ?? true,
+        };
+
+        const [item] = await this.db
+          .insert(menuItemsTable)
+          .values(values)
+          .returning();
+
+        if (item) {
+          createdItems.push(item);
+        }
+      }
+
+      this.logger.log(
+        `Bulk created ${createdItems.length} menu items for restaurant ${restaurantId}`,
+      );
+      return createdItems.map((item) => new MenuItemResponseDto(item));
+    }, 'bulkCreate');
+  }
+
+  // ─── BULK DELETE ───
+  async bulkDelete(
+    ids: string[],
+  ): Promise<{ message: string; deleted: number }> {
+    return this.handleDbOperation(async () => {
+      let deletedCount = 0;
+
+      for (const id of ids) {
+        const item = await this.findById(id);
+        if (item.imageUrl) {
+          const publicId = this.extractPublicId(item.imageUrl);
+          if (publicId) {
+            await this.cloudinaryService.deleteImage(publicId);
+          }
+        }
+        await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
+        deletedCount++;
+      }
+
+      this.logger.log(`Bulk deleted ${deletedCount} menu items`);
+      return {
+        message: `${deletedCount} menu items deleted successfully`,
+        deleted: deletedCount,
+      };
+    }, 'bulkDelete');
+  }
+
+  // ─── GET GROUPED BY CATEGORY ───
+  async getGroupedByCategory(
+    restaurantId: string,
+  ): Promise<{ categoryId: string; items: MenuItemResponseDto[] }[]> {
+    return this.handleDbOperation(async () => {
+      const items = await this.db
+        .select()
+        .from(menuItemsTable)
+        .where(
+          and(
+            eq(menuItemsTable.restaurantId, restaurantId),
+            eq(menuItemsTable.isAvailable, true),
+          ),
+        )
+        .orderBy(desc(menuItemsTable.createdAt));
+
+      const grouped = items.reduce<Record<string, MenuItemResponseDto[]>>(
+        (acc, item) => {
+          const categoryId = item.categoryId;
+          if (!acc[categoryId]) {
+            acc[categoryId] = [];
+          }
+          acc[categoryId].push(new MenuItemResponseDto(item));
+          return acc;
+        },
+        {},
+      );
+
+      return Object.entries(grouped).map(([categoryId, groupedItems]) => ({
+        categoryId,
+        items: groupedItems,
+      }));
+    }, 'getGroupedByCategory');
+  }
+}
