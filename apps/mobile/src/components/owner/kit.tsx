@@ -25,7 +25,7 @@ export const GREEN = '#16A34A';
 export const rs = (n: number) => `Rs. ${Math.round(n).toLocaleString('en-IN')}`;
 
 // ──────────────────────────────────────────────────────────────────────────
-// Responsive helpers
+// Responsive helpers function
 // ──────────────────────────────────────────────────────────────────────────
 
 export function useResponsive() {
@@ -68,8 +68,8 @@ export function ScreenHeader({ title, subtitle, back = true, right, tone = 'ligh
       className={isBrand ? 'bg-primary' : 'bg-white border-b border-gray-100'}
       style={{ paddingTop: insets.top }}
     >
-      <View className="h-16 flex-row items-center px-4">
-        <View className="flex-1 flex-row items-center" style={{ maxWidth: 688 }}>
+      <View className="flex-row items-center h-16 px-4">
+        <View className="flex-row items-center flex-1" style={{ maxWidth: 688 }}>
           {back && (
             <Pressable
               onPress={() => router.back()}
@@ -115,7 +115,7 @@ export function SectionHeader({
   onAction?: () => void;
 }) {
   return (
-    <View className="mb-3 flex-row items-center justify-between">
+    <View className="flex-row items-center justify-between mb-3">
       <Text className="text-base font-bold text-gray-900">{title}</Text>
       {actionLabel && onAction ? (
         <Pressable hitSlop={8} onPress={onAction} className="active:opacity-60">
@@ -170,7 +170,7 @@ export function StatCard({
   const positiveTrend = trend?.startsWith('+');
   const negativeTrend = trend?.startsWith('-');
   return (
-    <View className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm shadow-gray-100">
+    <View className="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl shadow-gray-100">
       <View className="flex-row items-start justify-between">
         <View className={`h-10 w-10 items-center justify-center rounded-xl ${t.chip}`}>
           <Feather name={icon || TONE_ICONS[tone]} size={18} color={TONE_ICON_COLORS[tone]} />
@@ -274,10 +274,10 @@ export function SearchInput({
 }) {
   const TextInput = RNTextInput;
   return (
-    <View className="h-12 flex-row items-center rounded-2xl border border-gray-200 bg-white px-4">
+    <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-2xl">
       <Feather name="search" size={18} color="#94A3B8" />
       <TextInput
-        className="ml-3 flex-1 text-sm text-gray-900"
+        className="flex-1 ml-3 text-sm text-gray-900"
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"
         value={value}
@@ -311,18 +311,18 @@ export function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <View className="items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-white px-8 py-12">
-      <View className="h-20 w-20 items-center justify-center rounded-full bg-green-50">
+    <View className="items-center justify-center px-8 py-12 bg-white border border-gray-200 border-dashed rounded-3xl">
+      <View className="items-center justify-center w-20 h-20 rounded-full bg-green-50">
         <Feather name={icon} size={34} color={GREEN} />
       </View>
       <Text className="mt-4 text-base font-bold text-gray-900">{title}</Text>
       {message ? (
-        <Text className="mt-1 text-center text-sm leading-5 text-gray-500">{message}</Text>
+        <Text className="mt-1 text-sm leading-5 text-center text-gray-500">{message}</Text>
       ) : null}
       {actionLabel && onAction ? (
         <Pressable
           onPress={onAction}
-          className="mt-5 flex-row items-center rounded-full bg-green-600 px-6 py-3 active:bg-green-700"
+          className="flex-row items-center px-6 py-3 mt-5 bg-green-600 rounded-full active:bg-green-700"
         >
           <Feather name="plus" size={16} color="#FFFFFF" />
           <Text className="ml-1.5 text-sm font-bold text-white">{actionLabel}</Text>
@@ -368,9 +368,9 @@ export function ConfirmDialog({
   const t = DIALOG_TONES[tone];
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1 bg-black/50 px-6" onPress={onClose}>
-        <View className="flex-1 items-center justify-center">
-          <Pressable className="w-full max-w-sm rounded-3xl bg-white p-6" onPress={() => {}}>
+      <Pressable className="flex-1 px-6 bg-black/50" onPress={onClose}>
+        <View className="items-center justify-center flex-1">
+          <Pressable className="w-full max-w-sm p-6 bg-white rounded-3xl" onPress={() => {}}>
             <View className="items-center">
               <View className={`h-16 w-16 items-center justify-center rounded-full ${t.iconBg}`}>
                 <Feather name={icon} size={28} color={t.iconColor} />
@@ -378,7 +378,7 @@ export function ConfirmDialog({
               <Text className="mt-4 text-lg font-bold text-gray-900">{title}</Text>
               <Text className="mt-1.5 text-center text-sm leading-5 text-gray-500">{message}</Text>
             </View>
-            <View className="mt-6 flex-row gap-3">
+            <View className="flex-row gap-3 mt-6">
               <Pressable
                 onPress={onClose}
                 disabled={busy}
@@ -467,11 +467,11 @@ export function InfoRow({
     <View
       className={`flex-row items-center py-3 ${last ? '' : 'border-b border-gray-50'}`}
     >
-      <View className="h-9 w-9 items-center justify-center rounded-full bg-gray-50">
+      <View className="items-center justify-center rounded-full h-9 w-9 bg-gray-50">
         <Feather name={icon} size={16} color="#64748B" />
       </View>
-      <Text className="ml-3 w-24 text-xs font-medium text-gray-400">{label}</Text>
-      <Text className="flex-1 text-right text-sm font-semibold text-gray-800" numberOfLines={2}>
+      <Text className="w-24 ml-3 text-xs font-medium text-gray-400">{label}</Text>
+      <Text className="flex-1 text-sm font-semibold text-right text-gray-800" numberOfLines={2}>
         {value}
       </Text>
     </View>
@@ -602,7 +602,7 @@ export function Toggle({
 
 export function LoadingScreen() {
   return (
-    <View className="flex-1 items-center justify-center bg-gray-50">
+    <View className="items-center justify-center flex-1 bg-gray-50">
       <ActivityIndicator size="large" color={BRAND} />
       <Text className="mt-3 text-sm text-gray-400">Loading…</Text>
     </View>
