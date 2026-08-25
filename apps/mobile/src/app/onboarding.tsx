@@ -1,297 +1,287 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  FlatList,
   Animated,
+  Dimensions,
+  FlatList,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors, Radius } from "@/constants/theme";
-import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
-const { width } = Dimensions.get("window");
+// ────────────────────────────────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────────────────────────────────
 
-const illustrationStyles = StyleSheet.create({
-  mapContainer: { width: "100%", alignItems: "center", paddingVertical: 16 },
-  mapBg: {
-    width: width * 0.78,
-    height: width * 0.78,
-    backgroundColor: "#F3F4F6",
-    borderRadius: Radius["2xl"],
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  line: { position: "absolute", backgroundColor: "#E5E7EB" },
-  lineH1: { width: "100%", height: 2, top: "40%" },
-  lineH2: { width: "100%", height: 2, top: "65%", opacity: 0.5 },
-  lineV1: { width: 2, height: "100%", left: "35%" },
-  pin: {
-    position: "absolute",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pinCenter: {
-    backgroundColor: Colors.primary,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    zIndex: 10,
-  },
-  pinTopLeft: { top: 60, left: 40, backgroundColor: Colors.primary },
-  pinTopRight: { top: 50, right: 50, backgroundColor: "#22C55E" },
-  pinBotLeft: { bottom: 70, left: 50, backgroundColor: "#22C55E" },
-  pinBotRight: { bottom: 60, right: 40, backgroundColor: Colors.primary },
-  pinIcon: { fontSize: 24 },
-  pinSmIcon: { fontSize: 20 },
-});
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
-const SLIDES = [
+type MciIcon = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+interface Slide {
+  id: string;
+  title: string;
+  subtitle: string;
+  heroIcon: MciIcon;
+  floaters: readonly [MciIcon, MciIcon, MciIcon];
+}
+
+const SLIDES: readonly Slide[] = [
   {
     id: "1",
     title: "Discover Restaurants\nNearby",
     subtitle:
-      "Explore the best local kitchens around you and find delicious meals delivered with warm Nepalese hospitality.",
-    emoji: "🗺️",
-    illustration: (
-      <View style={illustrationStyles.mapContainer}>
-        <View style={illustrationStyles.mapBg}>
-          {/* Map lines */}
-          <View style={[illustrationStyles.line, illustrationStyles.lineH1]} />
-          <View style={[illustrationStyles.line, illustrationStyles.lineH2]} />
-          <View style={[illustrationStyles.line, illustrationStyles.lineV1]} />
-          {/* Pin markers */}
-          <View style={[illustrationStyles.pin, illustrationStyles.pinCenter]}>
-            <Text style={illustrationStyles.pinIcon}>📍</Text>
-          </View>
-          <View style={[illustrationStyles.pin, illustrationStyles.pinTopLeft]}>
-            <Text style={illustrationStyles.pinSmIcon}>🍴</Text>
-          </View>
-          <View
-            style={[illustrationStyles.pin, illustrationStyles.pinTopRight]}
-          >
-            <Text style={illustrationStyles.pinSmIcon}>🍕</Text>
-          </View>
-          <View style={[illustrationStyles.pin, illustrationStyles.pinBotLeft]}>
-            <Text style={illustrationStyles.pinSmIcon}>🥗</Text>
-          </View>
-          <View
-            style={[illustrationStyles.pin, illustrationStyles.pinBotRight]}
-          >
-            <Text style={illustrationStyles.pinSmIcon}>☕</Text>
-          </View>
-        </View>
-      </View>
-    ),
+      "Explore the best local kitchens around you and find delicious meals delivered fast.",
+    heroIcon: "map-marker-radius",
+    floaters: ["silverware-fork-knife", "pizza", "coffee"],
   },
   {
     id: "2",
     title: "Order Your\nFavourites",
     subtitle:
-      "Browse menus, customise your order and enjoy food from your favourite local restaurants with ease.",
-    emoji: "🛒",
-    illustration: (
-      <View style={illustrationStyles.mapContainer}>
-        <View style={illustrationStyles.mapBg}>
-          <Text style={{ fontSize: 80 }}>🍜</Text>
-          <Text
-            style={{ fontSize: 40, position: "absolute", top: 20, right: 30 }}
-          >
-            🍕
-          </Text>
-          <Text
-            style={{ fontSize: 35, position: "absolute", bottom: 30, left: 25 }}
-          >
-            🍔
-          </Text>
-        </View>
-      </View>
-    ),
+      "Browse menus, customise your order and enjoy food from your favourite local restaurants.",
+    heroIcon: "shopping-outline",
+    floaters: ["hamburger", "noodles", "food-croissant"],
   },
   {
     id: "3",
     title: "Fast & Reliable\nDelivery",
     subtitle:
-      "Track your delivery in real time. Our riders bring your food hot and fresh right to your doorstep.",
-    emoji: "🚴",
-    illustration: (
-      <View style={illustrationStyles.mapContainer}>
-        <View style={illustrationStyles.mapBg}>
-          <Text style={{ fontSize: 80 }}>🚴</Text>
-          <Text
-            style={{ fontSize: 35, position: "absolute", top: 20, right: 30 }}
-          >
-            📦
-          </Text>
-          <Text
-            style={{ fontSize: 35, position: "absolute", bottom: 30, left: 25 }}
-          >
-            ⏱️
-          </Text>
-        </View>
-      </View>
-    ),
+      "Track your delivery in real time. Our riders bring your food hot and fresh to your door.",
+    heroIcon: "motorbike",
+    floaters: ["package-variant-closed", "timer-outline", "thumb-up-outline"],
   },
 ];
 
+// ────────────────────────────────────────────────────────────────────────────
+// Components
+// ────────────────────────────────────────────────────────────────────────────
+
+const Header = React.memo(({ onSkip }: { onSkip: () => void }) => (
+  <View className="flex-row items-center justify-between px-6 pb-2">
+    <View className="flex-row items-center gap-2.5">
+      <View className="w-11 h-11 rounded-2xl bg-primary items-center justify-center shadow-lg shadow-primary/30">
+        <MaterialCommunityIcons name="food" size={26} color="#FFFFFF" />
+      </View>
+      <View>
+        <Text className="text-2xl font-extrabold tracking-tight text-black">
+          Khana<Text className="text-primary">Go</Text>
+        </Text>
+        <Text className="text-gray-400 text-[10px] font-medium tracking-wide">
+          Delicious Food, Delivered Fast
+        </Text>
+      </View>
+    </View>
+
+    <TouchableOpacity
+      onPress={onSkip}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      activeOpacity={0.7}
+    >
+      <Text className="text-primary text-sm font-bold tracking-wide">Skip</Text>
+    </TouchableOpacity>
+  </View>
+));
+
+const SlideIllustration = React.memo(
+  ({
+    heroIcon,
+    floaters,
+  }: {
+    heroIcon: MciIcon;
+    floaters: readonly [MciIcon, MciIcon, MciIcon];
+  }) => (
+    <View className="w-[280px] h-[280px] rounded-[52px] bg-red-50 items-center justify-center mb-12">
+      {/* Decorative rings */}
+      <View className="absolute w-44 h-44 rounded-full border border-red-100" />
+      <View className="absolute w-[232px] h-[232px] rounded-full border border-red-100/70" />
+
+      {/* Hero */}
+      <View className="w-28 h-28 rounded-full bg-white shadow-lg shadow-black/10 items-center justify-center">
+        <MaterialCommunityIcons name={heroIcon} size={52} color="#E23744" />
+      </View>
+
+      {/* Floating badges */}
+      <View className="absolute top-8 right-8 w-14 h-14 rounded-2xl bg-white shadow-md shadow-black/5 items-center justify-center">
+        <MaterialCommunityIcons name={floaters[0]} size={26} color="#111827" />
+      </View>
+      <View className="absolute bottom-20 left-7 w-12 h-12 rounded-2xl bg-white shadow-md shadow-black/5 items-center justify-center">
+        <MaterialCommunityIcons name={floaters[1]} size={22} color="#374151" />
+      </View>
+      <View className="absolute bottom-9 right-12 w-12 h-12 rounded-2xl bg-white shadow-md shadow-black/5 items-center justify-center">
+        <MaterialCommunityIcons name={floaters[2]} size={22} color="#374151" />
+      </View>
+    </View>
+  ),
+);
+
+interface DotProps {
+  index: number;
+  scrollX: Animated.Value;
+}
+
+const Dot = React.memo(({ index, scrollX }: DotProps) => {
+  const inputRange = [
+    (index - 1) * SCREEN_WIDTH,
+    index * SCREEN_WIDTH,
+    (index + 1) * SCREEN_WIDTH,
+  ];
+
+  const width = scrollX.interpolate({
+    inputRange,
+    outputRange: [8, 28, 8],
+    extrapolate: "clamp",
+  });
+
+  const backgroundColor = scrollX.interpolate({
+    inputRange,
+    outputRange: ["#E5E7EB", "#E23744", "#E5E7EB"],
+    extrapolate: "clamp",
+  });
+
+  return <Animated.View style={[styles.dot, { width, backgroundColor }]} />;
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Main Screen
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function OnboardingScreen() {
   const [current, setCurrent] = useState(0);
-  const flatRef = useRef<FlatList>(null);
+  const flatRef = useRef<FlatList<Slide>>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
-  const finishOnboarding = async () => {
+  const finishOnboarding = useCallback(async () => {
     try {
       await AsyncStorage.setItem("hasSeenOnboarding", "true");
-    } catch (e) {}
+    } catch {}
     router.replace("/(auth)/login" as any);
-  };
+  }, []);
 
-  const goNext = () => {
+  const goToSlide = useCallback((index: number) => {
+    flatRef.current?.scrollToOffset({
+      offset: index * SCREEN_WIDTH,
+      animated: true,
+    });
+  }, []);
+
+  const handleNext = useCallback(() => {
     if (current < SLIDES.length - 1) {
-      const next = current + 1;
-      flatRef.current?.scrollToOffset({ offset: next * width, animated: true });
-      setCurrent(next);
+      goToSlide(current + 1);
     } else {
       finishOnboarding();
     }
-  };
+  }, [current, goToSlide, finishOnboarding]);
 
-  const skip = () => finishOnboarding();
+  const handleScroll = useMemo(
+    () =>
+      Animated.event(
+        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+        { useNativeDriver: false },
+      ),
+    [scrollX],
+  );
+
+  const handleMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+      setCurrent(Math.max(0, Math.min(index, SLIDES.length - 1)));
+    },
+    [],
+  );
+
+  const getItemLayout = useCallback(
+    (_: unknown, index: number) => ({
+      length: SCREEN_WIDTH,
+      offset: SCREEN_WIDTH * index,
+      index,
+    }),
+    [],
+  );
+
+  const renderItem = useCallback(({ item }: { item: Slide }) => (
+    <View
+      style={{ width: SCREEN_WIDTH }}
+      className="flex-1 items-center justify-center px-8"
+    >
+      <SlideIllustration heroIcon={item.heroIcon} floaters={item.floaters} />
+      <Text className="text-3xl font-extrabold text-black tracking-tight text-center leading-9">
+        {item.title}
+      </Text>
+      <Text className="text-gray-500 text-sm text-center leading-6 mt-3 px-4">
+        {item.subtitle}
+      </Text>
+    </View>
+  ), []);
+
+  const isLast = current === SLIDES.length - 1;
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoRow}>
-          <View style={styles.logoSmall}>
-            <Ionicons name="fast-food-outline" size={20} color="#FFF" />
-          </View>
-          <Text style={styles.logoText}>KhanaGo</Text>
-        </View>
-        <TouchableOpacity onPress={skip}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
+      <Header onSkip={finishOnboarding} />
 
       {/* Slides */}
-      <FlatList
+      <Animated.FlatList
         ref={flatRef}
         data={SLIDES}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
+        bounces={false}
         showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width }]}>
-            {item.illustration}
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.subtitle}>{item.subtitle}</Text>
-          </View>
-        )}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={handleMomentumEnd}
+        scrollEventThrottle={16}
+        getItemLayout={getItemLayout}
+        renderItem={renderItem}
       />
 
-      {/* Bottom: Dots + Next */}
-      <View style={styles.footer}>
-        <View style={styles.dots}>
+      {/* Footer */}
+      <View className="px-6 pb-8 gap-5">
+        <View className="flex-row items-center justify-center gap-2">
           {SLIDES.map((_, i) => (
-            <View
+            <TouchableOpacity
               key={i}
-              style={[
-                styles.dotBase,
-                i === current ? styles.dotActive : styles.dotInactive,
-              ]}
-            />
+              onPress={() => goToSlide(i)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+            >
+              <Dot index={i} scrollX={scrollX} />
+            </TouchableOpacity>
           ))}
         </View>
 
         <TouchableOpacity
-          style={styles.nextBtn}
-          onPress={goNext}
-          activeOpacity={0.85}
+          className="bg-primary rounded-xl py-4 flex-row items-center justify-center gap-2 shadow-lg shadow-primary/25"
+          onPress={handleNext}
+          activeOpacity={0.8}
         >
-          <Text style={styles.nextText}>
-            {current < SLIDES.length - 1 ? "Next" : "Get Started"}
+          <Text className="text-white font-bold text-base tracking-wide">
+            {isLast ? "Get Started" : "Next"}
           </Text>
-          <Feather
-            name="arrow-right"
-            size={20}
-            color="#FFF"
-            style={{ marginLeft: 8 }}
-          />
+          <Feather name="arrow-right" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Styles
+// ────────────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  dot: {
+    height: 8,
+    borderRadius: 4,
   },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  logoSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoText: { fontSize: 18, fontWeight: "700", color: Colors.textDark },
-  skipText: { fontSize: 15, color: Colors.textSecondary, fontWeight: "500" },
-  slide: {
-    paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: Colors.textDark,
-    textAlign: "center",
-    marginTop: 28,
-    marginBottom: 14,
-    lineHeight: 34,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 23,
-    paddingHorizontal: 8,
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    gap: 20,
-    alignItems: "center",
-  },
-  dots: { flexDirection: "row", gap: 8 },
-  dotBase: { height: 8, borderRadius: 4 },
-  dotActive: { width: 28, backgroundColor: Colors.primary },
-  dotInactive: { width: 8, backgroundColor: Colors.border },
-  nextBtn: {
-    backgroundColor: Colors.primary,
-    width: "100%",
-    paddingVertical: 17,
-    borderRadius: Radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-  },
-  nextText: { color: "#fff", fontSize: 17, fontWeight: "700" },
 });
