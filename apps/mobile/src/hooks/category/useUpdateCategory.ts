@@ -4,6 +4,7 @@ import { useCategoryStore } from '@/stores/categoryStore';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { UpdateCategoryPayload } from '@food_delivery/types';
+import { getApiErrorMessage } from '@/lib/api-error';
 
 export const useUpdateCategory = () => {
   const queryClient = useQueryClient();
@@ -23,7 +24,7 @@ export const useUpdateCategory = () => {
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.message || 'Failed to update category';
+        getApiErrorMessage(error, 'Failed to update category');
       setError(message);
       Alert.alert('Error', message);
     },

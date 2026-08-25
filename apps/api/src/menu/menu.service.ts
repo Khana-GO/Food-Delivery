@@ -4,14 +4,16 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  ForbiddenException,
   Inject,
 } from '@nestjs/common';
-import { eq, and, or, ilike, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, or, ilike, desc, asc, sql, isNull } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { MenuItemResponseDto } from './dto/menu-item-response.dto';
 import {
   menuItemsTable,
+  menuCategoriesTable,
   restaurantsTable,
   type MenuItem,
   type NewMenuItem,
@@ -44,6 +46,7 @@ export class MenuItemsService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
         error instanceof InternalServerErrorException
       ) {
         throw error;
@@ -67,12 +70,21 @@ export class MenuItemsService {
     }
   }
 
-  // ─── Helper: Resolve restaurant for current owner ───
+  /**
+   * Resolves the owner's default (oldest active) restaurant. Used when the
+   * client does not explicitly pick which of their restaurants to manage.
+   */
   async getRestaurantIdForUser(userId: string): Promise<string> {
     const [restaurant] = await this.db
       .select({ id: restaurantsTable.id })
       .from(restaurantsTable)
-      .where(eq(restaurantsTable.ownerId, userId))
+      .where(
+        and(
+          eq(restaurantsTable.ownerId, userId),
+          isNull(restaurantsTable.deletedAt),
+        ),
+      )
+      .orderBy(asc(restaurantsTable.createdAt))
       .limit(1);
 
     if (!restaurant) {
@@ -82,6 +94,84 @@ export class MenuItemsService {
     return restaurant.id;
   }
 
+  /**
+   * Verifies the user owns the given restaurant and returns its id.
+   * Used when an owner with multiple restaurants explicitly selects one.
+   */
+  async getOwnedRestaurantId(
+    userId: string,
+    restaurantId: string,
+  ): Promise<string> {
+    const [restaurant] = await this.db
+      .select({ id: restaurantsTable.id })
+      .from(restaurantsTable)
+      .where(
+        and(
+          eq(restaurantsTable.id, restaurantId),
+          eq(restaurantsTable.ownerId, userId),
+          isNull(restaurantsTable.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!restaurant) {
+      throw new ForbiddenException('You do not own this restaurant');
+    }
+
+    return restaurant.id;
+  }
+
+  /**
+   * Ensures the menu item belongs to the requesting owner's restaurant.
+   * Admins bypass this check by passing no `ownerRestaurantId`.
+   */
+  private assertOwnership(
+    itemRestaurantId: string,
+    ownerRestaurantId?: string,
+  ): void {
+    if (ownerRestaurantId && itemRestaurantId !== ownerRestaurantId) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this menu item',
+      );
+    }
+  }
+
+  /**
+   * Ensures the category belongs to the same restaurant as the menu item,
+   * so an owner can never attach items to another restaurant's category.
+   */
+  private async assertCategoryInRestaurant(
+    categoryId: string,
+    restaurantId: string,
+  ): Promise<void> {
+    const category = await this.db.query.menuCategoriesTable.findFirst({
+      where: eq(menuCategoriesTable.id, categoryId),
+    });
+
+    if (!category) {
+      throw new BadRequestException(`Category with ID ${categoryId} not found`);
+    }
+
+    if (category.restaurantId !== restaurantId) {
+      throw new BadRequestException(
+        'The selected category does not belong to your restaurant',
+      );
+    }
+  }
+
+  /** Fetches the raw row or throws NotFound. */
+  private async getRawItem(id: string): Promise<MenuItem> {
+    const item = await this.db.query.menuItemsTable.findFirst({
+      where: eq(menuItemsTable.id, id),
+    });
+
+    if (!item) {
+      throw new NotFoundException(`Menu item with ID ${id} not found`);
+    }
+
+    return item;
+  }
+
   // ─── CREATE ───
   async create(
     restaurantId: string,
@@ -89,6 +179,8 @@ export class MenuItemsService {
     file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
+      await this.assertCategoryInRestaurant(dto.categoryId, restaurantId);
+
       let imageUrl: string | undefined;
 
       if (file) {
@@ -236,14 +328,7 @@ export class MenuItemsService {
   // ─── FIND BY ID ───
   async findById(id: string): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
-      const item = await this.db.query.menuItemsTable.findFirst({
-        where: eq(menuItemsTable.id, id),
-      });
-
-      if (!item) {
-        throw new NotFoundException(`Menu item with ID ${id} not found`);
-      }
-
+      const item = await this.getRawItem(id);
       return new MenuItemResponseDto(item);
     }, 'findById');
   }
@@ -253,24 +338,29 @@ export class MenuItemsService {
     id: string,
     dto: UpdateMenuItemDto,
     file?: Express.Multer.File,
+    ownerRestaurantId?: string,
   ): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
-      const existing = await this.findById(id);
+      const existing = await this.getRawItem(id);
+      this.assertOwnership(existing.restaurantId, ownerRestaurantId);
 
-      let imageUrl: string | undefined = existing.imageUrl;
+      if (dto.categoryId && dto.categoryId !== existing.categoryId) {
+        await this.assertCategoryInRestaurant(
+          dto.categoryId,
+          existing.restaurantId,
+        );
+      }
+
+      let imageUrl: string | undefined = existing.imageUrl ?? undefined;
+      let previousImageUrl: string | undefined;
 
       if (file) {
-        if (existing.imageUrl) {
-          const publicId = this.extractPublicId(existing.imageUrl);
-          if (publicId) {
-            await this.cloudinaryService.deleteImage(publicId);
-          }
-        }
         const result = await this.cloudinaryService.uploadImage(
           file,
           `khanago/menu-items/${existing.restaurantId}`,
         );
         imageUrl = result.url;
+        previousImageUrl = existing.imageUrl ?? undefined;
       }
 
       const updateData: Partial<NewMenuItem> = {
@@ -293,15 +383,31 @@ export class MenuItemsService {
         throw new InternalServerErrorException('Failed to update menu item');
       }
 
+      // Clean up the replaced image only after the update succeeded
+      if (previousImageUrl) {
+        const publicId = this.extractPublicId(previousImageUrl);
+        if (publicId) {
+          await this.cloudinaryService.deleteImage(publicId).catch((err) => {
+            this.logger.warn(
+              `Failed to delete old image ${publicId}: ${err?.message}`,
+            );
+          });
+        }
+      }
+
       this.logger.log(`Menu item updated: ${updated.name} (ID: ${id})`);
       return new MenuItemResponseDto(updated);
     }, 'update');
   }
 
   // ─── TOGGLE AVAILABILITY ───
-  async toggleAvailability(id: string): Promise<{ isAvailable: boolean }> {
+  async toggleAvailability(
+    id: string,
+    ownerRestaurantId?: string,
+  ): Promise<{ isAvailable: boolean }> {
     return this.handleDbOperation(async () => {
-      const item = await this.findById(id);
+      const item = await this.getRawItem(id);
+      this.assertOwnership(item.restaurantId, ownerRestaurantId);
 
       const [updated] = await this.db
         .update(menuItemsTable)
@@ -322,18 +428,27 @@ export class MenuItemsService {
   }
 
   // ─── DELETE ───
-  async delete(id: string): Promise<{ message: string }> {
+  async delete(
+    id: string,
+    ownerRestaurantId?: string,
+  ): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
-      const item = await this.findById(id);
+      const item = await this.getRawItem(id);
+      this.assertOwnership(item.restaurantId, ownerRestaurantId);
 
+      await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
+
+      // Clean up the remote image only after the delete succeeded
       if (item.imageUrl) {
         const publicId = this.extractPublicId(item.imageUrl);
         if (publicId) {
-          await this.cloudinaryService.deleteImage(publicId);
+          await this.cloudinaryService.deleteImage(publicId).catch((err) => {
+            this.logger.warn(
+              `Failed to delete image ${publicId}: ${err?.message}`,
+            );
+          });
         }
       }
-
-      await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
 
       this.logger.log(`Menu item deleted: ${item.name} (ID: ${id})`);
       return { message: 'Menu item deleted successfully' };
@@ -346,28 +461,34 @@ export class MenuItemsService {
     items: CreateMenuItemDto[],
   ): Promise<MenuItemResponseDto[]> {
     return this.handleDbOperation(async () => {
-      const createdItems: MenuItem[] = [];
-
       for (const dto of items) {
-        const values: NewMenuItem = {
-          restaurantId,
-          categoryId: dto.categoryId,
-          name: dto.name,
-          description: dto.description,
-          price: dto.price.toString(),
-          imageUrl: dto.imageUrl,
-          isAvailable: dto.isAvailable ?? true,
-        };
-
-        const [item] = await this.db
-          .insert(menuItemsTable)
-          .values(values)
-          .returning();
-
-        if (item) {
-          createdItems.push(item);
-        }
+        await this.assertCategoryInRestaurant(dto.categoryId, restaurantId);
       }
+
+      const createdItems = await this.db.transaction(async (tx) => {
+        const rows: MenuItem[] = [];
+
+        for (const dto of items) {
+          const [item] = await tx
+            .insert(menuItemsTable)
+            .values({
+              restaurantId,
+              categoryId: dto.categoryId,
+              name: dto.name,
+              description: dto.description,
+              price: dto.price.toString(),
+              imageUrl: dto.imageUrl,
+              isAvailable: dto.isAvailable ?? true,
+            })
+            .returning();
+
+          if (item) {
+            rows.push(item);
+          }
+        }
+
+        return rows;
+      });
 
       this.logger.log(
         `Bulk created ${createdItems.length} menu items for restaurant ${restaurantId}`,
@@ -379,20 +500,34 @@ export class MenuItemsService {
   // ─── BULK DELETE ───
   async bulkDelete(
     ids: string[],
+    ownerRestaurantId?: string,
   ): Promise<{ message: string; deleted: number }> {
     return this.handleDbOperation(async () => {
       let deletedCount = 0;
+      const orphanImages: string[] = [];
 
       for (const id of ids) {
-        const item = await this.findById(id);
+        const item = await this.getRawItem(id);
+        this.assertOwnership(item.restaurantId, ownerRestaurantId);
+
+        await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
+        deletedCount++;
+
         if (item.imageUrl) {
           const publicId = this.extractPublicId(item.imageUrl);
           if (publicId) {
-            await this.cloudinaryService.deleteImage(publicId);
+            orphanImages.push(publicId);
           }
         }
-        await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
-        deletedCount++;
+      }
+
+      // Best-effort cleanup of remote images after successful deletes
+      for (const publicId of orphanImages) {
+        await this.cloudinaryService.deleteImage(publicId).catch((err) => {
+          this.logger.warn(
+            `Failed to delete image ${publicId}: ${err?.message}`,
+          );
+        });
       }
 
       this.logger.log(`Bulk deleted ${deletedCount} menu items`);

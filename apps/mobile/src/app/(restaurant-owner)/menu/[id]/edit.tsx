@@ -1,84 +1,110 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, Alert, ScrollView } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import {
-  ScreenHeader,
-  ConfirmDialog,
-  useResponsive,
-} from '@/components/owner/kit';
-import { MenuForm } from '@/components/owner/MenuForm';
-
-const CATEGORIES = [
-  { id: '1', name: 'Appetizers' },
-  { id: '2', name: 'Main Course' },
-  { id: '3', name: 'Beverages' },
-  { id: '4', name: 'Desserts' },
-];
+import { MenuItemForm } from '@/components/menu-item/MenuItemForm';
+import { useMenuItem } from '@/hooks/menu-item/useMenuItem';
+import { useUpdateMenuItem } from '@/hooks/menu-item/useUpdateMenuItem';
+import { useDeleteMenuItem } from '@/hooks/menu-item/useDeleteMenuItem';
+import type { MenuItemFormValues } from '@/components/menu-item/MenuItemForm';
+import type { UpdateMenuItemPayload } from '@food_delivery/types';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function EditMenuItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [showDelete, setShowDelete] = useState(false);
+  const { data: item, isLoading: isLoadingItem } = useMenuItem(id);
+  const { mutate: updateMenuItem, isPending: isUpdating } = useUpdateMenuItem();
+  const { mutate: deleteMenuItem, isPending: isDeleting } = useDeleteMenuItem();
 
-  const handleUpdate = async () => {
-    // TODO: call real update mutation with `id`
-    await new Promise((r) => setTimeout(r, 800));
-    Alert.alert('Success', 'Menu item updated.');
-    router.back();
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to delete this menu item?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteMenuItem(id) },
+      ]
+    );
   };
 
-  const handleDelete = () => setShowDelete(true);
+  const handleSubmit = (
+    values: MenuItemFormValues,
+    image?: ImagePicker.ImagePickerAsset,
+  ) => {
+    // Only send fields that actually changed
+    const payload: UpdateMenuItemPayload = {};
+    if (values.name !== item?.name) payload.name = values.name;
+    if (values.description !== item?.description)
+      payload.description = values.description;
+    if (values.price !== item?.price) payload.price = values.price;
+    if (values.categoryId !== item?.categoryId)
+      payload.categoryId = values.categoryId;
+    if (values.isAvailable !== item?.isAvailable)
+      payload.isAvailable = values.isAvailable;
 
-  const confirmDelete = async () => {
-    setShowDelete(false);
-    // TODO: call real delete mutation with `id`
-    await new Promise((r) => setTimeout(r, 500));
-    Alert.alert('Deleted', 'The menu item was removed.');
-    router.back();
+    // A newly picked image replaces the stored one
+    if (image) payload.image = image;
+
+    updateMenuItem({ id, data: payload });
   };
+
+  if (isLoadingItem) {
+    return (
+      <View className="items-center justify-center flex-1 bg-white">
+        <ActivityIndicator size="large" color="#E23744" />
+      </View>
+    );
+  }
+
+  if (!item) {
+    return (
+      <View className="items-center justify-center flex-1 px-6 bg-white">
+        <Feather name="menu" size={64} color="#D1D5DB" />
+        <Text className="mt-4 text-lg font-medium text-gray-400">Item Not Found</Text>
+        <TouchableOpacity
+          className="px-6 py-3 mt-6 bg-primary rounded-xl"
+          onPress={() => router.back()}
+        >
+          <Text className="font-semibold text-white">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader
-        title="Edit Menu Item"
-        subtitle={`Item ID · ${id}`}
-        right={
-          <Pressable
-            onPress={handleDelete}
-            className="flex-row items-center rounded-full border border-red-200 bg-red-50 px-3.5 py-2 active:bg-red-100"
-          >
-            <Feather name="trash-2" size={14} color="#DC2626" />
-            <Text className="ml-1.5 text-xs font-bold text-red-600">Delete</Text>
-          </Pressable>
-        }
-      />
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth: 640 }}
-      >
-        <MenuForm
-          categories={CATEGORIES}
-          initial={{
-            name: 'Chicken Momo',
-            description: 'Steamed chicken dumplings with spicy sesame chutney',
-            price: '299',
-            categoryId: '1',
-            isAvailable: true,
-          }}
-          submitLabel="Save Changes"
-          onSubmit={handleUpdate}
-        />
-      </ScrollView>
+      {/* Header */}
+      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity onPress={() => router.back()} className="p-1">
+              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+            <Text className="text-xl font-bold text-black">Edit Menu Item</Text>
+          </View>
+        </View>
+      </View>
 
-      <ConfirmDialog
-        visible={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={confirmDelete}
-        title="Delete menu item?"
-        message="This dish will be permanently removed from your menu."
-        confirmLabel="Delete"
-        icon="trash-2"
-        tone="danger"
+      <MenuItemForm
+        restaurantId={item.restaurantId}
+        initialData={{
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          categoryId: item.categoryId,
+          isAvailable: item.isAvailable,
+          imageUrl: item.imageUrl,
+        }}
+        onSubmit={handleSubmit}
+        isLoading={isUpdating || isDeleting}
+        submitLabel="Update Menu Item"
+        onDelete={handleDelete}
       />
     </View>
   );

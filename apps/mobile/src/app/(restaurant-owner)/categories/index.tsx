@@ -7,6 +7,7 @@ import { useCategories } from '@/hooks/category/useCategories';
 import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
 import { CategoryCard } from '@/components/category/CategoryCard';
 import type { Category } from '@food_delivery/types';
+import { getApiErrorMessage } from '@/lib/api-error';
 import {
   SearchInput,
   EmptyState,
@@ -32,8 +33,10 @@ export default function CategoriesScreen() {
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const errorMessage = isError
-    ? (error as any)?.response?.data?.message ||
-      "Couldn't load your categories. Check your connection and try again."
+    ? getApiErrorMessage(
+        error,
+        "Couldn't load your categories. Check your connection and try again.",
+      )
     : null;
 
   const filtered = useMemo(

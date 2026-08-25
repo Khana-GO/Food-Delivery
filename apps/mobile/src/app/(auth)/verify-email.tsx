@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { getApiErrorMessage } from '@/lib/api-error';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Components
@@ -80,9 +81,10 @@ export default function VerifyEmailScreen() {
         router.replace("/(auth)/login" as any);
       }, 1500);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        "Verification failed. Please try again.";
+      const msg = getApiErrorMessage(
+        err,
+        "Verification failed. Please try again.",
+      );
       setError(msg);
     }
   }, [code, email, verifyEmail]);
@@ -98,9 +100,10 @@ export default function VerifyEmailScreen() {
         "A new verification code has been sent to your email.",
       );
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        "Failed to resend code. Please try again.";
+      const msg = getApiErrorMessage(
+        err,
+        "Failed to resend code. Please try again.",
+      );
       setError(msg);
     }
   }, [email, resendVerificationCode, resendCooldown]);

@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { restaurantService } from '@/services/restaurant/restaurant.service';
 import { useRestaurantStore } from '@/stores/restaurantStore';
 import { CUISINE_TYPES } from '@food_delivery/types';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { restaurantKeys } from '@/lib/query-keys';
 
 export const useMyRestaurants = () => {
   const { setRestaurants, setLoading, setError } = useRestaurantStore();
 
   return useQuery({
-    queryKey: ['restaurants', 'my'],
+    queryKey: restaurantKeys.mine(),
     queryFn: async () => {
       setLoading(true);
       try {
@@ -15,7 +17,7 @@ export const useMyRestaurants = () => {
         setRestaurants(data);
         return data;
       } catch (error: any) {
-        setError(error?.response?.data?.message || 'Failed to fetch restaurants');
+        setError(getApiErrorMessage(error, 'Failed to fetch restaurants'));
         throw error;
       } finally {
         setLoading(false);

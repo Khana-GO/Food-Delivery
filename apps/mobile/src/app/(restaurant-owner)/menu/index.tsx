@@ -1,285 +1,441 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  TouchableOpacity,
   ScrollView,
-  Pressable,
-  Image,
+  TextInput,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  FilterChip,
-  SearchInput,
-  EmptyState,
-  ConfirmDialog,
-  ContentWidth,
-  useResponsive,
-  rs,
-} from '@/components/owner/kit';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { menuItemService } from '@/services/menu-item/menu-item.service';
+import { useDeleteMenuItem } from '@/hooks/menu-item/useDeleteMenuItem';
+import { useToggleAvailability } from '@/hooks/menu-item/useToggleAvailability';
+import { MenuItemCard } from '@/components/menu-item/MenuItemCard';
+import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { useCategories } from '@/hooks/category/useCategories';
+import type { MenuItemsResponse } from '@food_delivery/types';
+import { menuItemKeys } from '@/lib/query-keys';
 
-interface Item {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  imageUrl?: string;
-  isAvailable: boolean;
-}
+const PAGE_SIZE = 10;
 
-const INITIAL_ITEMS: Item[] = [
-  {
-    id: '1',
-    name: 'Chicken Momo',
-    description: 'Steamed chicken dumplings with spicy sesame chutney',
-    price: 299,
-    category: 'Appetizers',
-    isAvailable: true,
-  },
-  {
-    id: '2',
-    name: 'Garlic Naan',
-    description: 'Fresh baked naan brushed with garlic butter',
-    price: 99,
-    category: 'Breads',
-    isAvailable: true,
-  },
-  {
-    id: '3',
-    name: 'Chicken Biryani',
-    description: 'Fragrant spiced rice layered with tender chicken',
-    price: 449,
-    category: 'Main Course',
-    isAvailable: false,
-  },
-  {
-    id: '4',
-    name: 'Mango Lassi',
-    description: 'Sweet creamy mango yogurt drink',
-    price: 159,
-    category: 'Beverages',
-    isAvailable: true,
-  },
-];
+type StatFilter = 'all' | 'available' | 'unavailable';
 
-export default function MenuScreen() {
-  const insets = useSafeAreaInsets();
-  const { isTablet } = useResponsive();
-  const [items, setItems] = useState<Item[]>(INITIAL_ITEMS);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<string>('All');
-  const [refreshing, setRefreshing] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Item | null>(null);
+export default function MenuItemsScreen() {
+  const { data: restaurants, isLoading: restaurantsLoading } =
+    useMyRestaurants();
+  const hasMultipleRestaurants = (restaurants?.length ?? 0) > 1;
 
-  const categories = useMemo(() => ['All', ...new Set(items.map((i) => i.category))], [items]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<
+    string | undefined
+  >(undefined);
+  // Falls back to the owner's first restaurant until they pick one
+  const restaurantId = selectedRestaurantId ?? restaurants?.[0]?.id;
 
-  const filtered = useMemo(
-    () =>
-      items.filter((i) => {
-        const q = search.trim().toLowerCase();
-        const matchesSearch = !q || i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q);
-        const matchesCategory = category === 'All' || i.category === category;
-        return matchesSearch && matchesCategory;
-      }),
-    [items, search, category]
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [availability, setAvailability] = useState<StatFilter>('all');
+
+  // Debounce the search box so we don't hit the API on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const { data: categories } = useCategories(false);
+
+  const filters = useMemo(
+    () => ({
+      search: searchQuery || undefined,
+      categoryId: selectedCategory || undefined,
+      isAvailable:
+        availability === 'all' ? undefined : availability === 'available',
+    }),
+    [searchQuery, selectedCategory, availability],
   );
 
-  const availableCount = items.filter((i) => i.isAvailable).length;
+  const {
+    data,
+    isLoading,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: menuItemKeys.list(restaurantId, filters),
+    queryFn: ({ pageParam }) =>
+      menuItemService.getByRestaurant(restaurantId!, {
+        ...filters,
+        page: pageParam,
+        limit: PAGE_SIZE,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+    enabled: !!restaurantId,
+  });
 
-  const toggleAvailability = (id: string) =>
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isAvailable: !i.isAvailable } : i)));
+  const items = useMemo(
+    () => data?.pages.flatMap((page) => page.data) ?? [],
+    [data],
+  );
 
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
-    setDeleteTarget(null);
-    Alert.alert('Deleted', 'The menu item was removed.');
+  // Lightweight count-only queries so the stats stay correct
+  // regardless of the active filter
+  const { data: availableCount } = useQuery({
+    queryKey: menuItemKeys.stat(restaurantId, 'available'),
+    queryFn: () =>
+      menuItemService.getByRestaurant(restaurantId!, {
+        isAvailable: true,
+        limit: 1,
+      }),
+    enabled: !!restaurantId,
+    select: (res: MenuItemsResponse) => res.total,
+  });
+
+  const { data: unavailableCount } = useQuery({
+    queryKey: menuItemKeys.stat(restaurantId, 'unavailable'),
+    queryFn: () =>
+      menuItemService.getByRestaurant(restaurantId!, {
+        isAvailable: false,
+        limit: 1,
+      }),
+    enabled: !!restaurantId,
+    select: (res: MenuItemsResponse) => res.total,
+  });
+
+  const totalCount = (availableCount ?? 0) + (unavailableCount ?? 0);
+
+  const { mutate: deleteItem, isPending: isDeleting } = useDeleteMenuItem();
+  const { mutate: toggleAvailability, isPending: isToggling } =
+    useToggleAvailability();
+
+  const handleDelete = (id: string) => {
+    Alert.alert(
+      'Delete Menu Item',
+      'Are you sure you want to delete this item?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteItem(id) },
+      ],
+    );
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+  const handleToggle = (id: string) => {
+    toggleAvailability(id);
   };
+
+  const statCards: {
+    key: StatFilter;
+    label: string;
+    value: number;
+    activeClass: string;
+    textClass: string;
+  }[] = [
+    {
+      key: 'all',
+      label: 'Total Items',
+      value: totalCount,
+      activeClass: 'border-primary bg-primary/5',
+      textClass: 'text-black',
+    },
+    {
+      key: 'available',
+      label: 'Available',
+      value: availableCount ?? 0,
+      activeClass: 'border-green-500 bg-green-50',
+      textClass: 'text-green-500',
+    },
+    {
+      key: 'unavailable',
+      label: 'Unavailable',
+      value: unavailableCount ?? 0,
+      activeClass: 'border-red-500 bg-red-50',
+      textClass: 'text-red-500',
+    },
+  ];
+
+  if (restaurantsLoading) {
+    return (
+      <View className="items-center justify-center flex-1 bg-white">
+        <ActivityIndicator size="large" color="#E23744" />
+      </View>
+    );
+  }
+
+  if (!restaurantId) {
+    return (
+      <View className="items-center justify-center flex-1 px-6 bg-white">
+        <Feather name="store" size={64} color="#D1D5DB" />
+        <Text className="mt-4 text-lg font-medium text-gray-400">
+          No Restaurant Found
+        </Text>
+        <Text className="mt-1 text-sm text-center text-gray-400">
+          Please create a restaurant first to manage menu items.
+        </Text>
+        <TouchableOpacity
+          className="px-6 py-3 mt-6 bg-primary rounded-xl"
+          onPress={() =>
+            router.push('/(restaurant-owner)/restaurant/create' as never)
+          }
+        >
+          <Text className="font-semibold text-white">Create Restaurant</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-      {/* ─── Header ─── */}
-      <View className="bg-white px-4 pb-3 pt-3">
-        <View style={{ maxWidth: isTablet ? 688 : undefined, alignSelf: 'center', width: '100%' }}>
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-xl font-extrabold tracking-tight text-gray-900">Menu</Text>
-              <Text className="mt-0.5 text-xs text-gray-500">
-                {availableCount} of {items.length} dishes available
-              </Text>
-            </View>
-            <View className="flex-row gap-2">
-              <Pressable
-                onPress={() => router.push('/(restaurant-owner)/categories')}
-                className="h-11 flex-row items-center rounded-full border border-gray-200 px-3.5 active:bg-gray-50"
-              >
-                <Feather name="grid" size={15} color="#475569" />
-                <Text className="ml-1.5 text-sm font-bold text-slate-600">Categories</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => router.push('/(restaurant-owner)/menu/create')}
-                className="h-11 flex-row items-center rounded-full bg-green-600 px-4 active:bg-green-700"
-              >
-                <Feather name="plus" size={16} color="#FFFFFF" />
-                <Text className="ml-1 text-sm font-bold text-white">Add</Text>
-              </Pressable>
-            </View>
+    <View className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1 gap-3">
+            <TouchableOpacity onPress={() => router.back()} className="p-1">
+              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+            <Text className="text-xl font-bold text-black" numberOfLines={1}>
+              Menu Items
+            </Text>
           </View>
+          <TouchableOpacity
+            className="flex-row items-center gap-2 px-4 py-2 rounded-lg bg-primary"
+            onPress={() =>
+              router.push({
+                pathname: '/(restaurant-owner)/menu/create',
+                params: restaurantId ? { restaurantId } : {},
+              } as never)
+            }
+          >
+            <Feather name="plus" size={18} color="#FFF" />
+            <Text className="text-sm font-semibold text-white">Add Item</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          <View className="mt-3">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search your menu…" />
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+        }
+        stickyHeaderIndices={[0]}
+      >
+        {/* Restaurant selector — only shown when the owner has multiple */}
+      {hasMultipleRestaurants && (
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              gap: 8,
+            }}
+          >
+            {restaurants!.map((r) => {
+              const isActive = restaurantId === r.id;
+              return (
+                <TouchableOpacity
+                  key={r.id}
+                  className={`flex-row items-center px-4 py-2 border rounded-full ${
+                    isActive
+                      ? 'bg-primary border-primary'
+                      : 'bg-white border-gray-200'
+                  }`}
+                  onPress={() => setSelectedRestaurantId(r.id)}
+                >
+                  <Feather
+                    name="shopping-bag"
+                    size={14}
+                    color={isActive ? '#FFF' : '#64748B'}
+                  />
+                  <Text
+                    className={`ml-1.5 text-xs font-medium ${
+                      isActive ? 'text-white' : 'text-gray-600'
+                    }`}
+                    numberOfLines={1}
+                  >
+                    {r.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Search */}
+        <View className="px-4 pt-4 pb-1 bg-gray-50">
+          <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-xl">
+            <Feather name="search" size={20} color="#94A3B8" />
+            <TextInput
+              className="flex-1 ml-3 text-base text-black"
+              placeholder="Search menu items..."
+              placeholderTextColor="#94A3B8"
+              value={searchInput}
+              onChangeText={setSearchInput}
+              returnKeyType="search"
+            />
+            {searchInput.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchInput('')}>
+                <Feather name="x-circle" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* ─── Category chips ─── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-3"
-          contentContainerStyle={{ alignSelf: 'center', paddingHorizontal: 16 }}
-        >
-          {categories.map((c) => (
-            <FilterChip key={c} label={c} active={category === c} onPress={() => setCategory(c)} />
-          ))}
-        </ScrollView>
-      </View>
+        {/* Stats double as availability filters */}
+        <View className="flex-row flex-wrap gap-3 px-4 py-2">
+          {statCards.map((stat) => {
+            const isActive = availability === stat.key;
+            return (
+              <TouchableOpacity
+                key={stat.key}
+                className={`flex-1 min-w-[96px] items-center justify-center p-3 bg-white border rounded-xl ${
+                  isActive
+                    ? stat.activeClass
+                    : 'border-gray-100'
+                }`}
+                onPress={() => setAvailability(stat.key)}
+              >
+                <Text
+                  className={`text-lg font-bold ${isActive ? stat.textClass : 'text-black'}`}
+                >
+                  {stat.value}
+                </Text>
+                <Text className="text-xs text-gray-500">{stat.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      {/* ─── Items ─── */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, gap: 12, ...ContentWidth(isTablet ? 960 : 9999) }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon="book-open"
-            title="No menu items"
-            message={
-              search || category !== 'All'
-                ? 'Nothing matches this filter.'
-                : 'Add your first dish and it will appear here.'
-            }
-            actionLabel="Add Menu Item"
-            onAction={() => router.push('/(restaurant-owner)/menu/create')}
-          />
-        ) : (
-          filtered.map((item) => (
-            <View
-              key={item.id}
-              className="rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm shadow-gray-100"
+        {/* Category chips */}
+        {categories && categories.length > 0 && (
+          <View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                gap: 8,
+              }}
             >
-              <View className="flex-row">
-                {/* thumb */}
-                <View className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                  {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} className="h-full w-full" resizeMode="cover" />
-                  ) : (
-                    <View className="h-full w-full items-center justify-center bg-green-50">
-                      <Feather name="image" size={22} color="#86EFAC" />
-                    </View>
-                  )}
-                </View>
-
-                {/* info */}
-                <View className="ml-3 flex-1">
-                  <View className="flex-row items-start justify-between">
-                    <Text className="flex-1 pr-2 text-[15px] font-bold text-gray-900" numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <Text className="text-[15px] font-extrabold text-green-600">{rs(item.price)}</Text>
-                  </View>
-                  <Text className="mt-0.5 text-xs leading-4 text-gray-400" numberOfLines={1}>
-                    {item.description}
+              <TouchableOpacity
+                className={`px-4 py-2 rounded-full border ${
+                  selectedCategory === ''
+                    ? 'bg-primary border-primary'
+                    : 'bg-white border-gray-200'
+                }`}
+                onPress={() => setSelectedCategory('')}
+              >
+                <Text
+                  className={`text-xs font-medium ${
+                    selectedCategory === '' ? 'text-white' : 'text-gray-600'
+                  }`}
+                >
+                  All Categories
+                </Text>
+              </TouchableOpacity>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  className={`px-4 py-2 border rounded-full ${
+                    selectedCategory === cat.id
+                      ? 'bg-primary border-primary'
+                      : 'bg-white border-gray-200'
+                  }`}
+                  onPress={() => setSelectedCategory(cat.id)}
+                >
+                  <Text
+                    className={`text-xs font-medium ${
+                      selectedCategory === cat.id
+                        ? 'text-white'
+                        : 'text-gray-600'
+                    }`}
+                  >
+                    {cat.name}
                   </Text>
-                  <View className="mt-1.5 flex-row items-center gap-2">
-                    <View className="rounded-md bg-slate-100 px-2 py-0.5">
-                      <Text className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                        {item.category}
-                      </Text>
-                    </View>
-                    <View className="flex-row items-center gap-1">
-                      <View
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          item.isAvailable ? 'bg-green-500' : 'bg-red-400'
-                        }`}
-                      />
-                      <Text
-                        className={`text-[11px] font-semibold ${
-                          item.isAvailable ? 'text-green-600' : 'text-red-500'
-                        }`}
-                      >
-                        {item.isAvailable ? 'In stock' : 'Sold out'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* actions */}
-                  <View className="mt-2 flex-row items-center gap-2">
-                    <Pressable
-                      onPress={() => toggleAvailability(item.id)}
-                      className={`rounded-lg px-2.5 py-1.5 active:opacity-80 ${
-                        item.isAvailable ? 'bg-red-50' : 'bg-green-50'
-                      }`}
-                    >
-                      <Text
-                        className={`text-[11px] font-bold ${
-                          item.isAvailable ? 'text-red-500' : 'text-green-600'
-                        }`}
-                      >
-                        {item.isAvailable ? 'Mark sold out' : 'Restock'}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => router.push(`/(restaurant-owner)/menu/${item.id}/edit` as never)}
-                      className="rounded-lg bg-slate-100 px-2.5 py-1.5 active:bg-slate-200"
-                    >
-                      <Text className="text-[11px] font-bold text-slate-600">Edit</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setDeleteTarget(item)}
-                      className="rounded-lg bg-red-50 px-2 py-1.5 active:bg-red-100"
-                    >
-                      <Feather name="trash-2" size={13} color="#DC2626" />
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </View>
-          ))
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         )}
-        <View className="h-1" />
+
+        {/* List */}
+        <View className="px-4 pt-1">
+          {items.length === 0 ? (
+            <View className="items-center justify-center py-12">
+              <Feather name="menu" size={64} color="#D1D5DB" />
+              <Text className="mt-4 text-lg font-medium text-gray-400">
+                {searchQuery || selectedCategory || availability !== 'all'
+                  ? 'No items found'
+                  : 'No Menu Items'}
+              </Text>
+              <Text className="mt-1 text-sm text-center text-gray-400">
+                {searchQuery || selectedCategory || availability !== 'all'
+                  ? 'Try changing the search or filters'
+                  : 'Add your first menu item'}
+              </Text>
+              {!searchQuery &&
+                !selectedCategory &&
+                availability === 'all' && (
+                  <TouchableOpacity
+                    className="px-6 py-3 mt-6 bg-primary rounded-xl"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(restaurant-owner)/menu/create',
+                        params: restaurantId ? { restaurantId } : {},
+                      } as never)
+                    }
+                  >
+                    <Text className="font-semibold text-white">Add Item</Text>
+                  </TouchableOpacity>
+                )}
+            </View>
+          ) : (
+            <>
+              {items.map((item) => (
+                <MenuItemCard
+                  key={item.id}
+                  item={item}
+                  onDelete={handleDelete}
+                  onToggleAvailability={handleToggle}
+                />
+              ))}
+              {hasNextPage && (
+                <TouchableOpacity
+                  className="items-center py-3 mb-3 bg-white border border-gray-200 rounded-xl"
+                  onPress={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <ActivityIndicator size="small" color="#E23744" />
+                  ) : (
+                    <Text className="text-sm font-semibold text-primary">
+                      Load More
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+          <View className="h-6" />
+        </View>
       </ScrollView>
 
-      {/* floating add button (mobile) */}
-      {!isTablet && (
-        <Pressable
-          onPress={() => router.push('/(restaurant-owner)/menu/create')}
-          className="absolute bottom-6 right-5 h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:opacity-90"
-          style={{ elevation: 8, shadowColor: '#E23744', shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } }}
-        >
-          <Feather name="plus" size={24} color="#FFFFFF" />
-        </Pressable>
+      {/* Loading overlay for async actions */}
+      {(isDeleting || isToggling) && (
+        <View className="absolute inset-0 items-center justify-center bg-black/50">
+          <ActivityIndicator size="large" color="#E23744" />
+        </View>
       )}
-
-      <ConfirmDialog
-        visible={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={confirmDelete}
-        title="Delete menu item?"
-        message={`“${deleteTarget?.name}” will be permanently removed from your menu.`}
-        confirmLabel="Delete"
-        icon="trash-2"
-        tone="danger"
-      />
     </View>
   );
 }

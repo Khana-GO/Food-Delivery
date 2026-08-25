@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
+import { getApiErrorMessage } from '@/lib/api-error';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation
@@ -84,9 +85,10 @@ export default function ForgotPasswordScreen() {
         });
       }, 1500);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        "Something went wrong. Please try again.";
+      const msg = getApiErrorMessage(
+        err,
+        "Something went wrong. Please try again.",
+      );
       setError(msg);
     }
   }, [email, forgotPassword]);

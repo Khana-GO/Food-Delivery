@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { categoryService } from '@/services/category/category.service';
 import { useCategoryStore } from '@/stores/categoryStore';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { categoryKeys } from '@/lib/query-keys';
 
 /**
  * Fetches the categories of the owner's own restaurant.
@@ -12,7 +14,7 @@ export const useCategories = (includeItemCount: boolean = true) => {
   const { setCategories, setLoading, setError } = useCategoryStore();
 
   return useQuery({
-    queryKey: ['categories', 'mine', includeItemCount],
+    queryKey: categoryKeys.mine(includeItemCount),
     queryFn: async () => {
       setLoading(true);
       try {
@@ -26,5 +28,8 @@ export const useCategories = (includeItemCount: boolean = true) => {
         setLoading(false);
       }
     },
+    // Always pull fresh data so new categories appear when returning
+    // from the create-category screen
+    refetchOnMount: 'always',
   });
 };

@@ -72,7 +72,12 @@ export class JwtAuthGuard implements CanActivate {
       );
     }
 
-    if (this.sessionsService.isTokenRevoked(token, payload.sub)) {
+    if (
+      this.sessionsService.isTokenRevoked(token, {
+        userId: payload.sub,
+        issuedAtSeconds: payload.iat,
+      })
+    ) {
       throw new UnauthorizedException(
         'Session was revoked. Please log in again.',
       );

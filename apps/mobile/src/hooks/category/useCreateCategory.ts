@@ -4,6 +4,7 @@ import { useCategoryStore } from '@/stores/categoryStore';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { CreateCategoryPayload } from '@food_delivery/types';
+import { getApiErrorMessage } from '@/lib/api-error';
 
 export const useCreateCategory = () => {
   const queryClient = useQueryClient();
@@ -23,7 +24,7 @@ export const useCreateCategory = () => {
     },
     onError: (error: any) => {
       setLoading(false);
-      const message = error?.response?.data?.message || 'Failed to create category';
+      const message = getApiErrorMessage(error, 'Failed to create category');
       setError(message);
       Alert.alert('Error', message);
     },

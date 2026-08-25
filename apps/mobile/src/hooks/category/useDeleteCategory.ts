@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryService } from '@/services/category/category.service';
 import { useCategoryStore } from '@/stores/categoryStore';
 import { Alert } from 'react-native';
+import { getApiErrorMessage } from '@/lib/api-error';
 
 export const useDeleteCategory = () => {
   const queryClient = useQueryClient();
@@ -20,7 +21,7 @@ export const useDeleteCategory = () => {
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.message || 'Failed to delete category';
+        getApiErrorMessage(error, 'Failed to delete category');
       setError(message);
       Alert.alert('Error', message);
     },

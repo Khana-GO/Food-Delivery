@@ -9,9 +9,30 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
+
+/**
+ * multipart/form-data delivers every field as a string, so "true"/"false"
+ * must be converted explicitly. A plain Boolean("false") === true trap
+ * is avoided here.
+ */
+export const ToBoolean = () =>
+  Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  });
 
 export class CreateMenuItemDto {
+  @ApiPropertyOptional({
+    description:
+      'Target restaurant. Required when the owner has multiple restaurants; must be owned by the requester.',
+    example: 'restaurant-uuid',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  restaurantId?: string;
+
   @ApiProperty({ example: 'Chicken Momo' })
   @IsString()
   @IsNotEmpty()
@@ -41,6 +62,7 @@ export class CreateMenuItemDto {
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
+  @ToBoolean()
   @IsBoolean()
   isAvailable?: boolean = true;
 }

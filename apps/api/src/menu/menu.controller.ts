@@ -42,6 +42,20 @@ import { MenuItemsService } from './menu.service';
 export class MenuItemsController {
   constructor(private readonly menuItemsService: MenuItemsService) {}
 
+  /**
+   * Resolves the restaurant owned by the requester when they are a
+   * restaurant owner. Used to scope mutations to their own restaurant.
+   * Admins bypass ownership scoping.
+   */
+  private async resolveOwnerScope(
+    user: JwtPayload,
+  ): Promise<string | undefined> {
+    if (user.role !== UserRole.RESTAURANT_OWNER) {
+      return undefined;
+    }
+    return this.menuItemsService.getRestaurantIdForUser(user.sub);
+  }
+
   // ─── CREATE ───
   @Post()
   @Roles(UserRole.RESTAURANT_OWNER)
@@ -66,9 +80,14 @@ export class MenuItemsController {
     @Body() dto: CreateMenuItemDto,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
-    const restaurantId = await this.menuItemsService.getRestaurantIdForUser(
-      user.sub,
-    );
+    // Explicit selection (multi-restaurant owners) is ownership-checked;
+    // otherwise fall back to the owner's default restaurant.
+    const restaurantId = dto.restaurantId
+      ? await this.menuItemsService.getOwnedRestaurantId(
+          user.sub,
+          dto.restaurantId,
+        )
+      : await this.menuItemsService.getRestaurantIdForUser(user.sub);
     return this.menuItemsService.create(restaurantId, dto, file);
   }
 
@@ -131,6 +150,38 @@ export class MenuItemsController {
     return this.menuItemsService.findById(id);
   }
 
+  // ─── BULK CREATE ───
+  @Post('bulk')
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @ApiOperation({ summary: 'Bulk create menu items' })
+  async bulkCreate(
+    @CurrentUser() user: JwtPayload,
+    @Body() items: CreateMenuItemDto[],
+  ): Promise<MenuItemResponseDto[]> {
+    const restaurantId = await this.menuItemsService.getRestaurantIdForUser(
+      user.sub,
+    );
+    return this.menuItemsService.bulkCreate(restaurantId, items);
+  }
+
+  // ─── BULK DELETE ───
+  // Declared before `:id` routes so "bulk" is not captured as an id param
+  @Delete('bulk')
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Bulk delete menu items' })
+  @HttpCode(HttpStatus.OK)
+  bulkDelete(
+    @CurrentUser() user: JwtPayload,
+    @Body('ids') ids: string[],
+  ): Promise<{ message: string; deleted: number }> {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('Please provide at least one ID');
+    }
+    return this.resolveOwnerScope(user).then((ownerRestaurantId) =>
+      this.menuItemsService.bulkDelete(ids, ownerRestaurantId),
+    );
+  }
+
   // ─── UPDATE ───
   @Put(':id')
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
@@ -151,11 +202,13 @@ export class MenuItemsController {
   })
   @UseInterceptors(FileInterceptor('image'))
   async update(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateMenuItemDto,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
-    return this.menuItemsService.update(id, dto, file);
+    const ownerRestaurantId = await this.resolveOwnerScope(user);
+    return this.menuItemsService.update(id, dto, file, ownerRestaurantId);
   }
 
   // ─── TOGGLE AVAILABILITY ───
@@ -163,9 +216,11 @@ export class MenuItemsController {
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Toggle menu item availability' })
   async toggleAvailability(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ isAvailable: boolean }> {
-    return this.menuItemsService.toggleAvailability(id);
+    const ownerRestaurantId = await this.resolveOwnerScope(user);
+    return this.menuItemsService.toggleAvailability(id, ownerRestaurantId);
   }
 
   // ─── DELETE ───
@@ -174,36 +229,10 @@ export class MenuItemsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete menu item' })
   async delete(
+    @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    return this.menuItemsService.delete(id);
-  }
-
-  // ─── BULK CREATE ───
-  @Post('bulk')
-  @Roles(UserRole.RESTAURANT_OWNER)
-  @ApiOperation({ summary: 'Bulk create menu items' })
-  async bulkCreate(
-    @CurrentUser() user: JwtPayload,
-    @Body() items: CreateMenuItemDto[],
-  ): Promise<MenuItemResponseDto[]> {
-    const restaurantId = await this.menuItemsService.getRestaurantIdForUser(
-      user.sub,
-    );
-    return this.menuItemsService.bulkCreate(restaurantId, items);
-  }
-
-  // ─── BULK DELETE ───
-  @Delete('bulk')
-  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Bulk delete menu items' })
-  @HttpCode(HttpStatus.OK)
-  bulkDelete(
-    @Body('ids') ids: string[],
-  ): Promise<{ message: string; deleted: number }> {
-    if (!ids || ids.length === 0) {
-      throw new BadRequestException('Please provide at least one ID');
-    }
-    return this.menuItemsService.bulkDelete(ids);
+    const ownerRestaurantId = await this.resolveOwnerScope(user);
+    return this.menuItemsService.delete(id, ownerRestaurantId);
   }
 }

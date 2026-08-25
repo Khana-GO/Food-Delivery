@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { categoryService } from '@/services/category/category.service';
 import { useCategoryStore } from '@/stores/categoryStore';
+import { getApiErrorMessage } from '@/lib/api-error';
 
 export const useCategory = (id: string) => {
   const { setCurrentCategory, setLoading, setError } = useCategoryStore();
@@ -14,7 +15,7 @@ export const useCategory = (id: string) => {
         setCurrentCategory(data);
         return data;
       } catch (error: any) {
-        setError(error?.response?.data?.message || 'Failed to fetch category');
+        setError(getApiErrorMessage(error, 'Failed to fetch category'));
         throw error;
       } finally {
         setLoading(false);

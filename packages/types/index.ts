@@ -150,3 +150,54 @@ export interface CategoryResponse {
   limit: number;
   totalPages: number;
 }
+
+
+export interface MenuItem {
+  id: string;
+  restaurantId: string;
+  categoryId: string;
+  name: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMenuItemPayload {
+  restaurantId?: string; // required when the owner has multiple restaurants
+  name: string;
+  description?: string;
+  price: number;
+  categoryId: string;
+  isAvailable?: boolean;
+  image?: File | Blob | any; // For FormData
+}
+
+export interface UpdateMenuItemPayload {
+  name?: string;
+  description?: string;
+  price?: number;
+  categoryId?: string;
+  isAvailable?: boolean;
+  image?: File | Blob | any;
+}
+
+export interface MenuItemFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryId?: string;
+  isAvailable?: boolean;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+export interface MenuItemsResponse {
+  data: MenuItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

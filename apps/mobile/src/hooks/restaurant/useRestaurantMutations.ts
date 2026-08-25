@@ -7,11 +7,11 @@ import type {
 import { useRestaurantStore } from '@/stores/restaurantStore';
 import { CreateRestaurantPayload, Restaurant } from '@food_delivery/types';
 import { toast } from '@/components/ui/toast';
+import { restaurantKeys } from '@/lib/query-keys';
 
 const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message || error?.message || fallback;
 
-const MY_RESTAURANTS_KEY = ['restaurants', 'my'] as const;
 
 /**
  * Immediately patches the cached "my restaurants" list so the UI reflects
@@ -23,10 +23,10 @@ const patchCachedRestaurant = (
   id: string,
   data: Partial<Restaurant>,
 ) => {
-  const cached = queryClient.getQueryData<Restaurant[]>(MY_RESTAURANTS_KEY);
+  const cached = queryClient.getQueryData<Restaurant[]>(restaurantKeys.mine());
   if (!Array.isArray(cached)) return;
   queryClient.setQueryData<Restaurant[]>(
-    MY_RESTAURANTS_KEY,
+    restaurantKeys.mine(),
     cached.map((r) => (r.id === id ? { ...r, ...data } : r)),
   );
 };
@@ -50,7 +50,7 @@ export const useUpdateRestaurant = () => {
     onSuccess: (restaurant, { id }) => {
       updateRestaurant(restaurant.id, restaurant);
       patchCachedRestaurant(queryClient, id, restaurant);
-      queryClient.invalidateQueries({ queryKey: MY_RESTAURANTS_KEY });
+      queryClient.invalidateQueries({ queryKey: restaurantKeys.mine() });
       setLoading(false);
       toast.success('Your restaurant details have been saved.', 'Details updated');
     },
@@ -72,7 +72,7 @@ export const useToggleOpenStatus = () => {
     onSuccess: ({ isOpen }, id) => {
       updateRestaurant(id, { isOpen });
       patchCachedRestaurant(queryClient, id, { isOpen });
-      queryClient.invalidateQueries({ queryKey: MY_RESTAURANTS_KEY });
+      queryClient.invalidateQueries({ queryKey: restaurantKeys.mine() });
       toast.success(
         isOpen
           ? 'Customers can now place orders.'
@@ -107,7 +107,7 @@ export const useUpdateImage = () => {
       // Patch the cache synchronously so the new photo renders instantly,
       // even before the invalidated query finishes refetching.
       patchCachedRestaurant(queryClient, id, result);
-      queryClient.invalidateQueries({ queryKey: MY_RESTAURANTS_KEY });
+      queryClient.invalidateQueries({ queryKey: restaurantKeys.mine() });
       toast.success(
         type === 'logo'
           ? 'Your new logo is live on your storefront.'
@@ -136,7 +136,7 @@ export const useDeleteImage = () => {
       const cleared = type === 'logo' ? { logoUrl: undefined } : { coverImageUrl: undefined };
       updateRestaurant(id, cleared);
       patchCachedRestaurant(queryClient, id, cleared);
-      queryClient.invalidateQueries({ queryKey: MY_RESTAURANTS_KEY });
+      queryClient.invalidateQueries({ queryKey: restaurantKeys.mine() });
       toast.success(type === 'logo' ? 'Logo removed.' : 'Cover photo removed.', 'Photo deleted');
     },
     onError: (error: any) => {
@@ -158,7 +158,7 @@ export const useDeleteRestaurant = () => {
     },
     onSuccess: (_, id) => {
       removeRestaurant(id);
-      queryClient.invalidateQueries({ queryKey: MY_RESTAURANTS_KEY });
+      queryClient.invalidateQueries({ queryKey: restaurantKeys.mine() });
       setLoading(false);
       toast.success('Your restaurant has been removed.', 'Done');
     },
