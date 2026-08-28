@@ -1,127 +1,96 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { ScreenHeader, EmptyState, ContentWidth, useResponsive } from '@/components/owner/kit';
-
-type NotifType = 'order' | 'restaurant' | 'menu' | 'system';
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  type: NotifType;
-}
-
-const TYPE_META: Record<
-  NotifType,
-  { icon: React.ComponentProps<typeof Feather>['name']; chip: string; color: string }
-> = {
-  order: { icon: 'shopping-bag', chip: 'bg-red-50', color: '#E23744' },
-  restaurant: { icon: 'package', chip: 'bg-green-50', color: '#16A34A' },
-  menu: { icon: 'book-open', chip: 'bg-slate-100', color: '#475569' },
-  system: { icon: 'bell', chip: 'bg-amber-50', color: '#D97706' },
-};
-
-const INITIAL: Notification[] = [
-  {
-    id: '1',
-    title: 'New Order #124',
-    message: 'You have a new order from Anish Sharma. Tap to review and accept.',
-    time: '2 min ago',
-    read: false,
-    type: 'order',
-  },
-  {
-    id: '2',
-    title: 'Restaurant Verified',
-    message: 'Your restaurant “Spice Garden” has been verified and is now live.',
-    time: '1 hr ago',
-    read: false,
-    type: 'restaurant',
-  },
-  {
-    id: '3',
-    title: 'Menu Item Approved',
-    message: 'Your item “Chicken Momo” passed review and is visible to customers.',
-    time: '3 hrs ago',
-    read: true,
-    type: 'menu',
-  },
-  {
-    id: '4',
-    title: 'Payment Received',
-    message: 'Rs. 450 has been credited to your balance for Order #122.',
-    time: '5 hrs ago',
-    read: true,
-    type: 'system',
-  },
-];
+import { useNotifications } from '@/hooks/notification/useNotifications';
+import { useUnreadCount } from '@/hooks/notification/useUnreadCount';
+import { useMarkAsRead } from '@/hooks/notification/useMarkAsRead';
+import { useMarkAllAsRead } from '@/hooks/notification/useMarkAllAsRead';
+import { useDeleteNotification } from '@/hooks/notification/useDeleteNotification';
+import { NotificationItem } from '@/components/notification/NotificationItem';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 export default function NotificationsScreen() {
-  const { isTablet } = useResponsive();
-  const [items, setItems] = useState(INITIAL);
+  const [page, setPage] = useState(1);
+  const { data, isLoading, refetch } = useNotifications({ page, limit: 20 });
+  const { data: unreadData } = useUnreadCount();
+  const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAllAsRead } = useMarkAllAsRead();
+  const { mutate: deleteNotification } = useDeleteNotification();
+  const { notifications, unreadCount } = useNotificationStore();
 
-  const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
-
-  const markRead = (id: string) =>
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-
-  const markAll = () => setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+  const loadMore = () => {
+    if (data && page < data.totalPages) {
+      setPage(page + 1);
+    }
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader
-        title="Notifications"
-        back={false}
-        subtitle={unread > 0 ? `${unread} unread` : 'All caught up'}
-        right={
-          unread > 0 ? (
-            <Pressable onPress={markAll} className="rounded-full border border-green-200 bg-green-50 px-3.5 py-2 active:bg-green-100">
-              <Text className="text-xs font-bold text-green-700">Mark all read</Text>
-            </Pressable>
-          ) : undefined
-        }
-      />
+      {/* Header */}
+      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity onPress={() => router.back()} className="p-1">
+              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+            <Text className="text-xl font-bold text-black">Notifications</Text>
+          </View>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={() => markAllAsRead()} className="flex-row items-center gap-1">
+              <Feather name="check-circle" size={16} color="#E23744" />
+              <Text className="text-sm font-semibold text-primary">Mark all read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text className="mt-1 text-sm text-gray-500">
+          {unreadCount} unread
+        </Text>
+      </View>
 
+      {/* List */}
       <FlatList
-        data={items}
+        data={notifications}
+        renderItem={({ item }) => (
+          <NotificationItem
+            notification={item}
+            onPress={(notification) => {
+              // Navigate based on notification data
+              if (notification.data?.orderId) {
+                router.push(`/(restaurant-owner)/orders/${notification.data.orderId}` as any);
+              }
+            }}
+            onMarkAsRead={markAsRead}
+            onDelete={deleteNotification}
+          />
+        )}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, gap: 12, ...ContentWidth(isTablet ? 720 : 9999), paddingBottom: 24 }}
-        ListEmptyComponent={
-          <EmptyState icon="bell-off" title="No notifications" message="Order updates will show up here." />
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
         }
-        renderItem={({ item }) => {
-          const meta = TYPE_META[item.type];
-          return (
-            <Pressable
-              onPress={() => markRead(item.id)}
-              className={`flex-row items-start rounded-2xl border p-4 active:opacity-90 ${
-                item.read ? 'border-gray-100 bg-white' : 'border-green-200 bg-green-50/70'
-              }`}
-            >
-              <View className={`h-11 w-11 items-center justify-center rounded-xl ${meta.chip}`}>
-                <Feather name={meta.icon} size={18} color={meta.color} />
-              </View>
-              <View className="ml-3 flex-1">
-                <View className="flex-row items-center justify-between">
-                  <Text className={`flex-1 pr-2 text-sm ${item.read ? 'font-semibold text-gray-700' : 'font-bold text-gray-900'}`}>
-                    {item.title}
-                  </Text>
-                  {!item.read && <View className="h-2 w-2 rounded-full bg-primary" />}
-                </View>
-                <Text className={`mt-0.5 text-xs leading-4 ${item.read ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {item.message}
-                </Text>
-                <View className="mt-1.5 flex-row items-center gap-1">
-                  <Feather name="clock" size={10} color="#94A3B8" />
-                  <Text className="text-[11px] font-medium text-gray-400">{item.time}</Text>
-                </View>
-              </View>
-            </Pressable>
-          );
-        }}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListEmptyComponent={
+          <View className="items-center justify-center py-12">
+            <Feather name="bell-off" size={64} color="#D1D5DB" />
+            <Text className="mt-4 text-lg font-medium text-gray-400">No Notifications</Text>
+            <Text className="mt-1 text-sm text-gray-400">You're all caught up!</Text>
+          </View>
+        }
+        ListFooterComponent={
+          isLoading && notifications.length > 0 ? (
+            <View className="items-center py-4">
+              <ActivityIndicator size="small" color="#E23744" />
+            </View>
+          ) : null
+        }
       />
     </View>
   );

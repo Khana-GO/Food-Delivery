@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { useUnreadCount } from '@/hooks/notification/useUnreadCount';
 import {
   StatCard,
   StatusPill,
@@ -41,6 +42,8 @@ export default function RestaurantDashboard() {
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
   const { data: restaurants, isLoading, refetch } = useMyRestaurants();
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.count ?? 0;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
@@ -68,25 +71,54 @@ export default function RestaurantDashboard() {
           <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#FFFFFF" />
         }
       >
-        {/* ─── Hero header — clean professional red, no bubbles ─── */}
+        {/* ─── Hero header — clean professional red, round avatar, real notification count ─── */}
         <View className="bg-primary" style={{ paddingTop: insets.top }}>
           <View className="rounded-b-[32px] bg-primary px-5 pb-16 pt-3">
             <View className="flex-row items-center justify-between">
-              <View className="flex-1 pr-3">
-                <Text className="text-[13px] font-medium tracking-wide text-white/80">{greeting},</Text>
-                <Text className="mt-1 text-[26px] font-extrabold leading-7 tracking-tight text-white" numberOfLines={1}>
-                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Owner'}
-                </Text>
-                <Text className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70" numberOfLines={1}>
-                  Restaurant Owner
-                </Text>
+              <View className="flex-1 flex-row items-center gap-3 pr-3">
+                {/* Round avatar — shows real imageUrl from DB immediately after upload */}
+                <View className="h-12 w-12 overflow-hidden rounded-full border-2 border-white/30 bg-white/15">
+                  {user?.imageUrl ? (
+                    <Image source={{ uri: user.imageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                  ) : (
+                    <View className="h-full w-full items-center justify-center bg-white/10">
+                      <Text className="text-sm font-extrabold text-white">
+                        {(user?.firstName?.charAt(0) || 'O').toUpperCase()}
+                        {(user?.lastName?.charAt(0) || '').toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[13px] font-medium tracking-wide text-white/80" numberOfLines={1}>
+                    {greeting},
+                  </Text>
+                  <Text className="mt-0.5 text-[20px] font-extrabold leading-6 tracking-tight text-white" numberOfLines={1}>
+                    {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Owner'}
+                  </Text>
+                  <Text className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70" numberOfLines={1}>
+                    Restaurant Owner
+                  </Text>
+                </View>
               </View>
               <Pressable
                 onPress={() => router.push('/(restaurant-owner)/notifications')}
-                className="relative items-center justify-center border rounded-full h-11 w-11 bg-white/15 active:bg-white/25 border-white/20"
+                accessibilityRole="button"
+                accessibilityLabel={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                hitSlop={8}
+                className="relative items-center justify-center border rounded-full h-11 w-11 border-white/20 bg-white/15 active:bg-white/25"
               >
                 <Feather name="bell" size={19} color="#FFFFFF" />
-                <View className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-primary bg-amber-300" />
+                {unreadCount > 0 ? (
+                  <View
+                    className="absolute -right-1 -top-1 items-center justify-center rounded-full bg-red-500 border border-white"
+                    style={{ minWidth: 20, height: 20, paddingHorizontal: 4 }}
+                  >
+                    <Text className="text-[11px] font-extrabold leading-none text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                ) : null}
               </Pressable>
             </View>
           </View>

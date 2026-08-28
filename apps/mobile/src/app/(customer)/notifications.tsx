@@ -1,11 +1,86 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { router } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { useNotifications } from '@/hooks/notification/useNotifications';
+import { useMarkAsRead } from '@/hooks/notification/useMarkAsRead';
+import { useMarkAllAsRead } from '@/hooks/notification/useMarkAllAsRead';
+import { useDeleteNotification } from '@/hooks/notification/useDeleteNotification';
+import { NotificationItem } from '@/components/notification/NotificationItem';
+import { useNotificationStore } from '@/stores/notificationStore';
 
-export default function Notifications() {
+export default function CustomerNotifications() {
+  const [page, setPage] = useState(1);
+  const { data, isLoading, refetch } = useNotifications({ page, limit: 20 });
+  const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAllAsRead } = useMarkAllAsRead();
+  const { mutate: deleteNotification } = useDeleteNotification();
+  const { notifications, unreadCount } = useNotificationStore();
+
+  const loadMore = () => {
+    if (data && page < data.totalPages) setPage(page + 1);
+  };
+
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-2xl font-bold text-black">Notifications</Text>
-      <Text className="text-gray-500 mt-2">Your notifications</Text>
+    <View className="flex-1 bg-gray-50">
+      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity onPress={() => router.back()} className="p-1">
+              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+            <Text className="text-xl font-bold text-black">Notifications</Text>
+          </View>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={() => markAllAsRead()} className="flex-row items-center gap-1">
+              <Feather name="check-circle" size={16} color="#E23744" />
+              <Text className="text-sm font-semibold text-primary">Mark all read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text className="mt-1 text-sm text-gray-500">{unreadCount} unread • real-time</Text>
+      </View>
+
+      <FlatList
+        data={notifications}
+        renderItem={({ item }) => (
+          <NotificationItem
+            notification={item}
+            onPress={(n) => {
+              if (n.data?.orderId) router.push(`/(customer)/order/${n.data.orderId}` as any);
+            }}
+            onMarkAsRead={markAsRead}
+            onDelete={deleteNotification}
+          />
+        )}
+        keyExtractor={(item) => item.id}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListEmptyComponent={
+          !isLoading ? (
+            <View className="items-center justify-center py-12">
+              <Feather name="bell-off" size={64} color="#D1D5DB" />
+              <Text className="mt-4 text-lg font-medium text-gray-400">No Notifications</Text>
+              <Text className="mt-1 text-sm text-gray-400">You're all caught up!</Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          isLoading && notifications.length > 0 ? (
+            <View className="items-center py-4">
+              <ActivityIndicator size="small" color="#E23744" />
+            </View>
+          ) : null
+        }
+      />
     </View>
   );
 }

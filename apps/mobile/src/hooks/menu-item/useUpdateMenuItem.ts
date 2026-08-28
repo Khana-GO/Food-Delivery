@@ -20,6 +20,8 @@ export const useUpdateMenuItem = () => {
       updateItem(data.id, data);
       queryClient.invalidateQueries({ queryKey: menuItemKeys.all });
       queryClient.invalidateQueries({ queryKey: menuItemKeys.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setLoading(false);
       Alert.alert('Success', 'Menu item updated successfully');
       router.back();

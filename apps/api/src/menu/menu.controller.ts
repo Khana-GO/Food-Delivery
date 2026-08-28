@@ -85,7 +85,7 @@ export class MenuItemsController {
           dto.restaurantId,
         )
       : await this.menuItemsService.getRestaurantIdForUser(user.sub);
-    return this.menuItemsService.create(restaurantId, dto, file);
+    return this.menuItemsService.create(restaurantId, dto, file, user.sub);
   }
 
   // ─── GET ALL (By Restaurant) ───

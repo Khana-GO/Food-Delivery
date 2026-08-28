@@ -17,6 +17,8 @@ export const useDeleteCategory = () => {
       removeCategory(id);
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['category', id] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       Alert.alert('Success', 'Category deleted successfully');
     },
     onError: (error: any) => {

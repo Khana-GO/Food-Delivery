@@ -1,9 +1,13 @@
+// apps/api/src/notifications/notifications.module.ts
 import { Module } from '@nestjs/common';
-import { NotificationService } from './notification.service';
-import { NotificationController } from './notification.controller';
+import { NotificationsController } from './notification.controller';
+import { NotificationsService } from './notification.service';
+import { SessionsModule } from '../sessions/session.module';
 
 @Module({
-  controllers: [NotificationController],
-  providers: [NotificationService],
+  imports: [SessionsModule],
+  controllers: [NotificationsController],
+  providers: [NotificationsService],
+  exports: [NotificationsService],
 })
-export class NotificationModule {}
+export class NotificationsModule {}

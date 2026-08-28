@@ -12,6 +12,8 @@ export const useDeleteProfileImage = () => {
     onSuccess: (updatedUser) => {
       setUser(updatedUser);
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       Alert.alert('Success', 'Profile image removed');
     },
     onError: (error: any) => {

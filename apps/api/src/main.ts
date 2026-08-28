@@ -47,11 +47,26 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT') || 3000;
 
-  await app.listen(port);
+  try {
+    await app.listen(port);
+  } catch (err: any) {
+    if (err?.code === 'EADDRINUSE') {
+      const logger = new Logger('Bootstrap');
+      logger.error(`Port ${port} already in use (EADDRINUSE).`);
+      logger.error(`Run: lsof -ti:${port} | xargs kill -9  OR  fuser -k ${port}/tcp`);
+      logger.error(`Then: pnpm --filter api start:dev`);
+      process.exit(1);
+    }
+    throw err;
+  }
   const logger = new Logger('Bootstrap');
   logger.log(`Server is running on port ${port}`);
   if (configService.get<string>('NODE_ENV') !== 'production')
     logger.log(`Swagger docs available at /docs`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('Bootstrap failed:', err);
+  process.exit(1);
+});

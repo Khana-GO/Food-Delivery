@@ -9,7 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { UsersModule } from './users/users.module';
 import { OrderModule } from './order/order.module';
-import { NotificationModule } from './notification/notification.module';
+import { NotificationsModule } from './notification/notification.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { MenuModule } from './menu/menu.module';
 import { CategoriesModule } from './menu-categories/menu-categories.module';
@@ -43,7 +43,7 @@ import { SessionsModule } from './sessions/session.module';
     UsersModule,
     CategoriesModule,
     OrderModule,
-    NotificationModule,
+    NotificationsModule,
     CloudinaryModule,
     MenuModule,
     SessionsModule,

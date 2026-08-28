@@ -19,6 +19,9 @@ export const useCreateMenuItem = () => {
     onSuccess: (data) => {
       addItem(data);
       queryClient.invalidateQueries({ queryKey: menuItemKeys.all });
+      // Real-time: immediately refresh notifications for owner
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setLoading(false);
       Alert.alert('Success', 'Menu item created successfully');
       router.back();

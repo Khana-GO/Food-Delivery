@@ -58,7 +58,7 @@ export class CategoriesController {
           dto.restaurantId,
         )
       : await this.categoriesService.getRestaurantIdByUserId(user.sub);
-    return this.categoriesService.create(restaurantId, dto);
+    return this.categoriesService.create(restaurantId, dto, user.sub);
   }
 
   // ─── MY CATEGORIES ─── (legacy: oldest restaurant only)

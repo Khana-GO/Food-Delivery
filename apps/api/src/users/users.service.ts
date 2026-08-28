@@ -22,6 +22,7 @@ import * as schema from '../db/schema';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
+import { NotificationsService } from '../notification/notification.service';
 
 @Injectable()
 export class UsersService {
@@ -32,6 +33,7 @@ export class UsersService {
     private readonly db: NeonDatabase<typeof schema>,
     private configService: ConfigService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly notificationsService: NotificationsService
 
   ) {}
 
@@ -138,6 +140,17 @@ export class UsersService {
     });
   }
 
+  // Notify user - profile image updated (non-blocking)
+  await this.notificationsService
+    .create({
+      userId,
+      type: 'profile',
+      title: 'Profile picture updated',
+      body: 'Your profile picture has been updated successfully.',
+      data: { imageUrl: uploadedImage.url },
+    })
+    .catch((err) => this.logger.warn(`Failed to create notification for image upload: ${err?.message}`));
+
   return updatedUser;
 }
 
@@ -173,6 +186,16 @@ export class UsersService {
       'Failed to delete profile image',
     );
   }
+
+  await this.notificationsService
+    .create({
+      userId,
+      type: 'profile',
+      title: 'Profile picture removed',
+      body: 'Your profile picture has been removed.',
+      data: {},
+    })
+    .catch((err) => this.logger.warn(`Failed to create notification for image delete: ${err?.message}`));
 
   return updatedUser;
 }
@@ -619,7 +642,7 @@ export class UsersService {
 
       // Phone uniqueness check (also handles empty string -> undefined)
       if (safeData.phone !== undefined) {
-        const normalizedPhone = (safeData.phone as string)?.trim();
+        const normalizedPhone = (safeData.phone)?.trim();
         if (!normalizedPhone) {
           // Allow clearing phone? Keep as null if empty – but DB requires notNull, so ignore empty
           delete (safeData as any).phone;
@@ -648,6 +671,17 @@ export class UsersService {
       if (!updated) {
         throw new InternalServerErrorException('Failed to update user');
       }
+
+      // Send notification (non-blocking) - profile updated
+      await this.notificationsService
+        .create({
+          userId: id,
+          type: 'profile',
+          title: 'Profile Updated',
+          body: `Your profile information has been updated successfully.`,
+          data: { updatedFields: Object.keys(data) },
+        })
+        .catch((err) => this.logger.warn(`Failed to create profile update notification: ${err?.message}`));
 
       this.logger.log(`User updated: ${updated.email} (ID: ${id})`);
       return updated;

@@ -22,6 +22,7 @@ import type * as schema from '../db/schema';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { CreateMenuItemDto } from './dto/create-menu.dto';
 import { UpdateMenuItemDto } from './dto/update-menu.dto';
+import { NotificationsService } from '../notification/notification.service';
 
 const SORTABLE_COLUMNS = ['createdAt', 'updatedAt', 'name', 'price'] as const;
 
@@ -33,6 +34,7 @@ export class MenuItemsService {
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async handleDbOperation<T>(
@@ -199,6 +201,7 @@ export class MenuItemsService {
     restaurantId: string,
     dto: CreateMenuItemDto,
     file?: Express.Multer.File,
+    ownerUserId?: string,
   ): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
       await this.assertCategoryInRestaurant(dto.categoryId, restaurantId);
@@ -230,6 +233,28 @@ export class MenuItemsService {
 
       if (!item) {
         throw new InternalServerErrorException('Failed to create menu item');
+      }
+
+      if (ownerUserId) {
+        await this.notificationsService
+          .create({
+            userId: ownerUserId,
+            type: 'restaurant',
+            title: 'Menu item created',
+            body: `"${item.name}" has been added to your menu.`,
+            data: {
+              restaurantId,
+              menuItemId: item.id,
+              itemName: item.name,
+              price: item.price,
+              categoryId: item.categoryId,
+            },
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to create notification for menu create: ${err?.message}`,
+            ),
+          );
       }
 
       this.logger.log(`Menu item created: ${item.name} (ID: ${item.id})`);
@@ -417,6 +442,27 @@ export class MenuItemsService {
         }
       }
 
+      if (ownerUserId) {
+        await this.notificationsService
+          .create({
+            userId: ownerUserId,
+            type: 'restaurant',
+            title: 'Menu item updated',
+            body: `"${updated.name}" has been updated.`,
+            data: {
+              menuItemId: updated.id,
+              restaurantId: updated.restaurantId,
+              itemName: updated.name,
+              categoryId: updated.categoryId,
+            },
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to create notification for menu update: ${err?.message}`,
+            ),
+          );
+      }
+
       this.logger.log(`Menu item updated: ${updated.name} (ID: ${id})`);
       return new MenuItemResponseDto(updated);
     }, 'update');
@@ -450,10 +496,7 @@ export class MenuItemsService {
   }
 
   // ─── DELETE ───
-  async delete(
-    id: string,
-    ownerUserId?: string,
-  ): Promise<{ message: string }> {
+  async delete(id: string, ownerUserId?: string): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const item = await this.getRawItem(id);
       await this.assertOwnershipByUser(item.restaurantId, ownerUserId);
@@ -470,6 +513,26 @@ export class MenuItemsService {
             );
           });
         }
+      }
+
+      if (ownerUserId) {
+        await this.notificationsService
+          .create({
+            userId: ownerUserId,
+            type: 'restaurant',
+            title: 'Menu item deleted',
+            body: `"${item.name}" has been removed from your menu.`,
+            data: {
+              menuItemId: item.id,
+              restaurantId: item.restaurantId,
+              itemName: item.name,
+            },
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to create notification for menu delete: ${err?.message}`,
+            ),
+          );
       }
 
       this.logger.log(`Menu item deleted: ${item.name} (ID: ${id})`);

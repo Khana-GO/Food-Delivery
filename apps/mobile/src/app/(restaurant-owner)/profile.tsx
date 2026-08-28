@@ -17,6 +17,7 @@ import { ConfirmDialog, useResponsive, rs } from '@/components/owner/kit';
 import * as ImagePicker from 'expo-image-picker';
 import { useUploadProfileImage } from '@/hooks/user/useUploadProfileImage';
 import { useDeleteProfileImage } from '@/hooks/user/useDeleteProfileImage';
+import { useUnreadCount } from '@/hooks/notification/useUnreadCount';
 
 interface Row {
   id: string;
@@ -45,6 +46,8 @@ export default function OwnerProfile() {
   const { user, logout, isAuthenticating } = useAuth();
   const { mutate: uploadImage, isPending: isUploading } = useUploadProfileImage();
   const { mutate: deleteImage, isPending: isDeleting } = useDeleteProfileImage();
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.count ?? 0;
   const [showLogout, setShowLogout] = useState(false);
   const { isTablet } = useResponsive();
 
@@ -115,7 +118,6 @@ export default function OwnerProfile() {
           icon: 'shopping-bag',
           label: 'Orders',
           sub: 'Live queue & history',
-          badge: 8,
           tint: 'brand',
           onPress: () => router.push('/(restaurant-owner)/orders'),
         },
@@ -144,7 +146,7 @@ export default function OwnerProfile() {
           id: 'notifications',
           icon: 'bell',
           label: 'Notifications',
-          badge: 2,
+          badge: unreadCount > 0 ? (unreadCount > 99 ? 99 : unreadCount) : undefined,
           tint: 'brand',
           onPress: () => router.push('/(restaurant-owner)/notifications'),
         },
@@ -155,11 +157,9 @@ export default function OwnerProfile() {
   return (
     <View className="flex-1 bg-gray-50">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* ─── Header ─── */}
+        {/* ─── Header — simple smooth professional red ─── */}
         <View style={{ paddingTop: insets.top }} className="bg-primary">
-          <View className="overflow-hidden rounded-b-[32px] px-5 pb-14 pt-6">
-            <View className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-            <View className="absolute right-0 top-16 h-24 w-24 rounded-full bg-green-400/20" />
+          <View className="rounded-b-[32px] bg-primary px-5 pb-14 pt-6">
 
             <View className="flex-row items-center">
               {/* Avatar — round professional */}
@@ -296,7 +296,7 @@ export default function OwnerProfile() {
             </Text>
           </Pressable>
 
-          <Text className="mt-5 text-center text-xs text-gray-300">FoodHub Partner · v1.0.0</Text>
+          <Text className="mt-5 text-center text-xs text-gray-300">KhanaGo · v1.0.0</Text>
         </View>
       </ScrollView>
 

@@ -15,6 +15,7 @@ import { CategoryResponseDto } from './dto/category-response.dto';
 import * as schema from '../db/schema';
 import { CreateCategoryDto } from './dto/create-menu-category.dto';
 import { UpdateCategoryDto } from './dto/update-menu-category.dto';
+import { NotificationsService } from '../notification/notification.service';
 
 @Injectable()
 export class CategoriesService {
@@ -23,6 +24,7 @@ export class CategoriesService {
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async handleDbOperation<T>(
@@ -134,6 +136,7 @@ export class CategoriesService {
   async create(
     restaurantId: string,
     dto: CreateCategoryDto,
+    ownerUserId?: string,
   ): Promise<CategoryResponseDto> {
     return this.handleDbOperation(async () => {
       // Check if category with same name exists for this restaurant
@@ -158,6 +161,18 @@ export class CategoriesService {
 
       if (!category) {
         throw new InternalServerErrorException('Failed to create category');
+      }
+
+      if (ownerUserId) {
+        await this.notificationsService
+          .create({
+            userId: ownerUserId,
+            type: 'restaurant',
+            title: 'Category created',
+            body: `Category "${category.name}" has been created.`,
+            data: { categoryId: category.id, restaurantId, categoryName: category.name },
+          })
+          .catch((err) => this.logger.warn(`Failed to create notification for category create: ${err?.message}`));
       }
 
       this.logger.log(
@@ -316,6 +331,18 @@ export class CategoriesService {
         throw new InternalServerErrorException('Failed to update category');
       }
 
+      if (ownerUserId) {
+        await this.notificationsService
+          .create({
+            userId: ownerUserId,
+            type: 'restaurant',
+            title: 'Category updated',
+            body: `Category "${updated.name}" has been updated.`,
+            data: { categoryId: updated.id, restaurantId: updated.restaurantId, categoryName: updated.name },
+          })
+          .catch((err) => this.logger.warn(`Failed to create notification for category update: ${err?.message}`));
+      }
+
       this.logger.log(`Category updated: ${updated.name} (ID: ${id})`);
       return new CategoryResponseDto(updated);
     }, 'update');
@@ -345,6 +372,18 @@ export class CategoriesService {
       await this.db
         .delete(schema.menuCategoriesTable)
         .where(eq(schema.menuCategoriesTable.id, id));
+
+      if (ownerUserId) {
+        await this.notificationsService
+          .create({
+            userId: ownerUserId,
+            type: 'restaurant',
+            title: 'Category deleted',
+            body: `Category "${category.name}" has been deleted.`,
+            data: { categoryId: category.id, restaurantId: category.restaurantId, categoryName: category.name },
+          })
+          .catch((err) => this.logger.warn(`Failed to create notification for category delete: ${err?.message}`));
+      }
 
       this.logger.log(`Category deleted: ${category.name} (ID: ${id})`);
       return { message: 'Category deleted successfully' };

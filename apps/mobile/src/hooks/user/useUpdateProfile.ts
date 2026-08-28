@@ -15,6 +15,8 @@ export const useUpdateProfile = () => {
       setUser(updatedUser);
       // Invalidate any queries that might depend on user data
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       Alert.alert('Success', 'Profile updated successfully');
       router.back();
     },

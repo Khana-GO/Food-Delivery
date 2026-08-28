@@ -19,6 +19,8 @@ export const useUpdateCategory = () => {
       updateCategory(data.id, data);
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['category', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       Alert.alert('Success', 'Category updated successfully');
       router.back();
     },

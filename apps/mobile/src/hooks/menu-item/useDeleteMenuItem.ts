@@ -18,6 +18,8 @@ export const useDeleteMenuItem = () => {
     onSuccess: (_, id) => {
       removeItem(id);
       queryClient.invalidateQueries({ queryKey: menuItemKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setLoading(false);
       Alert.alert('Success', 'Menu item deleted successfully');
       router.back();

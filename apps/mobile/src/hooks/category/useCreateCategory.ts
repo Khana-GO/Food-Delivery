@@ -27,6 +27,9 @@ export const useCreateCategory = () => {
       await queryClient.invalidateQueries({
         queryKey: categoryKeys.byRestaurant(data.restaurantId, true),
       });
+      // Real-time notifications
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      await queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setLoading(false);
       // Redirect to the full categories list — not just back (which may go to menu form)
       // This satisfies: owner can create per restaurant, immediately visible, and navigation is deterministic.

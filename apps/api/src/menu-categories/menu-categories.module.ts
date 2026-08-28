@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { CategoriesController } from './menu-categories.controller';
 import { CategoriesService } from './menu-categories.service';
 import { SessionsModule } from '../sessions/session.module';
+import { NotificationsModule } from '../notification/notification.module';
 
 // SessionsModule is required so JwtAuthGuard (which injects SessionsService
 // for revoked-token checks) can resolve inside this module's context.
 @Module({
   controllers: [CategoriesController],
-  imports: [SessionsModule],
+  imports: [SessionsModule, NotificationsModule],
   providers: [CategoriesService],
   exports: [CategoriesService],
 })

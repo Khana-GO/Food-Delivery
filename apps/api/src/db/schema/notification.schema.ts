@@ -1,38 +1,54 @@
 import {
   boolean,
-  pgEnum,
+  index,
+  jsonb,
   pgTable,
+  uuid,
+  varchar,
   text,
   timestamp,
-  uuid,
 } from 'drizzle-orm/pg-core';
 
 import { usersTable } from './user.schema';
 
-export const notificationTypeEnum = pgEnum('notification_type', [
-  'order',
-  'promotion',
-  'offer',
-  'payment',
-  'system',
-]);
+export const notificationsTable = pgTable(
+  'notifications',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
 
-export const notificationsTable = pgTable('notifications', {
-  id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => usersTable.id, {
+        onDelete: 'cascade',
+      }),
 
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => usersTable.id, {
-      onDelete: 'cascade',
-    }),
+    type: varchar('type', {
+      length: 50,
+    }).notNull(),
 
-  title: text('title').notNull(),
+    title: varchar('title', {
+      length: 255,
+    }).notNull(),
 
-  message: text('message').notNull(),
+    body: text('body').notNull(),
 
-  type: notificationTypeEnum('type').notNull(),
+    data: jsonb('data'),
 
-  isRead: boolean('is_read').default(false).notNull(),
+    isRead: boolean('is_read').notNull().default(false),
 
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+    isPushSent: boolean('is_push_sent').notNull().default(false),
+
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+
+    readAt: timestamp('read_at'),
+  },
+  (table) => [
+    index('notifications_user_id_idx').on(table.userId),
+
+    index('notifications_created_at_idx').on(table.createdAt.desc()),
+  ],
+);
+
+export type Notification = typeof notificationsTable.$inferSelect;
+
+export type NewNotification = typeof notificationsTable.$inferInsert;
