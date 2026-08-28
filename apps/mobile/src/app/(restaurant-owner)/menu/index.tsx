@@ -17,7 +17,7 @@ import { useDeleteMenuItem } from '@/hooks/menu-item/useDeleteMenuItem';
 import { useToggleAvailability } from '@/hooks/menu-item/useToggleAvailability';
 import { MenuItemCard } from '@/components/menu-item/MenuItemCard';
 import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
-import { useCategories } from '@/hooks/category/useCategories';
+import { useCategoriesByRestaurant } from '@/hooks/category/useCategoriesByRestaurant';
 import type { MenuItemsResponse } from '@food_delivery/types';
 import { menuItemKeys } from '@/lib/query-keys';
 
@@ -47,7 +47,12 @@ export default function MenuItemsScreen() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data: categories } = useCategories(false);
+  // When switching restaurant, clear category filter (categories are per-restaurant)
+  useEffect(() => {
+    setSelectedCategory('');
+  }, [restaurantId]);
+
+  const { data: categories } = useCategoriesByRestaurant(restaurantId, false);
 
   const filters = useMemo(
     () => ({

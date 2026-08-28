@@ -13,9 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useCategories } from '@/hooks/category/useCategories';
 import { useCategoriesByRestaurant } from '@/hooks/category/useCategoriesByRestaurant';
 
 /** Validated, submission-ready shape produced by the form. */
@@ -54,25 +53,14 @@ export const MenuItemForm = ({
   submitLabel = 'Add Menu Item',
   onDelete,
 }: MenuItemFormProps) => {
+  // Categories are strictly per-restaurant — never fall back to `my` (which resolves to oldest restaurant)
+  // This ensures the list matches the selected restaurantId passed from create.tsx, so
+  // categoryId stored in menu_items always belongs to the same restaurant as restaurantId.
   const {
-    data: myCategories,
-    isLoading: myCategoriesLoading,
-    isError: myCategoriesError,
-  } = useCategories();
-  const {
-    data: scopedCategories,
-    isLoading: scopedCategoriesLoading,
-    isError: scopedCategoriesError,
+    data: categories,
+    isLoading: categoriesLoading,
+    isError: categoriesError,
   } = useCategoriesByRestaurant(restaurantId);
-
-  // When a specific restaurant is targeted, only its categories are valid
-  const categories = restaurantId ? scopedCategories : myCategories;
-  const categoriesLoading = restaurantId
-    ? scopedCategoriesLoading
-    : myCategoriesLoading;
-  const categoriesError = restaurantId
-    ? scopedCategoriesError
-    : myCategoriesError;
 
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
@@ -112,6 +100,35 @@ export const MenuItemForm = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  // Reset entire form when the create screen regains focus (prevents stale data
+  // when user creates one item, goes back, then taps Add again).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!initialData) {
+        setName('');
+        setDescription('');
+        setPrice('');
+        setCategoryId('');
+        setIsAvailable(true);
+        setImage(null);
+        setExistingImage(null);
+        setErrors({});
+      }
+    }, [initialData]),
+  );
+
+  // Sync when editing an existing item (initialData provided)
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name || '');
+      setDescription(initialData.description || '');
+      setPrice(initialData.price?.toString() || '');
+      setCategoryId(initialData.categoryId || '');
+      setIsAvailable(initialData.isAvailable ?? true);
+      setExistingImage(initialData.imageUrl || null);
+    }
+  }, [initialData]);
+
   // A category belongs to exactly one restaurant, so switching the target
   // restaurant invalidates any previously selected category. (In edit mode
   // the restaurant never changes, so initialData stays untouched.)
@@ -119,7 +136,6 @@ export const MenuItemForm = ({
     if (!initialData) {
       setCategoryId('');
     }
-     
   }, [restaurantId]);
 
   const handleSubmit = () => {
@@ -220,8 +236,21 @@ export const MenuItemForm = ({
         <Text className="text-sm font-semibold text-black mb-1.5">
           Category <Text className="text-red-500">*</Text>
         </Text>
-        {categoriesLoading ? (
-          <ActivityIndicator size="small" color="#E23744" />
+        {!restaurantId ? (
+          <View className="items-center p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <Feather name="info" size={20} color="#D97706" />
+            <Text className="mt-2 text-sm font-medium text-amber-700">
+              Select a restaurant first
+            </Text>
+            <Text className="mt-0.5 text-xs text-center text-amber-600 px-4">
+              Choose a restaurant above to load its categories.
+            </Text>
+          </View>
+        ) : categoriesLoading ? (
+          <View className="flex-row items-center gap-2 py-2">
+            <ActivityIndicator size="small" color="#E23744" />
+            <Text className="text-sm text-gray-400">Loading categories…</Text>
+          </View>
         ) : categoriesError ? (
           <View className="items-center p-4 bg-red-50 border border-red-200 rounded-xl">
             <Text className="text-sm text-red-500">
@@ -235,15 +264,18 @@ export const MenuItemForm = ({
           <View className="items-center p-4 bg-white border border-dashed border-gray-300 rounded-xl">
             <Feather name="layers" size={24} color="#94A3B8" />
             <Text className="mt-2 text-sm font-medium text-gray-500">
-              No categories yet
+              No categories yet for this restaurant
             </Text>
             <Text className="mt-0.5 text-xs text-center text-gray-400 px-4">
-              Create a category first, then come back to add your item.
+              Create a category for the selected restaurant, then come back to add your item.
             </Text>
             <TouchableOpacity
               className="px-4 py-2 mt-3 bg-primary rounded-lg"
               onPress={() =>
-                router.push('/(restaurant-owner)/categories/create' as never)
+                router.push({
+                  pathname: '/(restaurant-owner)/categories/create',
+                  params: { restaurantId },
+                } as never)
               }
             >
               <Text className="text-xs font-semibold text-white">

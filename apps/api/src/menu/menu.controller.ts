@@ -43,17 +43,14 @@ export class MenuItemsController {
   constructor(private readonly menuItemsService: MenuItemsService) {}
 
   /**
-   * Resolves the restaurant owned by the requester when they are a
-   * restaurant owner. Used to scope mutations to their own restaurant.
-   * Admins bypass ownership scoping.
+   * Returns owner userId for multi-restaurant-aware ownership check.
+   * Admins bypass by returning undefined.
    */
-  private async resolveOwnerScope(
-    user: JwtPayload,
-  ): Promise<string | undefined> {
+  private resolveOwnerScope(user: JwtPayload): string | undefined {
     if (user.role !== UserRole.RESTAURANT_OWNER) {
       return undefined;
     }
-    return this.menuItemsService.getRestaurantIdForUser(user.sub);
+    return user.sub;
   }
 
   // ─── CREATE ───
@@ -177,9 +174,8 @@ export class MenuItemsController {
     if (!ids || ids.length === 0) {
       throw new BadRequestException('Please provide at least one ID');
     }
-    return this.resolveOwnerScope(user).then((ownerRestaurantId) =>
-      this.menuItemsService.bulkDelete(ids, ownerRestaurantId),
-    );
+    const ownerUserId = this.resolveOwnerScope(user);
+    return this.menuItemsService.bulkDelete(ids, ownerUserId);
   }
 
   // ─── UPDATE ───
@@ -207,8 +203,8 @@ export class MenuItemsController {
     @Body() dto: UpdateMenuItemDto,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
-    const ownerRestaurantId = await this.resolveOwnerScope(user);
-    return this.menuItemsService.update(id, dto, file, ownerRestaurantId);
+    const ownerUserId = this.resolveOwnerScope(user);
+    return this.menuItemsService.update(id, dto, file, ownerUserId);
   }
 
   // ─── TOGGLE AVAILABILITY ───
@@ -219,8 +215,8 @@ export class MenuItemsController {
     @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ isAvailable: boolean }> {
-    const ownerRestaurantId = await this.resolveOwnerScope(user);
-    return this.menuItemsService.toggleAvailability(id, ownerRestaurantId);
+    const ownerUserId = this.resolveOwnerScope(user);
+    return this.menuItemsService.toggleAvailability(id, ownerUserId);
   }
 
   // ─── DELETE ───
@@ -232,7 +228,7 @@ export class MenuItemsController {
     @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    const ownerRestaurantId = await this.resolveOwnerScope(user);
-    return this.menuItemsService.delete(id, ownerRestaurantId);
+    const ownerUserId = this.resolveOwnerScope(user);
+    return this.menuItemsService.delete(id, ownerUserId);
   }
 }

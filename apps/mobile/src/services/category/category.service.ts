@@ -17,6 +17,14 @@ export const categoryService = {
     return response.data;
   },
 
+  // ─── GET ALL OWNER CATEGORIES (across all owned restaurants) ───
+  getAllForOwner: async (includeItemCount?: boolean): Promise<Category[]> => {
+    const response = await api.get('/categories/my/all', {
+      params: { includeItemCount },
+    });
+    return response.data;
+  },
+
   // ─── GET ALL CATEGORIES (By Restaurant) ───
   getByRestaurant: async (restaurantId: string, includeItemCount?: boolean): Promise<Category[]> => {
     const response = await api.get(`/categories/restaurant/${restaurantId}`, {

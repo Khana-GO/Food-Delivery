@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import {
   Field,
   PrimaryButton,
@@ -29,6 +30,18 @@ export function CategoryForm({
   const { isTablet } = useResponsive();
   const [name, setName] = useState(initialData?.name ?? '');
   const [error, setError] = useState('');
+
+  // Clear stale name when returning to create screen (prevents previous data showing)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!initialData) {
+        setName('');
+        setError('');
+      } else {
+        setName(initialData.name ?? '');
+      }
+    }, [initialData]),
+  );
 
   const submit = async () => {
     if (!name.trim()) {

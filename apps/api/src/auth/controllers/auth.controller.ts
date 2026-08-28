@@ -18,12 +18,17 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import { LogoutDto } from '../dto/logout.dto';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { Public } from '../decorators/public.decorator';
+import { UsersService } from '../../users/users.service';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
 
 @Throttle({ default: { limit: 5, ttl: 60_000 } }) // 5 request in per minute from single ip
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post('register')
   @Public()
@@ -62,12 +67,13 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  @ApiOperation({ summary: 'Get current authenticated user profile' })
-  @ApiResponse({ status: 200, description: 'Authenticated user profile' })
-  getMe(@CurrentUser() user: JwtPayload) {
+  @ApiOperation({ summary: 'Get current authenticated user profile (full DB user)' })
+  @ApiResponse({ status: 200, description: 'Authenticated user profile', type: UserResponseDto })
+  async getMe(@CurrentUser() user: JwtPayload) {
+    const fullUser = await this.usersService.findByIdOrThrow(user.sub);
     return {
       message: 'Authenticated successfully',
-      user,
+      user: new UserResponseDto(fullUser),
     };
   }
 

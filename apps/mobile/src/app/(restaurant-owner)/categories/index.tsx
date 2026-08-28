@@ -3,7 +3,8 @@ import { View, Text, Pressable, FlatList, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCategories } from '@/hooks/category/useCategories';
+import { useAllOwnerCategories } from '@/hooks/category/useAllOwnerCategories';
+import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
 import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
 import { CategoryCard } from '@/components/category/CategoryCard';
 import type { Category } from '@food_delivery/types';
@@ -26,8 +27,15 @@ export default function CategoriesScreen() {
     isError,
     error,
     refetch,
-  } = useCategories();
+  } = useAllOwnerCategories(true);
+  const { data: restaurants } = useMyRestaurants();
   const { mutate: deleteCategory, isPending: isDeleting } = useDeleteCategory();
+
+  const restaurantMap = useMemo(() => {
+    const m = new Map<string, string>();
+    restaurants?.forEach((r) => m.set(r.id, r.name));
+    return m;
+  }, [restaurants]);
 
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
@@ -154,6 +162,7 @@ export default function CategoriesScreen() {
         renderItem={({ item }) => (
           <CategoryCard
             category={item}
+            restaurantName={restaurantMap.get(item.restaurantId)}
             onEdit={handleEdit}
             onDelete={setDeleteTarget}
           />

@@ -41,7 +41,7 @@ export const usersTable = pgTable(
     }).notNull(),
 
     phone: varchar('phone', {
-      length: 10,
+      length: 20,
     })
       .notNull()
       .unique(),

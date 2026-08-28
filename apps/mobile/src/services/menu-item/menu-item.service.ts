@@ -5,35 +5,52 @@ import { Platform } from 'react-native';
 export const menuItemService = {
   // ─── CREATE ───
   create: async (data: CreateMenuItemPayload): Promise<MenuItem> => {
-    const formData = new FormData();
-    
-    // Append text fields
-    Object.keys(data).forEach((key) => {
-      if (key !== 'image' && data[key as keyof CreateMenuItemPayload] !== undefined) {
-        formData.append(key, String(data[key as keyof CreateMenuItemPayload]));
-      }
-    });
-    
-    // Append image if exists
-    if (data.image) {
-      // For React Native, we need to handle the file object properly
-      const image = data.image;
+    // If no image, we can send as JSON for simpler validation (but keep FormData for consistency)
+    const isFormData = !!data.image;
+    if (isFormData) {
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (key === 'image') return;
+        const value = data[key as keyof CreateMenuItemPayload];
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          formData.append(key, String(value));
+        } else if (key === 'isAvailable' && value !== undefined) {
+          // Always send isAvailable even if false
+          formData.append(key, String(value));
+        }
+      });
+      const image: any = data.image;
       if (Platform.OS === 'web') {
         formData.append('image', image);
       } else {
-        // React Native: image is an object with uri, type, name
+        // Expo ImagePicker: { uri, mimeType, fileName, type, name }
+        const mimeType = image.mimeType || image.type || 'image/jpeg';
+        const fileName = image.fileName || image.name || `menu_${Date.now()}.jpg`;
         formData.append('image', {
           uri: image.uri,
-          type: image.type || 'image/jpeg',
-          name: image.name || 'image.jpg',
+          type: mimeType,
+          name: fileName,
         } as any);
       }
+      // Let axios set Content-Type with boundary — do NOT force it
+      const response = await api.post('/menu-items', formData, {
+        headers: { 'Content-Type': undefined } as any,
+        // Required for RN to correctly set multipart boundary
+        transformRequest: (d) => d,
+      });
+      return response.data;
+    } else {
+      // No image — send as JSON (simpler, avoids multipart issues)
+      const { image, ...rest } = data as any;
+      // Strip empty strings for optional fields
+      const clean: any = {};
+      Object.entries(rest).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && String(v).trim() !== '') clean[k] = v;
+        else if (k === 'isAvailable' && v !== undefined) clean[k] = v;
+      });
+      const response = await api.post('/menu-items', clean);
+      return response.data;
     }
-    
-    const response = await api.post('/menu-items', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
   },
 
   // ─── GET ALL (By Restaurant) ───
@@ -60,31 +77,45 @@ export const menuItemService = {
 
   // ─── UPDATE ───
   update: async (id: string, data: UpdateMenuItemPayload): Promise<MenuItem> => {
-    const formData = new FormData();
-    
-    Object.keys(data).forEach((key) => {
-      if (key !== 'image' && data[key as keyof UpdateMenuItemPayload] !== undefined) {
-        formData.append(key, String(data[key as keyof UpdateMenuItemPayload]));
-      }
-    });
-    
-    if (data.image) {
-      const image = data.image;
+    const hasImage = !!data.image;
+    if (hasImage) {
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (key === 'image') return;
+        const value = (data as any)[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          formData.append(key, String(value));
+        } else if (key === 'isAvailable' && value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
+      const image: any = data.image;
       if (Platform.OS === 'web') {
         formData.append('image', image);
       } else {
+        const mimeType = (image as any).mimeType || image.type || 'image/jpeg';
+        const fileName = (image as any).fileName || image.name || `menu_${Date.now()}.jpg`;
         formData.append('image', {
           uri: image.uri,
-          type: image.type || 'image/jpeg',
-          name: image.name || 'image.jpg',
+          type: mimeType,
+          name: fileName,
         } as any);
       }
+      const response = await api.put(`/menu-items/${id}`, formData, {
+        headers: { 'Content-Type': undefined } as any,
+        transformRequest: (d) => d,
+      });
+      return response.data;
+    } else {
+      const { image, ...rest } = data as any;
+      const clean: any = {};
+      Object.entries(rest).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && String(v).trim() !== '') clean[k] = v;
+        else if (k === 'isAvailable' && v !== undefined) clean[k] = v;
+      });
+      const response = await api.put(`/menu-items/${id}`, clean);
+      return response.data;
     }
-    
-    const response = await api.put(`/menu-items/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
   },
 
   // ─── TOGGLE AVAILABILITY ───

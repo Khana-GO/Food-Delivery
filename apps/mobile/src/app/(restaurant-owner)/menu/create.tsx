@@ -14,35 +14,41 @@ export default function CreateMenuItemScreen() {
   }>();
   const { mutate: createMenuItem, isPending } = useCreateMenuItem();
 
-  // All of the owner's restaurants so they can pick the target here too
-  const { data: restaurants } = useMyRestaurants();
-  const hasMultipleRestaurants = (restaurants?.length ?? 0) > 1;
+  // All of the owner's restaurants — user must choose which restaurant the item belongs to
+  const { data: restaurants, isLoading: restaurantsLoading } = useMyRestaurants();
 
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
     string | undefined
-  >(restaurantIdParam);
+  >(restaurantIdParam ?? undefined);
 
-  // Keep selection valid if it came from params that no longer resolve
+  // Auto-select first restaurant as default, and keep selection valid if params no longer resolve
   useEffect(() => {
+    if (!selectedRestaurantId && restaurants && restaurants.length > 0) {
+      setSelectedRestaurantId(restaurants[0].id);
+    }
     if (
       selectedRestaurantId &&
       restaurants &&
       !restaurants.some((r) => r.id === selectedRestaurantId)
     ) {
-      setSelectedRestaurantId(undefined);
+      setSelectedRestaurantId(restaurants[0]?.id);
     }
   }, [restaurants, selectedRestaurantId]);
 
-  const restaurantId = selectedRestaurantId ?? restaurants?.[0]?.id;
+  const restaurantId = selectedRestaurantId;
 
   const handleSubmit = (
     values: MenuItemFormValues,
     image?: ImagePicker.ImagePickerAsset,
   ) => {
+    if (!restaurantId) {
+      // Prevent creating without explicit restaurant — ensures restaurantId is always stored
+      return;
+    }
     createMenuItem({
       ...values,
       image,
-      ...(restaurantId ? { restaurantId } : {}),
+      restaurantId,
     });
   };
 
@@ -58,18 +64,33 @@ export default function CreateMenuItemScreen() {
         </View>
       </View>
 
-      {/* Restaurant selector — only when owner has multiple restaurants */}
-      {hasMultipleRestaurants && (
-        <View className="px-4 pt-4">
-          <Text className="mb-2 text-sm font-semibold text-black">
-            Restaurant
-          </Text>
+      {/* Restaurant selector — always shown so menu is created for a specific restaurant */}
+      <View className="px-4 pt-4">
+        <Text className="mb-2 text-sm font-semibold text-black">
+          Restaurant <Text className="text-red-500">*</Text>
+        </Text>
+        {restaurantsLoading ? (
+          <View className="py-2">
+            <Text className="text-sm text-gray-400">Loading restaurants…</Text>
+          </View>
+        ) : !restaurants || restaurants.length === 0 ? (
+          <View className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <Text className="text-sm font-medium text-amber-700">No restaurant found</Text>
+            <Text className="mt-1 text-xs text-amber-600">Create a restaurant first before adding menu items.</Text>
+            <TouchableOpacity
+              className="px-4 py-2 mt-3 bg-primary rounded-lg self-start"
+              onPress={() => router.push('/(restaurant-owner)/restaurant/create' as never)}
+            >
+              <Text className="text-xs font-semibold text-white">+ Create Restaurant</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8 }}
           >
-            {restaurants!.map((r) => {
+            {restaurants.map((r) => {
               const isActive = restaurantId === r.id;
               return (
                 <TouchableOpacity
@@ -98,8 +119,11 @@ export default function CreateMenuItemScreen() {
               );
             })}
           </ScrollView>
-        </View>
-      )}
+        )}
+        {!restaurantId && restaurants && restaurants.length > 0 && (
+          <Text className="mt-2 text-xs text-red-500">Please select a restaurant</Text>
+        )}
+      </View>
 
       <MenuItemForm
         restaurantId={restaurantId}

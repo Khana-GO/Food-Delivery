@@ -1,10 +1,22 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Image } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Alert,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmDialog, useResponsive, rs } from '@/components/owner/kit';
+import * as ImagePicker from 'expo-image-picker';
+import { useUploadProfileImage } from '@/hooks/user/useUploadProfileImage';
+import { useDeleteProfileImage } from '@/hooks/user/useDeleteProfileImage';
 
 interface Row {
   id: string;
@@ -31,6 +43,8 @@ const TINT_FG = {
 export default function OwnerProfile() {
   const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticating } = useAuth();
+  const { mutate: uploadImage, isPending: isUploading } = useUploadProfileImage();
+  const { mutate: deleteImage, isPending: isDeleting } = useDeleteProfileImage();
   const [showLogout, setShowLogout] = useState(false);
   const { isTablet } = useResponsive();
 
@@ -43,6 +57,38 @@ export default function OwnerProfile() {
       Alert.alert('Error', 'Failed to logout. Please try again.');
     }
   }, [logout]);
+
+  const handlePickImage = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please allow access to your photo library.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      // asset has uri, mimeType/type, fileName – service handles both
+      uploadImage(asset as any);
+    }
+  }, [uploadImage]);
+
+  const handleDeleteImage = useCallback(() => {
+    Alert.alert(
+      'Remove Profile Image',
+      'Are you sure you want to remove your profile image?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
+      ]
+    );
+  }, [deleteImage]);
 
   const sections: Array<{ title: string; rows: Row[] }> = [
     {
@@ -116,18 +162,35 @@ export default function OwnerProfile() {
             <View className="absolute right-0 top-16 h-24 w-24 rounded-full bg-green-400/20" />
 
             <View className="flex-row items-center">
-              <View className="h-[72px] w-[72px] overflow-hidden rounded-2xl border-4 border-white/30 bg-white/15">
+              {/* Avatar — round professional */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={handlePickImage}
+                disabled={isUploading || isDeleting}
+                className="relative h-[72px] w-[72px] overflow-hidden rounded-full border-[3px] border-white/40 bg-white/15"
+                style={{ elevation: 2 }}
+              >
                 {user?.imageUrl ? (
-                  <Image source={{ uri: user.imageUrl }} className="h-full w-full" />
+                  <Image source={{ uri: user.imageUrl }} className="h-full w-full" style={{ borderRadius: 999 }} />
                 ) : (
-                  <View className="h-full w-full items-center justify-center">
+                  <View className="h-full w-full items-center justify-center rounded-full bg-white/10">
                     <Text className="text-2xl font-extrabold text-white">
                       {(user?.firstName?.charAt(0) || 'O').toUpperCase()}
                       {(user?.lastName?.charAt(0) || '').toUpperCase()}
                     </Text>
                   </View>
                 )}
-              </View>
+                {/* camera badge — bottom right, circular */}
+                <View className="absolute bottom-0 right-0 h-6 w-6 items-center justify-center rounded-full border-2 border-primary bg-white shadow-sm">
+                  <Feather name="camera" size={12} color="#E23744" />
+                </View>
+                {(isUploading || isDeleting) && (
+                  <View className="absolute inset-0 items-center justify-center rounded-full bg-black/50">
+                    <ActivityIndicator size="small" color="#FFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+
               <View className="ml-4 flex-1">
                 <Text className="text-lg font-extrabold tracking-tight text-white" numberOfLines={1}>
                   {user?.firstName} {user?.lastName}
@@ -135,12 +198,34 @@ export default function OwnerProfile() {
                 <Text className="mt-0.5 text-xs text-white/80" numberOfLines={1}>
                   {user?.email}
                 </Text>
+                {user?.phone ? (
+                  <Text className="mt-0.5 text-xs text-white/70" numberOfLines={1}>
+                    {user.phone}
+                  </Text>
+                ) : null}
                 <View className="mt-1.5 self-start rounded-full bg-green-400/25 px-2.5 py-1">
                   <Text className="text-[10px] font-bold uppercase tracking-wider text-green-50">
                     Restaurant Owner
                   </Text>
                 </View>
               </View>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(restaurant-owner)/profile/edit' as never)}
+                className="rounded-full bg-white/20 p-2.5"
+              >
+                <Feather name="edit-2" size={18} color="#FFF" />
+              </TouchableOpacity>
+
+              {user?.imageUrl ? (
+                <TouchableOpacity
+                  onPress={handleDeleteImage}
+                  disabled={isDeleting}
+                  className="p-2 ml-2 rounded-full bg-red-500/30"
+                >
+                  <Feather name="trash-2" size={16} color="#FFF" />
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
         </View>

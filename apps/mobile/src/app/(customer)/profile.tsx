@@ -10,10 +10,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Radius, Shadow } from '@/constants/theme';
-import { useAuth, AuthRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const SETTINGS_MENU = [
@@ -35,13 +35,7 @@ export default function ProfileScreen() {
     router.replace('/auth/login' as any);
   };
 
-  const handleDevRoleSwitch = (newRole: AuthRole) => {
-    switchRole(newRole);
-    if (newRole === 'CUSTOMER') router.replace('/(customer)' as any);
-    if (newRole === 'DRIVER') router.replace('/(driver)' as any);
-    if (newRole === 'RESTAURANT_OWNER') router.replace('/(restaurant)' as any);
-    if (newRole === 'ADMIN') router.replace('/(admin)' as any);
-  };
+  // Dev role switch removed – use AuthContext directly if needed
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -126,21 +120,7 @@ export default function ProfileScreen() {
         
         <Text style={styles.version}>KhanaGo v2.4.1</Text>
 
-        {/* Dev Role Switcher */}
-        <View style={styles.devSection}>
-          <Text style={styles.devTitle}>🛠️ Dev: Switch Role Views</Text>
-          <View style={styles.devRow}>
-             <TouchableOpacity style={styles.devBtn} onPress={() => handleDevRoleSwitch('DRIVER')}>
-                <Text style={styles.devBtnText}>Driver</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.devBtn} onPress={() => handleDevRoleSwitch('RESTAURANT_OWNER')}>
-                <Text style={styles.devBtnText}>Restaurant</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.devBtn} onPress={() => handleDevRoleSwitch('ADMIN')}>
-                <Text style={styles.devBtnText}>Admin</Text>
-             </TouchableOpacity>
-          </View>
-        </View>
+        {/* Dev Role Switcher - removed for production; requires AuthContext switchRole */}
 
       </ScrollView>
     </SafeAreaView>

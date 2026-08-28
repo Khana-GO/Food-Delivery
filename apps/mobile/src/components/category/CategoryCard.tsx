@@ -5,11 +5,12 @@ import { Category } from '@food_delivery/types';
 
 interface CategoryCardProps {
   category: Category;
+  restaurantName?: string;
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
 }
 
-export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) {
+export function CategoryCard({ category, restaurantName, onEdit, onDelete }: CategoryCardProps) {
   const hasItems = (category.itemCount ?? 0) > 0;
 
   return (
@@ -28,6 +29,14 @@ export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) 
           <Text className="text-[15px] font-bold text-gray-900" numberOfLines={1}>
             {category.name}
           </Text>
+          {restaurantName ? (
+            <View className="mt-0.5 flex-row items-center gap-1">
+              <Feather name="shopping-bag" size={10} color="#94A3B8" />
+              <Text className="text-[11px] font-medium text-gray-400" numberOfLines={1}>
+                {restaurantName}
+              </Text>
+            </View>
+          ) : null}
           <View className="mt-1 flex-row items-center gap-2">
             <View
               className={`rounded-md px-2 py-0.5 ${

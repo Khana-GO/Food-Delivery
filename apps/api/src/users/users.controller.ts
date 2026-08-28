@@ -86,9 +86,17 @@ export class UsersController {
     @CurrentUser() currentUser: JwtPayload,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    // Prevent users from changing their own role
-    const { role, ...rest } = updateUserDto;
-    const user = await this.usersService.update(currentUser.sub, rest);
+    // Only allow profile-relevant fields; prevent role/image escalation
+    const { firstName, lastName, email, phone } = updateUserDto;
+    const allowed: Partial<UpdateUserDto> = {};
+    if (firstName !== undefined) allowed.firstName = firstName;
+    if (lastName !== undefined) allowed.lastName = lastName;
+    if (email !== undefined) allowed.email = email;
+    // Treat empty phone as no-update (avoids Matches validation failure)
+    if (phone !== undefined && phone !== null && String(phone).trim() !== '') {
+      allowed.phone = String(phone).trim();
+    }
+    const user = await this.usersService.update(currentUser.sub, allowed);
     return new UserResponseDto(user);
   }
 
@@ -240,6 +248,45 @@ export class UsersController {
       isVerified: isVerified !== undefined ? isVerified === 'true' : undefined,
       isOnline: isOnline !== undefined ? isOnline === 'true' : undefined,
     });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Admin: Get Deleted Users (must be before :id)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  @Get('deleted/all')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all soft-deleted users (Admin only)' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Deleted users fetched successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
+  async getDeletedUsers(): Promise<UserResponseDto[]> {
+    const users = await this.usersService.findDeleted();
+    return users.map((user) => new UserResponseDto(user));
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Admin: Get User Statistics (must be before :id)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  @Get('stats/overview')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get user statistics (Admin only)' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User statistics retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin only',
+  })
+  async getUserStats() {
+    return this.usersService.getStatistics();
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -417,44 +464,5 @@ export class UsersController {
   ): Promise<{ message: string }> {
     await this.usersService.hardDelete(id);
     return { message: 'User permanently deleted' };
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Admin: Get Deleted Users
-  // ──────────────────────────────────────────────────────────────────────────
-
-  @Get('deleted/all')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all soft-deleted users (Admin only)' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Deleted users fetched successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden - Admin only',
-  })
-  async getDeletedUsers(): Promise<UserResponseDto[]> {
-    const users = await this.usersService.findDeleted();
-    return users.map((user) => new UserResponseDto(user));
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Admin: Get User Statistics
-  // ──────────────────────────────────────────────────────────────────────────
-
-  @Get('stats/overview')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get user statistics (Admin only)' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User statistics retrieved successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden - Admin only',
-  })
-  async getUserStats() {
-    return this.usersService.getStatistics();
   }
 }

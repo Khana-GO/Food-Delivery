@@ -70,8 +70,54 @@ export class CategoriesService {
   }
 
   /**
-   * Ensures the category belongs to the requesting owner's restaurant.
-   * Admins bypass this check by passing no `ownerRestaurantId`.
+   * Verifies the user owns the given restaurant and returns its id.
+   * Used when an owner with multiple restaurants explicitly selects one.
+   */
+  async getOwnedRestaurantId(
+    userId: string,
+    restaurantId: string,
+  ): Promise<string> {
+    const restaurant = await this.db.query.restaurantsTable.findFirst({
+      where: and(
+        eq(schema.restaurantsTable.id, restaurantId),
+        eq(schema.restaurantsTable.ownerId, userId),
+        isNull(schema.restaurantsTable.deletedAt),
+      ),
+    });
+
+    if (!restaurant) {
+      throw new ForbiddenException('You do not own this restaurant');
+    }
+
+    return restaurant.id;
+  }
+
+  /**
+   * Ensures the category belongs to a restaurant owned by the requesting user.
+   * Supports owners with multiple restaurants — any owned restaurant is allowed.
+   * Admins bypass this check by passing no `ownerUserId`.
+   */
+  private async assertOwnershipByUser(
+    categoryRestaurantId: string,
+    ownerUserId?: string,
+  ): Promise<void> {
+    if (!ownerUserId) return; // admin bypass
+    const owned = await this.db.query.restaurantsTable.findFirst({
+      where: and(
+        eq(schema.restaurantsTable.id, categoryRestaurantId),
+        eq(schema.restaurantsTable.ownerId, ownerUserId),
+        isNull(schema.restaurantsTable.deletedAt),
+      ),
+    });
+    if (!owned) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this category',
+      );
+    }
+  }
+
+  /**
+   * @deprecated Use assertOwnershipByUser. Kept for internal single-restaurant check.
    */
   private assertOwnership(
     categoryRestaurantId: string,
@@ -119,6 +165,56 @@ export class CategoriesService {
       );
       return new CategoryResponseDto(category);
     }, 'create');
+  }
+
+  // ─── FIND ALL (For Owner — across all owned restaurants) ───
+  async findAllForOwner(
+    ownerId: string,
+    includeItemCount: boolean = false,
+  ): Promise<CategoryResponseDto[]> {
+    return this.handleDbOperation(async () => {
+      const owned = await this.db
+        .select({ id: schema.restaurantsTable.id })
+        .from(schema.restaurantsTable)
+        .where(
+          and(
+            eq(schema.restaurantsTable.ownerId, ownerId),
+            isNull(schema.restaurantsTable.deletedAt),
+          ),
+        );
+      if (owned.length === 0) return [];
+      const restaurantIds = owned.map((r) => r.id);
+      const categories = await this.db.query.menuCategoriesTable.findMany({
+        where: inArray(schema.menuCategoriesTable.restaurantId, restaurantIds),
+        orderBy: [desc(schema.menuCategoriesTable.createdAt)],
+      });
+      if (categories.length === 0) return [];
+      if (!includeItemCount) {
+        return categories.map((cat) => new CategoryResponseDto(cat));
+      }
+      const itemCounts = await this.db
+        .select({
+          categoryId: schema.menuItemsTable.categoryId,
+          total: count(),
+        })
+        .from(schema.menuItemsTable)
+        .where(
+          and(
+            inArray(
+              schema.menuItemsTable.categoryId,
+              categories.map((c) => c.id),
+            ),
+            eq(schema.menuItemsTable.isAvailable, true),
+          ),
+        )
+        .groupBy(schema.menuItemsTable.categoryId);
+      const countMap = new Map(itemCounts.map((r) => [r.categoryId, r.total]));
+      return categories.map((cat) => {
+        const dto = new CategoryResponseDto(cat);
+        dto.itemCount = countMap.get(cat.id) ?? 0;
+        return dto;
+      });
+    }, 'findAllForOwner');
   }
 
   // ─── FIND ALL (By Restaurant) ───
@@ -187,11 +283,11 @@ export class CategoriesService {
   async update(
     id: string,
     dto: UpdateCategoryDto,
-    ownerRestaurantId?: string,
+    ownerUserId?: string,
   ): Promise<CategoryResponseDto> {
     return this.handleDbOperation(async () => {
       const existing = await this.findById(id);
-      this.assertOwnership(existing.restaurantId, ownerRestaurantId);
+      await this.assertOwnershipByUser(existing.restaurantId, ownerUserId);
 
       // Check if new name conflicts with another category in the same restaurant
       if (dto.name && dto.name !== existing.name) {
@@ -228,11 +324,11 @@ export class CategoriesService {
   // ─── DELETE ───
   async delete(
     id: string,
-    ownerRestaurantId?: string,
+    ownerUserId?: string,
   ): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const category = await this.findById(id);
-      this.assertOwnership(category.restaurantId, ownerRestaurantId);
+      await this.assertOwnershipByUser(category.restaurantId, ownerUserId);
 
       // Check if category has menu items
       const [countResult] = await this.db

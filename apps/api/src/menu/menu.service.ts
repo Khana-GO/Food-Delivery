@@ -122,8 +122,30 @@ export class MenuItemsService {
   }
 
   /**
-   * Ensures the menu item belongs to the requesting owner's restaurant.
-   * Admins bypass this check by passing no `ownerRestaurantId`.
+   * Ensures the menu item belongs to a restaurant owned by the requesting user.
+   * Multi-restaurant aware: any owned restaurant is allowed. Admins bypass.
+   */
+  private async assertOwnershipByUser(
+    itemRestaurantId: string,
+    ownerUserId?: string,
+  ): Promise<void> {
+    if (!ownerUserId) return; // admin bypass
+    const owned = await this.db.query.restaurantsTable.findFirst({
+      where: and(
+        eq(restaurantsTable.id, itemRestaurantId),
+        eq(restaurantsTable.ownerId, ownerUserId),
+        isNull(restaurantsTable.deletedAt),
+      ),
+    });
+    if (!owned) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this menu item',
+      );
+    }
+  }
+
+  /**
+   * @deprecated Use assertOwnershipByUser for multi-restaurant support
    */
   private assertOwnership(
     itemRestaurantId: string,
@@ -338,11 +360,11 @@ export class MenuItemsService {
     id: string,
     dto: UpdateMenuItemDto,
     file?: Express.Multer.File,
-    ownerRestaurantId?: string,
+    ownerUserId?: string,
   ): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
       const existing = await this.getRawItem(id);
-      this.assertOwnership(existing.restaurantId, ownerRestaurantId);
+      await this.assertOwnershipByUser(existing.restaurantId, ownerUserId);
 
       if (dto.categoryId && dto.categoryId !== existing.categoryId) {
         await this.assertCategoryInRestaurant(
@@ -403,11 +425,11 @@ export class MenuItemsService {
   // ─── TOGGLE AVAILABILITY ───
   async toggleAvailability(
     id: string,
-    ownerRestaurantId?: string,
+    ownerUserId?: string,
   ): Promise<{ isAvailable: boolean }> {
     return this.handleDbOperation(async () => {
       const item = await this.getRawItem(id);
-      this.assertOwnership(item.restaurantId, ownerRestaurantId);
+      await this.assertOwnershipByUser(item.restaurantId, ownerUserId);
 
       const [updated] = await this.db
         .update(menuItemsTable)
@@ -430,11 +452,11 @@ export class MenuItemsService {
   // ─── DELETE ───
   async delete(
     id: string,
-    ownerRestaurantId?: string,
+    ownerUserId?: string,
   ): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const item = await this.getRawItem(id);
-      this.assertOwnership(item.restaurantId, ownerRestaurantId);
+      await this.assertOwnershipByUser(item.restaurantId, ownerUserId);
 
       await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
 
@@ -500,7 +522,7 @@ export class MenuItemsService {
   // ─── BULK DELETE ───
   async bulkDelete(
     ids: string[],
-    ownerRestaurantId?: string,
+    ownerUserId?: string,
   ): Promise<{ message: string; deleted: number }> {
     return this.handleDbOperation(async () => {
       let deletedCount = 0;
@@ -508,7 +530,7 @@ export class MenuItemsService {
 
       for (const id of ids) {
         const item = await this.getRawItem(id);
-        this.assertOwnership(item.restaurantId, ownerRestaurantId);
+        await this.assertOwnershipByUser(item.restaurantId, ownerUserId);
 
         await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
         deletedCount++;

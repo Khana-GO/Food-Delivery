@@ -1,4 +1,3 @@
-// contexts/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -52,7 +51,6 @@ interface ResetPasswordData {
   newPassword: string;
 }
 
-
 interface AuthContextType {
   user: User | null;
   isInitializing: boolean;
@@ -67,6 +65,8 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   forgotPassword: (data: ForgotPasswordData) => Promise<void>;
   resetPassword: (data: ResetPasswordData) => Promise<void>;
+  // ✅ NEW: Expose setUser for profile updates
+  setUser: (user: User | null) => void;
 }
 
 // ===============================
@@ -80,7 +80,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // ===============================
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
@@ -92,32 +92,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // ─── setUser (exposed) ───
+  const setUser = useCallback((user: User | null) => {
+    if (isMountedRef.current) setUserState(user);
+  }, []);
 
-  // ===============================
-// Implement methods in Provider
-// ===============================
+  // ─── forgotPassword ───
+  const forgotPassword = useCallback(async (data: ForgotPasswordData): Promise<void> => {
+    setIsAuthenticating(true);
+    try {
+      await api.post('/auth/forgot-password', data);
+    } catch (error) {
+      throw error;
+    } finally {
+      if (isMountedRef.current) setIsAuthenticating(false);
+    }
+  }, []);
 
-const forgotPassword = useCallback(async (data: ForgotPasswordData): Promise<void> => {
-  setIsAuthenticating(true);
-  try {
-    await api.post('/auth/forgot-password', data);
-  } catch (error) {
-    throw error;
-  } finally {
-    if (isMountedRef.current) setIsAuthenticating(false);
-  }
-}, []);
-
-const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void> => {
-  setIsAuthenticating(true);
-  try {
-    await api.post('/auth/reset-password', data);
-  } catch (error) {
-    throw error;
-  } finally {
-    if (isMountedRef.current) setIsAuthenticating(false);
-  }
-}, []);
+  // ─── resetPassword ───
+  const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void> => {
+    setIsAuthenticating(true);
+    try {
+      await api.post('/auth/reset-password', data);
+    } catch (error) {
+      throw error;
+    } finally {
+      if (isMountedRef.current) setIsAuthenticating(false);
+    }
+  }, []);
 
   // ---------- Restore session on launch ----------
   const restoreSession = useCallback(async () => {
@@ -136,7 +138,7 @@ const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void>
     } finally {
       if (isMountedRef.current) setIsInitializing(false);
     }
-  }, []);
+  }, [setUser]);
 
   useEffect(() => {
     restoreSession();
@@ -161,14 +163,13 @@ const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void>
     } finally {
       if (isMountedRef.current) setIsAuthenticating(false);
     }
-  }, []);
+  }, [setUser]);
 
   // ---------- Register (no auto-login) ----------
   const register = useCallback(async (data: RegisterData): Promise<{ email: string; message: string }> => {
     setIsAuthenticating(true);
     try {
       const response = await api.post("/auth/register", data);
-      // The backend returns { message, email } – we don't save tokens or set user
       return response.data;
     } catch (error) {
       throw error;
@@ -215,7 +216,7 @@ const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void>
         setIsAuthenticating(false);
       }
     }
-  }, []);
+  }, [setUser]);
 
   // ---------- Refresh current user ----------
   const refreshUser = useCallback(async () => {
@@ -225,7 +226,7 @@ const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void>
     } catch (error) {
       console.warn("Failed to refresh user:", error);
     }
-  }, []);
+  }, [setUser]);
 
   // ---------- Memoized context value ----------
   const value = useMemo<AuthContextType>(
@@ -243,8 +244,22 @@ const resetPassword = useCallback(async (data: ResetPasswordData): Promise<void>
       refreshUser,
       forgotPassword,
       resetPassword,
+      setUser, // ✅ Expose setUser
     }),
-    [user, isInitializing, isAuthenticating, login, register, verifyEmail, resendVerificationCode, logout, refreshUser]
+    [
+      user,
+      isInitializing,
+      isAuthenticating,
+      login,
+      register,
+      verifyEmail,
+      resendVerificationCode,
+      logout,
+      refreshUser,
+      forgotPassword,
+      resetPassword,
+      setUser,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

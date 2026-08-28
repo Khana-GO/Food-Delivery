@@ -8,14 +8,27 @@ import {
   deleteTokens, // add this if not already
 } from "./secure-storage";
 
-const BASE_URL =
-  Platform.OS === "web"
-    ? process.env.EXPO_PUBLIC_API_URL_WEB
-    : process.env.EXPO_PUBLIC_API_URL_MOBILE;
+const getBaseUrl = () => {
+  const webUrl = process.env.EXPO_PUBLIC_API_URL_WEB;
+  const mobileUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE;
+  // Fallback to localhost for web and LAN IP for mobile if env not set (common dev mistake)
+  if (Platform.OS === "web") {
+    return webUrl || "http://localhost:3000/api";
+  }
+  return mobileUrl || "http://192.168.18.192:3000/api";
+};
+
+const BASE_URL = getBaseUrl();
+
+if (!BASE_URL) {
+  console.warn("[axios] BASE_URL is not defined. Check EXPO_PUBLIC_API_URL_* in apps/mobile/.env");
+}
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
+  // Do not force Content-Type here — let each request set it.
+  // For JSON it will be application/json, for FormData it will be multipart/form-data with boundary.
+  headers: {},
 });
 
 // ─── Request Interceptor ───

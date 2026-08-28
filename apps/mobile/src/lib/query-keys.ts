@@ -24,6 +24,8 @@ export const categoryKeys = {
   all: ['categories'] as const,
   mine: (includeItemCount: boolean) =>
     [...categoryKeys.all, 'mine', includeItemCount] as const,
+  mineAll: (includeItemCount: boolean) =>
+    [...categoryKeys.all, 'mine', 'all', includeItemCount] as const,
   byRestaurant: (restaurantId: string | undefined, includeItemCount: boolean) =>
     [...categoryKeys.all, 'restaurant', restaurantId ?? 'none', includeItemCount] as const,
 };

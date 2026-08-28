@@ -334,6 +334,12 @@ export class AuthService {
       role: string;
       firstName: string;
       lastName: string;
+      phone?: string | null;
+      imageUrl?: string | null;
+      imagePublicId?: string | null;
+      isVerified?: boolean;
+      isOnline?: boolean;
+      createdAt?: Date | string | null;
     },
     meta?: { userAgent?: string; ipAddress?: string },
   ) {
@@ -371,6 +377,12 @@ export class AuthService {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: (user as any).phone ?? null,
+        imageUrl: (user as any).imageUrl ?? null,
+        imagePublicId: (user as any).imagePublicId ?? null,
+        isVerified: (user as any).isVerified ?? false,
+        isOnline: (user as any).isOnline ?? false,
+        createdAt: (user as any).createdAt ?? new Date(),
       },
     };
   }

@@ -68,32 +68,25 @@ export default function RestaurantDashboard() {
           <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#FFFFFF" />
         }
       >
-        {/* ─── Hero header ─── */}
+        {/* ─── Hero header — clean professional red, no bubbles ─── */}
         <View className="bg-primary" style={{ paddingTop: insets.top }}>
-          <View className="overflow-hidden rounded-b-[32px] bg-primary px-5 pb-16 pt-3">
-            {/* decorative circles */}
-            <View className="absolute rounded-full -right-10 -top-14 h-44 w-44 bg-white/10" />
-            <View className="absolute w-24 h-24 rounded-full right-16 top-10 bg-green-400/20" />
-
+          <View className="rounded-b-[32px] bg-primary px-5 pb-16 pt-3">
             <View className="flex-row items-center justify-between">
               <View className="flex-1 pr-3">
-                <Text className="text-[13px] font-medium text-white/80">{greeting},</Text>
-                <Text className="mt-0.5 text-2xl font-extrabold tracking-tight text-white">
-                  {user?.firstName || 'Owner'} {user?.lastName?.charAt(0) ? `${user.lastName.charAt(0)}.` : ''}
+                <Text className="text-[13px] font-medium tracking-wide text-white/80">{greeting},</Text>
+                <Text className="mt-1 text-[26px] font-extrabold leading-7 tracking-tight text-white" numberOfLines={1}>
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Owner'}
                 </Text>
-                <View className="flex-row items-center mt-2">
-                  <View className="h-1.5 w-1.5 rounded-full bg-green-300" />
-                  <Text className="ml-1.5 text-xs font-medium text-white/85">
-                    Your store is live on KhanaGo
-                  </Text>
-                </View>
+                <Text className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70" numberOfLines={1}>
+                  Restaurant Owner
+                </Text>
               </View>
               <Pressable
                 onPress={() => router.push('/(restaurant-owner)/notifications')}
-                className="relative items-center justify-center rounded-full h-11 w-11 bg-white/15 active:bg-white/30"
+                className="relative items-center justify-center border rounded-full h-11 w-11 bg-white/15 active:bg-white/25 border-white/20"
               >
                 <Feather name="bell" size={19} color="#FFFFFF" />
-                <View className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-amber-300" />
+                <View className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-primary bg-amber-300" />
               </Pressable>
             </View>
           </View>

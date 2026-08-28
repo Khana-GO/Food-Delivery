@@ -32,17 +32,14 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   /**
-   * Resolves the restaurant owned by the requester when they are a
-   * restaurant owner. Used to scope mutations to their own restaurant.
-   * Admins bypass ownership scoping.
+   * Returns the owner's userId for ownership checks (multi-restaurant aware).
+   * Admins bypass scoping by returning undefined.
    */
-  private async resolveOwnerScope(
-    user: JwtPayload,
-  ): Promise<string | undefined> {
+  private resolveOwnerScope(user: JwtPayload): string | undefined {
     if (user.role !== UserRole.RESTAURANT_OWNER) {
       return undefined;
     }
-    return this.categoriesService.getRestaurantIdByUserId(user.sub);
+    return user.sub;
   }
 
   // ─── CREATE ───
@@ -53,29 +50,48 @@ export class CategoriesController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateCategoryDto,
   ): Promise<CategoryResponseDto> {
-    const restaurantId = await this.categoriesService.getRestaurantIdByUserId(
-      user.sub,
-    );
+    // Explicit selection (multi-restaurant owners) is ownership-checked;
+    // otherwise fall back to the owner's default restaurant.
+    const restaurantId = dto.restaurantId
+      ? await this.categoriesService.getOwnedRestaurantId(
+          user.sub,
+          dto.restaurantId,
+        )
+      : await this.categoriesService.getRestaurantIdByUserId(user.sub);
     return this.categoriesService.create(restaurantId, dto);
   }
 
-  // ─── MY CATEGORIES ───
+  // ─── MY CATEGORIES ─── (legacy: oldest restaurant only)
   @Get('my')
   @Roles(UserRole.RESTAURANT_OWNER)
   @ApiOperation({
-    summary: "Get categories for the authenticated owner's restaurant",
+    summary: "Get categories for the authenticated owner's restaurant (oldest)",
   })
   async findMine(
     @CurrentUser() user: JwtPayload,
     @Query('includeItemCount') includeItemCount?: string,
   ): Promise<CategoryResponseDto[]> {
-    // Same resolution as create/update/delete → reads can never
-    // point at a different restaurant than writes.
     const restaurantId = await this.categoriesService.getRestaurantIdByUserId(
       user.sub,
     );
     return this.categoriesService.findByRestaurant(
       restaurantId,
+      includeItemCount === 'true',
+    );
+  }
+
+  // ─── ALL OWNER CATEGORIES (all restaurants) ───
+  @Get('my/all')
+  @Roles(UserRole.RESTAURANT_OWNER)
+  @ApiOperation({
+    summary: "Get all categories across all restaurants owned by the user",
+  })
+  async findAllForOwner(
+    @CurrentUser() user: JwtPayload,
+    @Query('includeItemCount') includeItemCount?: string,
+  ): Promise<CategoryResponseDto[]> {
+    return this.categoriesService.findAllForOwner(
+      user.sub,
       includeItemCount === 'true',
     );
   }
@@ -113,8 +129,8 @@ export class CategoriesController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateCategoryDto,
   ): Promise<CategoryResponseDto> {
-    const ownerRestaurantId = await this.resolveOwnerScope(user);
-    return this.categoriesService.update(id, dto, ownerRestaurantId);
+    const ownerUserId = this.resolveOwnerScope(user);
+    return this.categoriesService.update(id, dto, ownerUserId);
   }
 
   // ─── DELETE ───
@@ -126,7 +142,7 @@ export class CategoriesController {
     @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ message: string }> {
-    const ownerRestaurantId = await this.resolveOwnerScope(user);
-    return this.categoriesService.delete(id, ownerRestaurantId);
+    const ownerUserId = this.resolveOwnerScope(user);
+    return this.categoriesService.delete(id, ownerUserId);
   }
 }

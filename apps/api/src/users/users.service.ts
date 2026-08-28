@@ -62,6 +62,20 @@ export class UsersService {
     );
   }
 
+  private extractPublicIdFromUrl(url?: string | null): string | null {
+    if (!url) return null;
+    try {
+      const parts = url.split('/');
+      const uploadIndex = parts.indexOf('upload');
+      if (uploadIndex === -1) return null;
+      const pathParts = parts.slice(uploadIndex + 2);
+      const filename = pathParts.join('/');
+      return filename.replace(/\.[^/.]+$/, '');
+    } catch {
+      return null;
+    }
+  }
+
   private async handleDbOperation<T>(
     operation: () => Promise<T>,
     context: string,
@@ -116,14 +130,12 @@ export class UsersService {
     );
   }
 
-  // Delete old image AFTER successful database update.
-  if (
-    user.imagePublicId &&
-    user.imagePublicId !== uploadedImage.publicId
-  ) {
-    await this.cloudinaryService.deleteImage(
-      user.imagePublicId,
-    );
+  // Delete old image AFTER successful database update (handle legacy imageUrl without publicId)
+  const oldPublicId = user.imagePublicId || this.extractPublicIdFromUrl(user.imageUrl);
+  if (oldPublicId && oldPublicId !== uploadedImage.publicId) {
+    await this.cloudinaryService.deleteImage(oldPublicId).catch((e) => {
+      this.logger.warn(`Failed to delete old image ${oldPublicId}: ${e?.message}`);
+    });
   }
 
   return updatedUser;
@@ -134,15 +146,17 @@ export class UsersService {
 ): Promise<UsersTable> {
   const user = await this.findByIdOrThrow(userId);
 
-  if (!user.imagePublicId) {
+  if (!user.imageUrl && !user.imagePublicId) {
     throw new BadRequestException('No profile image to delete');
   }
 
-  // Delete the image from Cloudinary first. If this fails the
-  // database still points to a valid image, so the request is safe.
-  await this.cloudinaryService.deleteImage(
-    user.imagePublicId,
-  );
+  // Delete from Cloudinary if we have a publicId, otherwise try to extract from URL
+  const publicIdToDelete = user.imagePublicId || this.extractPublicIdFromUrl(user.imageUrl);
+  if (publicIdToDelete) {
+    await this.cloudinaryService.deleteImage(publicIdToDelete).catch((e) => {
+      this.logger.warn(`Failed to delete old image ${publicIdToDelete}: ${e?.message}`);
+    });
+  }
 
   const [updatedUser] = await this.db
     .update(usersTable)
@@ -592,10 +606,33 @@ export class UsersService {
 
       const { password, ...safeData } = data;
 
-      if (safeData.email && safeData.email !== user.email) {
-        const existing = await this.findByEmail(safeData.email);
-        if (existing) {
-          throw new ConflictException('Email already registered');
+      // Normalize email to lowercase for consistent comparison
+      if (safeData.email) {
+        safeData.email = safeData.email.trim().toLowerCase();
+        if (safeData.email !== user.email) {
+          const existing = await this.findByEmail(safeData.email);
+          if (existing) {
+            throw new ConflictException('Email already registered');
+          }
+        }
+      }
+
+      // Phone uniqueness check (also handles empty string -> undefined)
+      if (safeData.phone !== undefined) {
+        const normalizedPhone = (safeData.phone as string)?.trim();
+        if (!normalizedPhone) {
+          // Allow clearing phone? Keep as null if empty – but DB requires notNull, so ignore empty
+          delete (safeData as any).phone;
+        } else {
+          if (normalizedPhone !== user.phone) {
+            const existingPhone = await this.db.query.usersTable.findFirst({
+              where: eq(usersTable.phone, normalizedPhone),
+            });
+            if (existingPhone) {
+              throw new ConflictException('Phone number already registered');
+            }
+          }
+          (safeData as any).phone = normalizedPhone;
         }
       }
 

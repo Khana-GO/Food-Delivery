@@ -16,8 +16,13 @@ export interface User {
     firstName: string,
     lastName: string,
     role : UserRole,
+    phone?: string | null,
     imageUrl?: string | null,
-    createdAt: Date
+    imagePublicId?: string | null,
+    isVerified?: boolean,
+    isOnline?: boolean,
+    createdAt: Date | string,
+    updatedAt?: Date | string,
 }
 
 
@@ -137,6 +142,7 @@ export interface Category {
 
 export interface CreateCategoryPayload {
   name: string;
+  restaurantId?: string; // required when owner has multiple restaurants
 }
 
 export interface UpdateCategoryPayload {

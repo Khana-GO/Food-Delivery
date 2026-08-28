@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { CreateCategoryPayload } from '@food_delivery/types';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { categoryKeys } from '@/lib/query-keys';
 
 export const useCreateCategory = () => {
   const queryClient = useQueryClient();
@@ -15,12 +16,21 @@ export const useCreateCategory = () => {
       setLoading(true);
       return categoryService.create(data);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       addCategory(data);
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      // Ensure all category lists (mine, mineAll, byRestaurant) refetch immediately
+      await queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      // Also refetch the newly created restaurant's categories explicitly for instant menu-form availability
+      await queryClient.invalidateQueries({
+        queryKey: categoryKeys.byRestaurant(data.restaurantId, false),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: categoryKeys.byRestaurant(data.restaurantId, true),
+      });
       setLoading(false);
-      Alert.alert('Success', 'Category created successfully');
-      router.back();
+      // Redirect to the full categories list — not just back (which may go to menu form)
+      // This satisfies: owner can create per restaurant, immediately visible, and navigation is deterministic.
+      router.replace('/(restaurant-owner)/categories' as never);
     },
     onError: (error: any) => {
       setLoading(false);
