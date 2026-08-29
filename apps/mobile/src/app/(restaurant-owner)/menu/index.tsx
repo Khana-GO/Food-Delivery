@@ -176,7 +176,7 @@ export default function MenuItemsScreen() {
   if (!restaurantId) {
     return (
       <View className="items-center justify-center flex-1 px-6 bg-white">
-        <Feather name="store" size={64} color="#D1D5DB" />
+        <Feather name="package" size={64} color="#D1D5DB" />
         <Text className="mt-4 text-lg font-medium text-gray-400">
           No Restaurant Found
         </Text>

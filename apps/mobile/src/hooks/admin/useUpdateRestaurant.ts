@@ -14,8 +14,12 @@ export const useUpdateRestaurant = () => {
       updateRestaurant(data.id, data);
       queryClient.invalidateQueries({ queryKey: ['admin-restaurants'] });
       queryClient.invalidateQueries({ queryKey: ['admin-restaurant', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-stats'] });
       Alert.alert('Success', 'Restaurant updated successfully');
-      router.back();
+      if (router.canGoBack()) router.back();
+      setTimeout(() => {
+        try { router.replace('/(admin)/(tabs)/restaurants' as any); } catch {}
+      }, 100);
     },
     onError: (error: any) => {
       const msg = Array.isArray(error?.response?.data?.message)

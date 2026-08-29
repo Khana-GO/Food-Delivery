@@ -13,8 +13,14 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 10,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchInterval: false,
+      placeholderData: (prev: any) => prev,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });
@@ -42,17 +48,26 @@ function AppNavigator() {
     );
   }
 
-  //  Simplified: Just render all screens without conditionals
+  // Smooth page switching with slide animation
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(customer)" />
-        <Stack.Screen name="(driver)" />
-        <Stack.Screen name="(restaurant-owner)" />
-        <Stack.Screen name="(admin)" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 220,
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          contentStyle: { backgroundColor: '#F8F9FB' },
+        }}
+      >
+        <Stack.Screen name="index" options={{ animation: 'fade', animationDuration: 200 }} />
+        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(auth)" options={{ animation: 'slide_from_bottom', animationDuration: 280 }} />
+        <Stack.Screen name="(customer)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(driver)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(restaurant-owner)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(admin)" options={{ animation: 'fade' }} />
       </Stack>
       <ToastHost />
     </>

@@ -108,8 +108,12 @@ export class RestaurantsController {
       search: query.search,
       cuisineType: query.cuisineType,
       isOpen: query.isOpen !== undefined ? query.isOpen === 'true' : undefined,
-      isVerified: query.isVerified !== undefined ? query.isVerified === 'true' : undefined,
-      isActive: query.isActive !== undefined ? query.isActive === 'true' : undefined,
+      isVerified:
+        query.isVerified !== undefined
+          ? query.isVerified === 'true'
+          : undefined,
+      isActive:
+        query.isActive !== undefined ? query.isActive === 'true' : undefined,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder as any,
     });
@@ -118,7 +122,9 @@ export class RestaurantsController {
   // ─── FIND BY SLUG ─── (must be before :id if using string)
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get restaurant by slug' })
-  async findBySlug(@Param('slug') slug: string): Promise<RestaurantResponseDto> {
+  async findBySlug(
+    @Param('slug') slug: string,
+  ): Promise<RestaurantResponseDto> {
     return this.restaurantsService.findBySlug(slug);
   }
 
@@ -127,8 +133,10 @@ export class RestaurantsController {
   @ApiOperation({ summary: 'Get restaurant by ID' })
   async findById(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<RestaurantResponseDto> {
-    return this.restaurantsService.findById(id);
+    const includeDeleted = user?.role === UserRole.ADMIN;
+    return this.restaurantsService.findById(id, includeDeleted);
   }
 
   // ─── UPDATE ───
@@ -172,14 +180,18 @@ export class RestaurantsController {
     const logoFile = files?.logo?.[0];
     const coverFile = files?.cover?.[0];
     if (!logoFile && !coverFile) {
-      throw new BadRequestException('At least one image (logo or cover) is required');
+      throw new BadRequestException(
+        'At least one image (logo or cover) is required',
+      );
     }
     return this.restaurantsService.uploadImages(id, user, logoFile, coverFile);
   }
 
   @Put(':id/images')
   @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update restaurant images (replaces existing images)' })
+  @ApiOperation({
+    summary: 'Update restaurant images (replaces existing images)',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -205,7 +217,9 @@ export class RestaurantsController {
     const logoFile = files?.logo?.[0];
     const coverFile = files?.cover?.[0];
     if (!logoFile && !coverFile) {
-      throw new BadRequestException('At least one image (logo or cover) is required');
+      throw new BadRequestException(
+        'At least one image (logo or cover) is required',
+      );
     }
     return this.restaurantsService.updateImages(id, user, logoFile, coverFile);
   }
@@ -245,7 +259,9 @@ export class RestaurantsController {
 
   @Patch(':id/toggle-verify')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Toggle restaurant verification status (Admin only)' })
+  @ApiOperation({
+    summary: 'Toggle restaurant verification status (Admin only)',
+  })
   async toggleVerification(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<{ isVerified: boolean }> {
@@ -254,7 +270,9 @@ export class RestaurantsController {
 
   @Patch(':id/toggle-active')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Toggle restaurant active/inactive status (Admin only)' })
+  @ApiOperation({
+    summary: 'Toggle restaurant active/inactive status (Admin only)',
+  })
   async toggleActive(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<{ isActive: boolean }> {

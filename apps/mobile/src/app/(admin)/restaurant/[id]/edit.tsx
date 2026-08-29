@@ -21,7 +21,7 @@ export default function EditRestaurantScreen() {
   if (!restaurant) {
     return (
       <View className="items-center justify-center flex-1 px-6 bg-white">
-        <Feather name="store" size={64} color="#D1D5DB" />
+        <Feather name="package" size={64} color="#D1D5DB" />
         <Text className="mt-4 text-lg font-medium text-gray-400">Restaurant Not Found</Text>
         <TouchableOpacity
           className="px-6 py-3 mt-6 bg-primary rounded-xl"

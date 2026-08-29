@@ -42,7 +42,7 @@ export default function AdminRestaurantsScreen() {
 
   const isDeletedTab = status === 'deleted';
 
-  // ✅ Fix: Hooks must be called unconditionally (Rules of Hooks)
+  //  Fix: Hooks must be called unconditionally (Rules of Hooks)
   const activeQuery = useAdminRestaurants(filters as any, { enabled: !isDeletedTab });
   const deletedQuery = useDeletedRestaurants(filters as any, { enabled: isDeletedTab });
   const query = isDeletedTab ? deletedQuery : activeQuery;
@@ -65,7 +65,7 @@ export default function AdminRestaurantsScreen() {
         <View className="flex-row items-center justify-between">
           <View className="flex-1 pr-3">
             <Text className="text-xl font-black text-[#0F172A]">Restaurants</Text>
-            <Text className="text-xs text-gray-500 mt-1">
+            <Text className="mt-1 text-xs text-gray-500">
               {stats ? `${stats.total} total • ${stats.active} active • ${stats.verified} verified` : `${total} restaurants`}
             </Text>
           </View>
@@ -125,7 +125,7 @@ export default function AdminRestaurantsScreen() {
             <Text className={`text-xs font-black ${status === v ? 'text-white' : 'text-gray-600'}`}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); setStatus('all'); }} className="ml-auto px-3 py-2">
+        <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); setStatus('all'); }} className="px-3 py-2 ml-auto">
           <Text className="text-xs font-black text-primary">Clear</Text>
         </TouchableOpacity>
       </View>
@@ -164,11 +164,11 @@ export default function AdminRestaurantsScreen() {
         </View>
       </View>
 
-      {/* List */}
+      {/* List – single loading only */}
       <ScrollView
         className="flex-1 px-4 mt-4"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isFetching && page === 1} onRefresh={() => refetch()} tintColor="#0F172A" />}
+        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor="#0F172A" />}
         onScroll={({ nativeEvent }) => {
           const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
           const close = layoutMeasurement.height + contentOffset.y >= contentSize.height - 200;
@@ -176,18 +176,18 @@ export default function AdminRestaurantsScreen() {
         }}
         scrollEventThrottle={200}
       >
-        {isLoading && page === 1 ? (
+        {isLoading ? (
           <View className="items-center py-16">
             <ActivityIndicator size="large" color="#0F172A" />
-            <Text className="text-sm text-gray-400 mt-3">Loading restaurants…</Text>
+            <Text className="mt-3 text-sm text-gray-400">Loading restaurants…</Text>
           </View>
         ) : restaurants.length === 0 ? (
           <View className="items-center py-16">
-            <View className="w-20 h-20 rounded-full bg-gray-100 items-center justify-center">
+            <View className="items-center justify-center w-20 h-20 bg-gray-100 rounded-full">
               <Feather name="search" size={28} color="#94A3B8" />
             </View>
-            <Text className="text-base font-black text-gray-700 mt-4">No restaurants found</Text>
-            <Text className="text-sm text-gray-400 mt-1 text-center px-8">{search ? 'Try a different term or clear filters' : 'No restaurants match the current filters'}</Text>
+            <Text className="mt-4 text-base font-black text-gray-700">No restaurants found</Text>
+            <Text className="px-8 mt-1 text-sm text-center text-gray-400">{search ? 'Try a different term or clear filters' : 'No restaurants match the current filters'}</Text>
             {(search || cuisine || verified !== undefined) && (
               <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); }} className="mt-4 px-5 py-2.5 bg-white border border-gray-200 rounded-full">
                 <Text className="text-sm font-black text-[#0F172A]">Clear filters</Text>

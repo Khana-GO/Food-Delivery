@@ -12,8 +12,13 @@ export const useAdminRestaurants = (filters?: RestaurantFilters, opts?: { enable
     queryKey: ['admin-restaurants', filters],
     queryFn: () => restaurantAdminService.getAll(filters),
     enabled,
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     placeholderData: (prev) => prev,
+    notifyOnChangeProps: ['data', 'isFetching', 'isLoading', 'error'],
   });
 
   useEffect(() => {

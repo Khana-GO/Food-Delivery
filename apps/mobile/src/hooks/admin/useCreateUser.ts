@@ -14,8 +14,12 @@ export const useCreateUser = () => {
       addUser(data);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-stats'] });
       Alert.alert('Success', 'User created successfully');
-      router.back();
+      // Ensure we return to the users list, not dashboard
+      if (router.canGoBack()) router.back();
+      // Fallback: ensure list is shown if back goes to dashboard
+      setTimeout(() => router.replace('/(admin)/(tabs)/users' as any), 100);
     },
     onError: (error: any) => {
       const msg = Array.isArray(error?.response?.data?.message)

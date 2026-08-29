@@ -24,6 +24,7 @@ import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@food_delivery/types';
 import { CacheService } from '../redis/cache.service';
 import { RestaurantStatsDto } from './dto/restaurant-stats.dto';
+import { NotificationsService } from '../notification/notification.service';
 
 @Injectable()
 export class RestaurantsService {
@@ -32,12 +33,14 @@ export class RestaurantsService {
   private readonly LIST_TTL = 60; // 1 min
   private readonly ENTITY_TTL = 300; // 5 min
   private readonly OWNER_TTL = 120; // 2 min
+  private readonly STATS_TTL = 60; // 1 min for stats
 
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly cache: CacheService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ─── CACHE KEYS ───
@@ -53,14 +56,24 @@ export class RestaurantsService {
   private keyOwner(ownerId: string) {
     return `restaurant:owner:${ownerId}`;
   }
+  private keyStats() {
+    return `restaurant:stats:overview`;
+  }
 
   private async invalidateRestaurant(opts: {
     id?: string;
     slug?: string;
     ownerId?: string;
   }): Promise<void> {
-    const ops: Promise<void>[] = [this.cache.delByPattern('restaurant:list:*')];
-    if (opts.id) ops.push(this.cache.del(this.keyId(opts.id)));
+    const ops: Promise<void>[] = [
+      this.cache.delByPattern('restaurant:list:*'),
+      this.cache.del(this.keyStats()),
+      this.cache.delByPattern('restaurant:stats:*'),
+    ];
+    if (opts.id) {
+      ops.push(this.cache.del(this.keyId(opts.id)));
+      ops.push(this.cache.del(`${this.keyId(opts.id)}:withDeleted`));
+    }
     if (opts.slug) ops.push(this.cache.del(this.keySlug(opts.slug)));
     if (opts.ownerId) ops.push(this.cache.del(this.keyOwner(opts.ownerId)));
     // slug cache depends on id too — blow all slug keys when id changes (cheap via pattern)
@@ -169,6 +182,19 @@ export class RestaurantsService {
       }
 
       await this.invalidateRestaurant({ ownerId });
+      await this.notificationsService
+        .create({
+          userId: ownerId,
+          type: 'restaurant',
+          title: 'Restaurant Created',
+          body: `Your restaurant "${restaurant.name}" has been created successfully.`,
+          data: { restaurantId: restaurant.id, slug: restaurant.slug },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create restaurant notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(
         `Restaurant created: ${restaurant.name} (ID: ${restaurant.id})`,
       );
@@ -226,7 +252,8 @@ export class RestaurantsService {
         } = options;
 
         if (page < 1) throw new BadRequestException('Page must be at least 1');
-        if (limit < 1 || limit > 100) throw new BadRequestException('Limit must be between 1 and 100');
+        if (limit < 1 || limit > 100)
+          throw new BadRequestException('Limit must be between 1 and 100');
 
         const allowedSort: Record<string, any> = {
           createdAt: restaurantsTable.createdAt,
@@ -236,7 +263,8 @@ export class RestaurantsService {
           deliveryFee: restaurantsTable.deliveryFee,
         };
         const sortCol = allowedSort[sortBy] ?? restaurantsTable.createdAt;
-        const orderFn = sortOrder.toUpperCase() === 'ASC' ? asc(sortCol) : desc(sortCol);
+        const orderFn =
+          sortOrder.toUpperCase() === 'ASC' ? asc(sortCol) : desc(sortCol);
 
         const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NULL`];
 
@@ -292,14 +320,24 @@ export class RestaurantsService {
   }
 
   // ─── FIND BY ID ─── (cached)
-  async findById(id: string): Promise<RestaurantResponseDto> {
+  async findById(
+    id: string,
+    includeDeleted = false,
+  ): Promise<RestaurantResponseDto> {
     return this.handleDbOperation(async () => {
-      return this.cache.wrap(this.keyId(id), this.ENTITY_TTL, async () => {
+      // For admin detail view we need to allow fetching soft-deleted; use separate cache key
+      const cacheKey = includeDeleted
+        ? `${this.keyId(id)}:withDeleted`
+        : this.keyId(id);
+      return this.cache.wrap(cacheKey, this.ENTITY_TTL, async () => {
+        const whereClause = includeDeleted
+          ? eq(restaurantsTable.id, id)
+          : and(
+              eq(restaurantsTable.id, id),
+              sql`${restaurantsTable.deletedAt} IS NULL`,
+            );
         const restaurant = await this.db.query.restaurantsTable.findFirst({
-          where: and(
-            eq(restaurantsTable.id, id),
-            sql`${restaurantsTable.deletedAt} IS NULL`,
-          ),
+          where: whereClause,
         });
         if (!restaurant) {
           throw new NotFoundException(`Restaurant with ID ${id} not found`);
@@ -389,6 +427,19 @@ export class RestaurantsService {
         slug: updated.slug,
         ownerId: updated.ownerId,
       });
+      await this.notificationsService
+        .create({
+          userId: updated.ownerId,
+          type: 'restaurant',
+          title: 'Restaurant Updated',
+          body: `Your restaurant "${updated.name}" has been updated.`,
+          data: { restaurantId: updated.id },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create update notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(`Restaurant updated: ${updated.name} (ID: ${id})`);
       return updated as unknown as RestaurantResponseDto;
     }, 'update');
@@ -545,6 +596,19 @@ export class RestaurantsService {
       }
 
       await this.invalidateRestaurant({ id, ownerId: restaurant.ownerId });
+      await this.notificationsService
+        .create({
+          userId: restaurant.ownerId,
+          type: 'restaurant',
+          title: updated.isOpen ? 'Restaurant Opened' : 'Restaurant Closed',
+          body: `Your restaurant "${restaurant.name}" is now ${updated.isOpen ? 'open' : 'closed'}.`,
+          data: { restaurantId: id, isOpen: updated.isOpen },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create open notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(`Restaurant ${id} open status: ${updated.isOpen}`);
       return { isOpen: updated.isOpen };
     }, 'toggleOpen');
@@ -571,6 +635,21 @@ export class RestaurantsService {
         slug: restaurant.slug,
         ownerId: restaurant.ownerId,
       });
+      await this.notificationsService
+        .create({
+          userId: restaurant.ownerId,
+          type: 'restaurant',
+          title: updated.isVerified
+            ? 'Restaurant Verified'
+            : 'Restaurant Unverified',
+          body: `Your restaurant "${restaurant.name}" has been ${updated.isVerified ? 'verified' : 'unverified'} by admin.`,
+          data: { restaurantId: id, isVerified: updated.isVerified },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create verify notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(
         `Restaurant ${id} verification status: ${updated.isVerified}`,
       );
@@ -593,6 +672,19 @@ export class RestaurantsService {
         slug: restaurant.slug,
         ownerId: restaurant.ownerId,
       });
+      await this.notificationsService
+        .create({
+          userId: restaurant.ownerId,
+          type: 'restaurant',
+          title: 'Restaurant Deactivated',
+          body: `Your restaurant "${restaurant.name}" has been deactivated by admin.`,
+          data: { restaurantId: id },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create delete notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(`Restaurant soft deleted: ${id}`);
       return { message: 'Restaurant deleted successfully' };
     }, 'delete');
@@ -623,6 +715,19 @@ export class RestaurantsService {
         slug: restored.slug,
         ownerId: restored.ownerId,
       });
+      await this.notificationsService
+        .create({
+          userId: restored.ownerId,
+          type: 'restaurant',
+          title: 'Restaurant Restored',
+          body: `Your restaurant "${restored.name}" has been restored.`,
+          data: { restaurantId: id },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create restore notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(`Restaurant restored: ${restored.name} (ID: ${id})`);
       return restored as unknown as RestaurantResponseDto;
     }, 'restore');
@@ -645,13 +750,30 @@ export class RestaurantsService {
       }
 
       await this.invalidateRestaurant({ id, ownerId: restaurant.ownerId });
+      await this.notificationsService
+        .create({
+          userId: restaurant.ownerId,
+          type: 'restaurant',
+          title: updated.isActive
+            ? 'Restaurant Activated'
+            : 'Restaurant Deactivated',
+          body: `Your restaurant "${restaurant.name}" has been ${updated.isActive ? 'activated' : 'deactivated'}.`,
+          data: { restaurantId: id, isActive: updated.isActive },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to create active notification: ${err?.message}`,
+          ),
+        );
       this.logger.log(`Restaurant ${id} active status: ${updated.isActive}`);
       return { isActive: updated.isActive };
     }, 'toggleActive');
   }
 
   // ─── FIND DELETED (Admin) ───
-  async findDeleted(options: { page?: number; limit?: number; search?: string } = {}): Promise<{
+  async findDeleted(
+    options: { page?: number; limit?: number; search?: string } = {},
+  ): Promise<{
     data: RestaurantResponseDto[];
     total: number;
     page: number;
@@ -660,13 +782,23 @@ export class RestaurantsService {
   }> {
     return this.handleDbOperation(async () => {
       const { page = 1, limit = 10, search } = options;
-      const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NOT NULL`];
+      const conditions: any[] = [
+        sql`${restaurantsTable.deletedAt} IS NOT NULL`,
+      ];
       if (search && search.trim()) {
         const term = `%${search.trim()}%`;
-        conditions.push(or(ilike(restaurantsTable.name, term), ilike(restaurantsTable.address, term)));
+        conditions.push(
+          or(
+            ilike(restaurantsTable.name, term),
+            ilike(restaurantsTable.address, term),
+          ),
+        );
       }
       const whereClause = and(...conditions);
-      const [countResult] = await this.db.select({ total: count() }).from(restaurantsTable).where(whereClause);
+      const [countResult] = await this.db
+        .select({ total: count() })
+        .from(restaurantsTable)
+        .where(whereClause);
       const total = countResult?.total || 0;
       const totalPages = Math.ceil(total / limit);
       const offset = (page - 1) * limit;
@@ -677,7 +809,13 @@ export class RestaurantsService {
         .orderBy(desc(restaurantsTable.deletedAt))
         .limit(limit)
         .offset(offset);
-      return { data: rows as unknown as RestaurantResponseDto[], total, page, limit, totalPages };
+      return {
+        data: rows as unknown as RestaurantResponseDto[],
+        total,
+        page,
+        limit,
+        totalPages,
+      };
     }, 'findDeleted');
   }
 
@@ -687,7 +825,8 @@ export class RestaurantsService {
       const restaurant = await this.db.query.restaurantsTable.findFirst({
         where: eq(restaurantsTable.id, id),
       });
-      if (!restaurant) throw new NotFoundException(`Restaurant with ID ${id} not found`);
+      if (!restaurant)
+        throw new NotFoundException(`Restaurant with ID ${id} not found`);
       // cleanup cloudinary best effort
       if (restaurant.logoUrl) {
         const pid = this.extractPublicId(restaurant.logoUrl);
@@ -698,7 +837,11 @@ export class RestaurantsService {
         if (pid) await this.cloudinaryService.deleteImage(pid).catch(() => {});
       }
       await this.db.delete(restaurantsTable).where(eq(restaurantsTable.id, id));
-      await this.invalidateRestaurant({ id, slug: restaurant.slug, ownerId: restaurant.ownerId });
+      await this.invalidateRestaurant({
+        id,
+        slug: restaurant.slug,
+        ownerId: restaurant.ownerId,
+      });
       this.logger.log(`Restaurant hard deleted: ${id}`);
     }, 'hardDelete');
   }

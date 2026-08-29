@@ -23,19 +23,35 @@ import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { NotificationsService } from '../notification/notification.service';
+import { CacheService } from '../redis/cache.service';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private readonly LIST_TTL = 60;
+  private readonly ENTITY_TTL = 300;
+  private readonly STATS_TTL = 60;
+  private readonly DELETED_TTL = 60;
 
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
     private configService: ConfigService,
     private readonly cloudinaryService: CloudinaryService,
-    private readonly notificationsService: NotificationsService
-
+    private readonly notificationsService: NotificationsService,
+    private readonly cache: CacheService,
   ) {}
+
+  private keyList(hash: string) { return `users:list:${hash}`; }
+  private keyId(id: string) { return `users:id:${id}`; }
+  private keyStats() { return `users:stats:overview`; }
+  private keyDeleted(hash: string) { return `users:deleted:${hash}`; }
+
+  private async invalidateUsers(opts: { id?: string } = {}): Promise<void> {
+    const ops: Promise<void>[] = [this.cache.delByPattern('users:list:*'), this.cache.delByPattern('users:deleted:*'), this.cache.del(this.keyStats())];
+    if (opts.id) ops.push(this.cache.del(this.keyId(opts.id)));
+    await Promise.all(ops);
+  }
 
   // ──────────────────────────────────────────────────────────────────────────
   // Helper Methods
@@ -140,6 +156,7 @@ export class UsersService {
     });
   }
 
+  await this.invalidateUsers({ id: userId });
   // Notify user - profile image updated (non-blocking)
   await this.notificationsService
     .create({
@@ -187,6 +204,7 @@ export class UsersService {
     );
   }
 
+  await this.invalidateUsers({ id: userId });
   await this.notificationsService
     .create({
       userId,
@@ -223,11 +241,14 @@ export class UsersService {
       if (!id || id.trim().length === 0) {
         throw new BadRequestException('User ID is required');
       }
-
+      // Use cache for admin fetches – fail-open
+      const cacheKey = this.keyId(id);
+      const cached = await this.cache.get<UsersTable>(cacheKey);
+      if (cached !== null) return cached;
       const user = await this.db.query.usersTable.findFirst({
         where: eq(usersTable.id, id),
       });
-
+      if (user) await this.cache.set(cacheKey, user, this.ENTITY_TTL);
       return user ?? null;
     }, 'findById');
   }
@@ -315,6 +336,18 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to create user');
       }
 
+      await this.invalidateUsers();
+      // Notify new user – welcome (non-blocking)
+      await this.notificationsService
+        .create({
+          userId: newUser.id,
+          type: 'profile',
+          title: 'Welcome to KhanaGo!',
+          body: `Your account has been created as ${newUser.role}.`,
+          data: { role: newUser.role },
+        })
+        .catch((err) => this.logger.warn(`Failed to create welcome notification: ${err?.message}`));
+
       this.logger.log(`User created: ${newUser.email} (ID: ${newUser.id})`);
       return newUser;
     }, 'create');
@@ -350,6 +383,16 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to verify user');
       }
 
+      await this.invalidateUsers({ id: userId });
+      await this.notificationsService
+        .create({
+          userId,
+          type: 'profile',
+          title: 'Account Verified',
+          body: `Your account has been verified successfully.`,
+          data: {},
+        })
+        .catch((err) => this.logger.warn(`Failed to create verify notification: ${err?.message}`));
       this.logger.log(`User verified: ${user.email} (ID: ${userId})`);
     }, 'markAsVerified');
   }
@@ -553,88 +596,103 @@ export class UsersService {
     limit: number;
     totalPages: number;
   }> {
+    const normalized = {
+      page: options.page ?? 1,
+      limit: options.limit ?? 10,
+      search: options.search ?? '',
+      role: options.role ?? '',
+      isVerified: options.isVerified,
+      isOnline: options.isOnline,
+      sortBy: options.sortBy ?? 'createdAt',
+      sortOrder: options.sortOrder ?? 'desc',
+    };
+    const hash = CacheService.hashOptions(normalized);
+    const cacheKey = this.keyList(hash);
+
     return this.handleDbOperation(async () => {
-      const {
-        page = 1,
-        limit = 10,
-        search,
-        role,
-        isVerified,
-        isOnline,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-      } = options;
+      return this.cache.wrap(cacheKey, this.LIST_TTL, async () => {
+        const {
+          page = 1,
+          limit = 10,
+          search,
+          role,
+          isVerified,
+          isOnline,
+          sortBy = 'createdAt',
+          sortOrder = 'desc',
+        } = options;
 
-      if (page < 1) throw new BadRequestException('Page must be at least 1');
-      if (limit < 1 || limit > 100) {
-        throw new BadRequestException('Limit must be between 1 and 100');
-      }
+        if (page < 1) throw new BadRequestException('Page must be at least 1');
+        if (limit < 1 || limit > 100) {
+          throw new BadRequestException('Limit must be between 1 and 100');
+        }
 
-      const allowedSortFields: Record<string, any> = {
-        createdAt: usersTable.createdAt,
-        updatedAt: usersTable.updatedAt,
-        firstName: usersTable.firstName,
-        lastName: usersTable.lastName,
-        email: usersTable.email,
-      };
-      const sortColumn = allowedSortFields[sortBy] ?? usersTable.createdAt;
-      const orderFn = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+        const allowedSortFields: Record<string, any> = {
+          createdAt: usersTable.createdAt,
+          updatedAt: usersTable.updatedAt,
+          firstName: usersTable.firstName,
+          lastName: usersTable.lastName,
+          email: usersTable.email,
+        };
+        const sortColumn = allowedSortFields[sortBy] ?? usersTable.createdAt;
+        const orderFn = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
-      const conditions: any[] = [];
+        const conditions: any[] = [];
 
-      if (search && search.trim().length > 0) {
-        const searchTerm = `%${search.trim()}%`;
-        conditions.push(
-          or(
-            ilike(usersTable.firstName, searchTerm),
-            ilike(usersTable.lastName, searchTerm),
-            ilike(usersTable.email, searchTerm),
-            ilike(usersTable.phone, searchTerm),
-          ),
-        );
-      }
+        if (search && search.trim().length > 0) {
+          const searchTerm = `%${search.trim()}%`;
+          conditions.push(
+            or(
+              ilike(usersTable.firstName, searchTerm),
+              ilike(usersTable.lastName, searchTerm),
+              ilike(usersTable.email, searchTerm),
+              ilike(usersTable.phone, searchTerm),
+            ),
+          );
+        }
 
-      if (role) {
-        conditions.push(eq(usersTable.role, role));
-      }
+        if (role) {
+          conditions.push(eq(usersTable.role, role));
+        }
 
-      if (isVerified !== undefined) {
-        conditions.push(eq(usersTable.isVerified, isVerified));
-      }
+        if (isVerified !== undefined) {
+          conditions.push(eq(usersTable.isVerified, isVerified));
+        }
 
-      if (isOnline !== undefined) {
-        conditions.push(eq(usersTable.isOnline, isOnline));
-      }
+        if (isOnline !== undefined) {
+          conditions.push(eq(usersTable.isOnline, isOnline));
+        }
 
-      conditions.push(sql`${usersTable.deletedAt} IS NULL`);
+        conditions.push(sql`${usersTable.deletedAt} IS NULL`);
 
-      const whereClause =
-        conditions.length > 0 ? and(...conditions) : undefined;
+        const whereClause =
+          conditions.length > 0 ? and(...conditions) : undefined;
 
-      const [countResult] = await this.db
-        .select({ total: count() })
-        .from(usersTable)
-        .where(whereClause);
+        const [countResult] = await this.db
+          .select({ total: count() })
+          .from(usersTable)
+          .where(whereClause);
 
-      const total = countResult?.total || 0;
-      const totalPages = Math.ceil(total / limit);
-      const offset = (page - 1) * limit;
+        const total = countResult?.total || 0;
+        const totalPages = Math.ceil(total / limit);
+        const offset = (page - 1) * limit;
 
-      const users = await this.db
-        .select()
-        .from(usersTable)
-        .where(whereClause)
-        .orderBy(orderFn)
-        .limit(limit)
-        .offset(offset);
+        const users = await this.db
+          .select()
+          .from(usersTable)
+          .where(whereClause)
+          .orderBy(orderFn)
+          .limit(limit)
+          .offset(offset);
 
-      return {
-        data: users,
-        total,
-        page,
-        limit,
-        totalPages,
-      };
+        return {
+          data: users,
+          total,
+          page,
+          limit,
+          totalPages,
+        };
+      });
     }, 'findAll');
   }
 
@@ -687,6 +745,7 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to update user');
       }
 
+      await this.invalidateUsers({ id });
       // Send notification (non-blocking) - profile updated
       await this.notificationsService
         .create({
@@ -748,6 +807,16 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to update user role');
       }
 
+      await this.invalidateUsers({ id: userId });
+      await this.notificationsService
+        .create({
+          userId,
+          type: 'profile',
+          title: 'Role Updated',
+          body: `Your role has been changed to ${newRole}.`,
+          data: { previousRole: user.role, newRole },
+        })
+        .catch((err) => this.logger.warn(`Failed to create role notification: ${err?.message}`));
       this.logger.log(
         `User ${userId} role changed from ${user.role} to ${newRole}`,
       );
@@ -798,6 +867,16 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to delete user');
       }
 
+      await this.invalidateUsers({ id });
+      await this.notificationsService
+        .create({
+          userId: id,
+          type: 'profile',
+          title: 'Account Deactivated',
+          body: `Your account has been deactivated.`,
+          data: {},
+        })
+        .catch((err) => this.logger.warn(`Failed to create delete notification: ${err?.message}`));
       this.logger.log(`User soft deleted: ${user.email} (ID: ${id})`);
     }, 'softDelete');
   }
@@ -851,6 +930,16 @@ export class UsersService {
         throw new InternalServerErrorException('Failed to restore user');
       }
 
+      await this.invalidateUsers({ id });
+      await this.notificationsService
+        .create({
+          userId: id,
+          type: 'profile',
+          title: 'Account Restored',
+          body: `Your account has been restored. Welcome back!`,
+          data: {},
+        })
+        .catch((err) => this.logger.warn(`Failed to create restore notification: ${err?.message}`));
       this.logger.log(`User restored: ${restored.email} (ID: ${id})`);
       return restored;
     }, 'restore');
@@ -891,6 +980,7 @@ export class UsersService {
         );
       }
 
+      await this.invalidateUsers({ id });
       this.logger.log(`User hard deleted: ${user.email} (ID: ${id})`);
     }, 'hardDelete');
   }
@@ -902,25 +992,29 @@ export class UsersService {
     limit: number;
     totalPages: number;
   }> {
+    const hash = CacheService.hashOptions(options);
+    const cacheKey = this.keyDeleted(hash);
     return this.handleDbOperation(async () => {
-      const { page = 1, limit = 10, search } = options;
-      const conditions: any[] = [sql`${usersTable.deletedAt} IS NOT NULL`];
-      if (search && search.trim().length > 0) {
-        const term = `%${search.trim()}%`;
-        conditions.push(or(ilike(usersTable.email, term), ilike(usersTable.firstName, term), ilike(usersTable.lastName, term)));
-      }
-      const whereClause = and(...conditions);
-      const [countResult] = await this.db.select({ total: count() }).from(usersTable).where(whereClause);
-      const total = countResult?.total || 0;
-      const totalPages = Math.ceil(total / limit);
-      const offset = (page - 1) * limit;
-      const users = await this.db.query.usersTable.findMany({
-        where: whereClause,
-        orderBy: [desc(usersTable.deletedAt)],
-        limit,
-        offset,
+      return this.cache.wrap(cacheKey, this.DELETED_TTL, async () => {
+        const { page = 1, limit = 10, search } = options;
+        const conditions: any[] = [sql`${usersTable.deletedAt} IS NOT NULL`];
+        if (search && search.trim().length > 0) {
+          const term = `%${search.trim()}%`;
+          conditions.push(or(ilike(usersTable.email, term), ilike(usersTable.firstName, term), ilike(usersTable.lastName, term)));
+        }
+        const whereClause = and(...conditions);
+        const [countResult] = await this.db.select({ total: count() }).from(usersTable).where(whereClause);
+        const total = countResult?.total || 0;
+        const totalPages = Math.ceil(total / limit);
+        const offset = (page - 1) * limit;
+        const users = await this.db.query.usersTable.findMany({
+          where: whereClause,
+          orderBy: [desc(usersTable.deletedAt)],
+          limit,
+          offset,
+        });
+        return { data: users || [], total, page, limit, totalPages };
       });
-      return { data: users || [], total, page, limit, totalPages };
     }, 'findDeleted');
   }
 
@@ -938,44 +1032,47 @@ export class UsersService {
     adminUsers: number;
     deletedUsers: number;
   }> {
+    const cacheKey = this.keyStats();
     return this.handleDbOperation(async () => {
-      const [totalUsersResult] = await this.db
-        .select({ totalUsers: count() })
-        .from(usersTable);
+      return this.cache.wrap(cacheKey, this.STATS_TTL, async () => {
+        const [totalUsersResult] = await this.db
+          .select({ totalUsers: count() })
+          .from(usersTable);
 
-      const [activeUsersResult] = await this.db
-        .select({ activeUsers: count() })
-        .from(usersTable)
-        .where(sql`${usersTable.deletedAt} IS NULL`);
+        const [activeUsersResult] = await this.db
+          .select({ activeUsers: count() })
+          .from(usersTable)
+          .where(sql`${usersTable.deletedAt} IS NULL`);
 
-      const [verifiedUsersResult] = await this.db
-        .select({ verifiedUsers: count() })
-        .from(usersTable)
-        .where(and(eq(usersTable.isVerified, true), sql`${usersTable.deletedAt} IS NULL`));
+        const [verifiedUsersResult] = await this.db
+          .select({ verifiedUsers: count() })
+          .from(usersTable)
+          .where(and(eq(usersTable.isVerified, true), sql`${usersTable.deletedAt} IS NULL`));
 
-      const [onlineUsersResult] = await this.db
-        .select({ onlineUsers: count() })
-        .from(usersTable)
-        .where(and(eq(usersTable.isOnline, true), sql`${usersTable.deletedAt} IS NULL`));
+        const [onlineUsersResult] = await this.db
+          .select({ onlineUsers: count() })
+          .from(usersTable)
+          .where(and(eq(usersTable.isOnline, true), sql`${usersTable.deletedAt} IS NULL`));
 
-      const [adminUsersResult] = await this.db
-        .select({ adminUsers: count() })
-        .from(usersTable)
-        .where(and(eq(usersTable.role, 'ADMIN'), sql`${usersTable.deletedAt} IS NULL`));
+        const [adminUsersResult] = await this.db
+          .select({ adminUsers: count() })
+          .from(usersTable)
+          .where(and(eq(usersTable.role, 'ADMIN'), sql`${usersTable.deletedAt} IS NULL`));
 
-      const [deletedUsersResult] = await this.db
-        .select({ deletedUsers: count() })
-        .from(usersTable)
-        .where(sql`${usersTable.deletedAt} IS NOT NULL`);
+        const [deletedUsersResult] = await this.db
+          .select({ deletedUsers: count() })
+          .from(usersTable)
+          .where(sql`${usersTable.deletedAt} IS NOT NULL`);
 
-      return {
-        totalUsers: totalUsersResult?.totalUsers ?? 0,
-        activeUsers: activeUsersResult?.activeUsers ?? 0,
-        verifiedUsers: verifiedUsersResult?.verifiedUsers ?? 0,
-        onlineUsers: onlineUsersResult?.onlineUsers ?? 0,
-        adminUsers: adminUsersResult?.adminUsers ?? 0,
-        deletedUsers: deletedUsersResult?.deletedUsers ?? 0,
-      };
+        return {
+          totalUsers: totalUsersResult?.totalUsers ?? 0,
+          activeUsers: activeUsersResult?.activeUsers ?? 0,
+          verifiedUsers: verifiedUsersResult?.verifiedUsers ?? 0,
+          onlineUsers: onlineUsersResult?.onlineUsers ?? 0,
+          adminUsers: adminUsersResult?.adminUsers ?? 0,
+          deletedUsers: deletedUsersResult?.deletedUsers ?? 0,
+        };
+      });
     }, 'getStatistics');
   }
 }

@@ -14,8 +14,13 @@ export const useUpdateUser = () => {
       updateUser(data.id, data);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-user', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
       Alert.alert('Success', 'User updated successfully');
-      router.back();
+      if (router.canGoBack()) router.back();
+      setTimeout(() => {
+        // Ensure we are on users list, not dashboard
+        try { router.replace('/(admin)/(tabs)/users' as any); } catch {}
+      }, 100);
     },
     onError: (error: any) => {
       const msg = Array.isArray(error?.response?.data?.message)

@@ -170,11 +170,11 @@ export default function AdminUsersScreen() {
         </View>
       </View>
 
-      {/* List */}
+      {/* List – single loading only */}
       <ScrollView
         className="flex-1 px-4 mt-3"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isFetching && page === 1} onRefresh={() => refetch()} />}
+        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor="#E23744" />}
         onScroll={({ nativeEvent }) => {
           const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
           const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 200;
@@ -182,7 +182,7 @@ export default function AdminUsersScreen() {
         }}
         scrollEventThrottle={200}
       >
-        {isLoading && page === 1 ? (
+        {isLoading ? (
           <View className="items-center py-12">
             <ActivityIndicator size="large" color="#E23744" />
             <Text className="mt-3 text-sm text-gray-400">Loading users...</Text>

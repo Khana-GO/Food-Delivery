@@ -8,6 +8,11 @@ export const useUserStats = () => {
       const data = await userAdminService.getStats();
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    placeholderData: (prev) => prev,
   });
 };

@@ -30,7 +30,8 @@ export default function CreateRestaurantAdminScreen() {
             },
             onSuccess: () => {
               Alert.alert('Success', 'Restaurant created');
-              router.back();
+              if (router.canGoBack()) router.back();
+              setTimeout(() => router.replace('/(admin)/(tabs)/restaurants' as any), 100);
             },
           });
         }}
