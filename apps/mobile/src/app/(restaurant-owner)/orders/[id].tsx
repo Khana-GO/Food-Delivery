@@ -11,7 +11,7 @@ import {
   useResponsive,
   rs,
   type OrderStatus,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 interface OrderItem {
   name: string;

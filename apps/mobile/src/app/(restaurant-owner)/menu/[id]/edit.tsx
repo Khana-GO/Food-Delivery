@@ -8,11 +8,11 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { MenuItemForm } from '@/components/menu-item/MenuItemForm';
-import { useMenuItem } from '@/hooks/menu-item/useMenuItem';
-import { useUpdateMenuItem } from '@/hooks/menu-item/useUpdateMenuItem';
-import { useDeleteMenuItem } from '@/hooks/menu-item/useDeleteMenuItem';
-import type { MenuItemFormValues } from '@/components/menu-item/MenuItemForm';
+import { MenuItemForm } from '@/components/res-owner/menu-item/MenuItemForm';
+import { useMenuItem } from '@/hooks/owner/menu-item/useMenuItem';
+import { useUpdateMenuItem } from '@/hooks/owner/menu-item/useUpdateMenuItem';
+import { useDeleteMenuItem } from '@/hooks/owner/menu-item/useDeleteMenuItem';
+import type { MenuItemFormValues } from '@/components/res-owner/menu-item/MenuItemForm';
 import type { UpdateMenuItemPayload } from '@food_delivery/types';
 import * as ImagePicker from 'expo-image-picker';
 

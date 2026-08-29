@@ -7,11 +7,11 @@ import {
   LoadingScreen,
   ContentWidth,
   useResponsive,
-} from '@/components/owner/kit';
-import { RestaurantForm } from '@/components/restaurant/RestaurantForm';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
-import { useUpdateRestaurant } from '@/hooks/restaurant/useRestaurantMutations';
-import { useRestaurantStore } from '@/stores/restaurantStore';
+} from '@/components/res-owner/owner/kit';
+import { RestaurantForm } from '@/components/res-owner/restaurant/RestaurantForm';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
+import { useUpdateRestaurant } from '@/hooks/owner/restaurant/useRestaurantMutations';
+import { useRestaurantStore } from '@/stores/owner/restaurantStore';
 import { CreateRestaurantPayload } from '@food_delivery/types';
 
 export default function EditRestaurantScreen() {

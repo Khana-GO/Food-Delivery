@@ -3,6 +3,7 @@ import { UsersService } from './users.service';
 import { DATABASE } from '../db/database.constants';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { ConfigService } from '@nestjs/config';
+import { NotificationsService } from '../notification/notification.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -13,7 +14,8 @@ describe('UsersService', () => {
         UsersService,
         { provide: DATABASE, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: CloudinaryService, useValue: {} },
+        { provide: CloudinaryService, useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() } },
+        { provide: NotificationsService, useValue: { create: jest.fn().mockResolvedValue(null) } },
       ],
     }).compile();
 

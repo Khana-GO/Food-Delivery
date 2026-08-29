@@ -9,7 +9,7 @@ import {
   useResponsive,
   rs,
   GREEN,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 type Range = 'week' | 'month' | 'year';
 

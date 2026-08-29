@@ -1,15 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RestaurantService } from './restaurant.service';
+import { RestaurantsService } from './restaurant.service';
+import { DATABASE } from '../db/database.constants';
+import { CloudinaryService } from '../cloudinary/clodinary.service';
+import { CacheService } from '../redis/cache.service';
 
-describe('RestaurantService', () => {
-  let service: RestaurantService;
+describe('RestaurantsService', () => {
+  let service: RestaurantsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RestaurantService],
+      providers: [
+        RestaurantsService,
+        { provide: DATABASE, useValue: {} },
+        { provide: CloudinaryService, useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() } },
+        { provide: CacheService, useValue: { wrap: jest.fn((k, ttl, fn) => fn()), del: jest.fn(), delByPattern: jest.fn(), hashOptions: jest.fn(() => 'hash') } },
+      ],
     }).compile();
 
-    service = module.get<RestaurantService>(RestaurantService);
+    service = module.get<RestaurantsService>(RestaurantsService);
   });
 
   it('should be defined', () => {

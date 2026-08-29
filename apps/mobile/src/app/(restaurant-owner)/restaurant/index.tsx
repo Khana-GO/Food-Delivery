@@ -4,13 +4,13 @@ import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
 import {
   SearchInput,
   EmptyState,
   ContentWidth,
   useResponsive,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 export default function RestaurantsListScreen() {
   const insets = useSafeAreaInsets();

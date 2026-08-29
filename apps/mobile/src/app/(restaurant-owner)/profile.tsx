@@ -13,11 +13,11 @@ import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
-import { ConfirmDialog, useResponsive, rs } from '@/components/owner/kit';
+import { ConfirmDialog, useResponsive, rs } from '@/components/res-owner/owner/kit';
 import * as ImagePicker from 'expo-image-picker';
-import { useUploadProfileImage } from '@/hooks/user/useUploadProfileImage';
-import { useDeleteProfileImage } from '@/hooks/user/useDeleteProfileImage';
-import { useUnreadCount } from '@/hooks/notification/useUnreadCount';
+import { useUploadProfileImage } from '@/hooks/owner/user/useUploadProfileImage';
+import { useDeleteProfileImage } from '@/hooks/owner/user/useDeleteProfileImage';
+import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 
 interface Row {
   id: string;

@@ -41,6 +41,9 @@ export class UserResponseDto {
   @ApiProperty({ example: null, nullable: true })
   deletedAt?: Date | null;
 
+  @ApiProperty({ example: 'https://example.com/avatar.jpg', nullable: true })
+  imagePublicId?: string | null;
+
   constructor(partial: Partial<UserResponseDto> = {}) {
     Object.assign(this, partial);
   }

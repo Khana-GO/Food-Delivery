@@ -22,7 +22,9 @@ export interface User {
     isVerified?: boolean,
     isOnline?: boolean,
     createdAt: Date | string,
+    deletedAt?: Date | string,
     updatedAt?: Date | string,
+    lastLoginAt?: Date | string,
 }
 
 
@@ -97,6 +99,7 @@ export interface Restaurant {  id: string;
   totalReviews: number;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface CreateRestaurantPayload {
@@ -223,6 +226,59 @@ export interface Notification {
 
 export interface NotificationResponse {
   data: Notification[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+
+// Additional frontend-specific types
+export interface UserListFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: UserRole;
+  isVerified?: boolean;
+  isOnline?: boolean;
+}
+
+export interface UserStats {
+  totalUsers: number;
+  activeUsers: number;
+  verifiedUsers: number;
+  onlineUsers: number;
+  adminUsers: number;
+  deletedUsers: number;
+}
+
+
+export interface RestaurantFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  cuisineType?: string;
+  isOpen?: boolean;
+  isVerified?: boolean;
+  isActive?: boolean;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+export interface RestaurantStats {
+  total: number;
+  active: number;
+  inactive: number;
+  verified: number;
+  unverified: number;
+  open: number;
+  closed: number;
+  deleted: number;
+  pendingVerification?: number;
+}
+
+export interface RestaurantListResponse {
+  data: Restaurant[];
   total: number;
   page: number;
   limit: number;

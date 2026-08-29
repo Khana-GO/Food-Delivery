@@ -7,11 +7,11 @@ import {
   ConfirmDialog,
   LoadingScreen,
   EmptyState,
-} from '@/components/owner/kit';
-import { CategoryForm } from '@/components/category/CategoryForm';
-import { useCategory } from '@/hooks/category/useCategory';
-import { useUpdateCategory } from '@/hooks/category/useUpdateCategory';
-import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
+} from '@/components/res-owner/owner/kit';
+import { CategoryForm } from '@/components/res-owner/category/CategoryForm';
+import { useCategory } from '@/hooks/owner/category/useCategory';
+import { useUpdateCategory } from '@/hooks/owner/category/useUpdateCategory';
+import { useDeleteCategory } from '@/hooks/owner/category/useDeleteCategory';
 
 export default function EditCategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

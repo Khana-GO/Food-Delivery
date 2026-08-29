@@ -14,15 +14,15 @@ import {
   useResponsive,
   rs,
   Toggle,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 import { toast } from '@/components/ui/toast';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
 import {
   useToggleOpenStatus,
   useUpdateImage,
   useDeleteImage,
   useDeleteRestaurant,
-} from '@/hooks/restaurant/useRestaurantMutations';
+} from '@/hooks/owner/restaurant/useRestaurantMutations';
 
 type PhotoTarget = 'logo' | 'cover';
 

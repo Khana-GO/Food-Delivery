@@ -8,7 +8,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, and, sql, desc, count } from 'drizzle-orm';
+import { eq, and, sql, desc, asc, count, ilike, or } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import {
@@ -23,6 +23,7 @@ import { RestaurantResponseDto } from './dto/restarurant-response.dto';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@food_delivery/types';
 import { CacheService } from '../redis/cache.service';
+import { RestaurantStatsDto } from './dto/restaurant-stats.dto';
 
 @Injectable()
 export class RestaurantsService {
@@ -184,6 +185,7 @@ export class RestaurantsService {
       cuisineType?: string;
       isOpen?: boolean;
       isVerified?: boolean;
+      isActive?: boolean;
       sortBy?: string;
       sortOrder?: 'ASC' | 'DESC';
     } = {},
@@ -202,6 +204,7 @@ export class RestaurantsService {
       cuisineType: options.cuisineType ?? '',
       isOpen: options.isOpen,
       isVerified: options.isVerified,
+      isActive: options.isActive,
       sortBy: options.sortBy ?? 'createdAt',
       sortOrder: options.sortOrder ?? 'DESC',
     };
@@ -217,16 +220,35 @@ export class RestaurantsService {
           cuisineType,
           isOpen,
           isVerified,
+          isActive,
           sortBy = 'createdAt',
           sortOrder = 'DESC',
         } = options;
 
+        if (page < 1) throw new BadRequestException('Page must be at least 1');
+        if (limit < 1 || limit > 100) throw new BadRequestException('Limit must be between 1 and 100');
+
+        const allowedSort: Record<string, any> = {
+          createdAt: restaurantsTable.createdAt,
+          updatedAt: restaurantsTable.updatedAt,
+          name: restaurantsTable.name,
+          averageRating: restaurantsTable.averageRating,
+          deliveryFee: restaurantsTable.deliveryFee,
+        };
+        const sortCol = allowedSort[sortBy] ?? restaurantsTable.createdAt;
+        const orderFn = sortOrder.toUpperCase() === 'ASC' ? asc(sortCol) : desc(sortCol);
+
         const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NULL`];
 
-        if (search) {
-          const searchTerm = `%${search}%`;
+        if (search && search.trim()) {
+          const term = `%${search.trim()}%`;
           conditions.push(
-            sql`${restaurantsTable.name} ILIKE ${searchTerm} OR ${restaurantsTable.description} ILIKE ${searchTerm}`,
+            or(
+              ilike(restaurantsTable.name, term),
+              ilike(restaurantsTable.description, term),
+              ilike(restaurantsTable.address, term),
+              ilike(restaurantsTable.slug, term),
+            ),
           );
         }
         if (cuisineType)
@@ -235,6 +257,8 @@ export class RestaurantsService {
           conditions.push(eq(restaurantsTable.isOpen, isOpen));
         if (isVerified !== undefined)
           conditions.push(eq(restaurantsTable.isVerified, isVerified));
+        if (isActive !== undefined)
+          conditions.push(eq(restaurantsTable.isActive, isActive));
 
         const whereClause =
           conditions.length > 0 ? and(...conditions) : undefined;
@@ -252,9 +276,7 @@ export class RestaurantsService {
           .select()
           .from(restaurantsTable)
           .where(whereClause)
-          .orderBy(
-            sql`${restaurantsTable[sortBy as keyof typeof restaurantsTable]} ${sql.raw(sortOrder)}`,
-          )
+          .orderBy(orderFn)
           .limit(limit)
           .offset(offset);
 
@@ -604,5 +626,136 @@ export class RestaurantsService {
       this.logger.log(`Restaurant restored: ${restored.name} (ID: ${id})`);
       return restored as unknown as RestaurantResponseDto;
     }, 'restore');
+  }
+
+  // ─── TOGGLE ACTIVE ───
+  async toggleActive(id: string): Promise<{ isActive: boolean }> {
+    return this.handleDbOperation(async () => {
+      const restaurant = await this.findById(id);
+      const [updated] = await this.db
+        .update(restaurantsTable)
+        .set({ isActive: !restaurant.isActive, updatedAt: new Date() })
+        .where(eq(restaurantsTable.id, id))
+        .returning();
+
+      if (!updated) {
+        throw new InternalServerErrorException(
+          'Failed to toggle active status',
+        );
+      }
+
+      await this.invalidateRestaurant({ id, ownerId: restaurant.ownerId });
+      this.logger.log(`Restaurant ${id} active status: ${updated.isActive}`);
+      return { isActive: updated.isActive };
+    }, 'toggleActive');
+  }
+
+  // ─── FIND DELETED (Admin) ───
+  async findDeleted(options: { page?: number; limit?: number; search?: string } = {}): Promise<{
+    data: RestaurantResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    return this.handleDbOperation(async () => {
+      const { page = 1, limit = 10, search } = options;
+      const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NOT NULL`];
+      if (search && search.trim()) {
+        const term = `%${search.trim()}%`;
+        conditions.push(or(ilike(restaurantsTable.name, term), ilike(restaurantsTable.address, term)));
+      }
+      const whereClause = and(...conditions);
+      const [countResult] = await this.db.select({ total: count() }).from(restaurantsTable).where(whereClause);
+      const total = countResult?.total || 0;
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+      const rows = await this.db
+        .select()
+        .from(restaurantsTable)
+        .where(whereClause)
+        .orderBy(desc(restaurantsTable.deletedAt))
+        .limit(limit)
+        .offset(offset);
+      return { data: rows as unknown as RestaurantResponseDto[], total, page, limit, totalPages };
+    }, 'findDeleted');
+  }
+
+  // ─── HARD DELETE (Admin) ───
+  async hardDelete(id: string): Promise<void> {
+    return this.handleDbOperation(async () => {
+      const restaurant = await this.db.query.restaurantsTable.findFirst({
+        where: eq(restaurantsTable.id, id),
+      });
+      if (!restaurant) throw new NotFoundException(`Restaurant with ID ${id} not found`);
+      // cleanup cloudinary best effort
+      if (restaurant.logoUrl) {
+        const pid = this.extractPublicId(restaurant.logoUrl);
+        if (pid) await this.cloudinaryService.deleteImage(pid).catch(() => {});
+      }
+      if (restaurant.coverImageUrl) {
+        const pid = this.extractPublicId(restaurant.coverImageUrl);
+        if (pid) await this.cloudinaryService.deleteImage(pid).catch(() => {});
+      }
+      await this.db.delete(restaurantsTable).where(eq(restaurantsTable.id, id));
+      await this.invalidateRestaurant({ id, slug: restaurant.slug, ownerId: restaurant.ownerId });
+      this.logger.log(`Restaurant hard deleted: ${id}`);
+    }, 'hardDelete');
+  }
+
+  // ─── GET STATS ───
+  async getStats(): Promise<RestaurantStatsDto> {
+    return this.handleDbOperation(async () => {
+      const [totalResult] = await this.db
+        .select({ total: count() })
+        .from(restaurantsTable)
+        .where(sql`${restaurantsTable.deletedAt} IS NULL`);
+
+      const [activeResult] = await this.db
+        .select({ active: count() })
+        .from(restaurantsTable)
+        .where(
+          and(
+            eq(restaurantsTable.isActive, true),
+            sql`${restaurantsTable.deletedAt} IS NULL`,
+          ),
+        );
+
+      const [verifiedResult] = await this.db
+        .select({ verified: count() })
+        .from(restaurantsTable)
+        .where(
+          and(
+            eq(restaurantsTable.isVerified, true),
+            sql`${restaurantsTable.deletedAt} IS NULL`,
+          ),
+        );
+
+      const [openResult] = await this.db
+        .select({ open: count() })
+        .from(restaurantsTable)
+        .where(
+          and(
+            eq(restaurantsTable.isOpen, true),
+            sql`${restaurantsTable.deletedAt} IS NULL`,
+          ),
+        );
+
+      const [deletedResult] = await this.db
+        .select({ deleted: count() })
+        .from(restaurantsTable)
+        .where(sql`${restaurantsTable.deletedAt} IS NOT NULL`);
+
+      return {
+        total: totalResult?.total || 0,
+        active: activeResult?.active || 0,
+        inactive: (totalResult?.total || 0) - (activeResult?.active || 0),
+        verified: verifiedResult?.verified || 0,
+        unverified: (totalResult?.total || 0) - (verifiedResult?.verified || 0),
+        open: openResult?.open || 0,
+        closed: (totalResult?.total || 0) - (openResult?.open || 0),
+        deleted: deletedResult?.deleted || 0,
+      };
+    }, 'getStats');
   }
 }

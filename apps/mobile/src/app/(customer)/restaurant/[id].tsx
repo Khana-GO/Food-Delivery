@@ -14,7 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import { useRestaurant } from '@/hooks/restaurant/useRestaurants';
+import { useRestaurant } from '@/hooks/owner/restaurant/useRestaurants';
 
 const { width } = Dimensions.get('window');
 

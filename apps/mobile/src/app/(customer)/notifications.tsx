@@ -9,12 +9,12 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useNotifications } from '@/hooks/notification/useNotifications';
-import { useMarkAsRead } from '@/hooks/notification/useMarkAsRead';
-import { useMarkAllAsRead } from '@/hooks/notification/useMarkAllAsRead';
-import { useDeleteNotification } from '@/hooks/notification/useDeleteNotification';
-import { NotificationItem } from '@/components/notification/NotificationItem';
-import { useNotificationStore } from '@/stores/notificationStore';
+import { useNotifications } from '@/hooks/owner/notification/useNotifications';
+import { useMarkAsRead } from '@/hooks/owner/notification/useMarkAsRead';
+import { useMarkAllAsRead } from '@/hooks/owner/notification/useMarkAllAsRead';
+import { useDeleteNotification } from '@/hooks/owner/notification/useDeleteNotification';
+import { NotificationItem } from '@/components/res-owner/notification/NotificationItem';
+import { useNotificationStore } from '@/stores/owner/notificationStore';
 
 export default function CustomerNotifications() {
   const [page, setPage] = useState(1);

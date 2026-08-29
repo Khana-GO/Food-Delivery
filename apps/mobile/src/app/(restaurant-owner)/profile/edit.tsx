@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
-import { useUpdateProfile } from '@/hooks/user/useUpdateProfile';
+import { ProfileEditForm } from '@/components/res-owner/profile/ProfileEditForm';
+import { useUpdateProfile } from '@/hooks/owner/user/useUpdateProfile';
 
 export default function EditProfileScreen() {
   const { user } = useAuth();

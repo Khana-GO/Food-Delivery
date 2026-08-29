@@ -12,7 +12,7 @@ import {
   useResponsive,
   rs,
   type OrderStatus,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 type TabKey = 'all' | OrderStatus;
 

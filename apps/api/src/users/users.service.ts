@@ -9,7 +9,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { eq, sql, and, or, like, desc, count } from 'drizzle-orm';
+import { eq, sql, and, or, ilike, desc, count, asc } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import {
@@ -543,6 +543,8 @@ export class UsersService {
       role?: UserRole;
       isVerified?: boolean;
       isOnline?: boolean;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
     } = {},
   ): Promise<{
     data: UsersTable[];
@@ -559,6 +561,8 @@ export class UsersService {
         role,
         isVerified,
         isOnline,
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
       } = options;
 
       if (page < 1) throw new BadRequestException('Page must be at least 1');
@@ -566,15 +570,26 @@ export class UsersService {
         throw new BadRequestException('Limit must be between 1 and 100');
       }
 
+      const allowedSortFields: Record<string, any> = {
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+        email: usersTable.email,
+      };
+      const sortColumn = allowedSortFields[sortBy] ?? usersTable.createdAt;
+      const orderFn = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+
       const conditions: any[] = [];
 
       if (search && search.trim().length > 0) {
         const searchTerm = `%${search.trim()}%`;
         conditions.push(
           or(
-            like(usersTable.firstName, searchTerm),
-            like(usersTable.lastName, searchTerm),
-            like(usersTable.email, searchTerm),
+            ilike(usersTable.firstName, searchTerm),
+            ilike(usersTable.lastName, searchTerm),
+            ilike(usersTable.email, searchTerm),
+            ilike(usersTable.phone, searchTerm),
           ),
         );
       }
@@ -609,7 +624,7 @@ export class UsersService {
         .select()
         .from(usersTable)
         .where(whereClause)
-        .orderBy(desc(usersTable.createdAt))
+        .orderBy(orderFn)
         .limit(limit)
         .offset(offset);
 
@@ -688,9 +703,17 @@ export class UsersService {
     }, 'update');
   }
 
-  async changeRole(userId: string, newRole: UserRole): Promise<UsersTable> {
+  async changeRole(userId: string, newRole: UserRole, actorId?: string): Promise<UsersTable> {
     return this.handleDbOperation(async () => {
       const user = await this.findByIdOrThrow(userId);
+
+      if (user.deletedAt) {
+        throw new BadRequestException('Cannot change role of a deleted user');
+      }
+
+      if (actorId && actorId === userId) {
+        throw new BadRequestException('You cannot change your own role');
+      }
 
       if (user.role === newRole) {
         throw new BadRequestException(`User already has role: ${newRole}`);
@@ -732,9 +755,13 @@ export class UsersService {
     }, 'changeRole');
   }
 
-  async softDelete(id: string): Promise<void> {
+  async softDelete(id: string, actorId?: string): Promise<void> {
     await this.handleDbOperation(async () => {
       const user = await this.findByIdOrThrow(id);
+
+      if (actorId && actorId === id) {
+        throw new BadRequestException('You cannot delete your own account');
+      }
 
       if (user.deletedAt) {
         throw new BadRequestException('User is already deleted');
@@ -762,6 +789,7 @@ export class UsersService {
           deletedAt: new Date(),
           updatedAt: new Date(),
           email: sql`${usersTable.email} || '-deleted-' || ${id}`,
+          phone: sql`${usersTable.phone} || '-deleted-' || ${id}`,
         })
         .where(eq(usersTable.id, id))
         .returning();
@@ -790,6 +818,23 @@ export class UsersService {
       }
 
       const originalEmail = user.email.replace(/-deleted-.*$/, '');
+      const originalPhone = user.phone ? user.phone.replace(/-deleted-.*$/, '') : user.phone;
+
+      // Prevent restoring if email/phone now collides with an active user
+      const emailCollision = await this.db.query.usersTable.findFirst({
+        where: and(eq(usersTable.email, originalEmail), sql`${usersTable.deletedAt} IS NULL`),
+      });
+      if (emailCollision) {
+        throw new ConflictException('Cannot restore: email already taken by another active user');
+      }
+      if (originalPhone) {
+        const phoneCollision = await this.db.query.usersTable.findFirst({
+          where: and(eq(usersTable.phone, originalPhone), sql`${usersTable.deletedAt} IS NULL`),
+        });
+        if (phoneCollision) {
+          throw new ConflictException('Cannot restore: phone already taken by another active user');
+        }
+      }
 
       const [restored] = await this.db
         .update(usersTable)
@@ -797,6 +842,7 @@ export class UsersService {
           deletedAt: null,
           updatedAt: new Date(),
           email: originalEmail,
+          phone: originalPhone,
         })
         .where(eq(usersTable.id, id))
         .returning();
@@ -810,9 +856,13 @@ export class UsersService {
     }, 'restore');
   }
 
-  async hardDelete(id: string): Promise<void> {
+  async hardDelete(id: string, actorId?: string): Promise<void> {
     await this.handleDbOperation(async () => {
       const user = await this.findByIdOrThrow(id);
+
+      if (actorId && actorId === id) {
+        throw new BadRequestException('You cannot permanently delete your own account');
+      }
 
       if (user.role === 'ADMIN') {
         const admins = await this.db
@@ -845,15 +895,39 @@ export class UsersService {
     }, 'hardDelete');
   }
 
-  async findDeleted(): Promise<UsersTable[]> {
+  async findDeleted(options: { page?: number; limit?: number; search?: string } = {}): Promise<{
+    data: UsersTable[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     return this.handleDbOperation(async () => {
+      const { page = 1, limit = 10, search } = options;
+      const conditions: any[] = [sql`${usersTable.deletedAt} IS NOT NULL`];
+      if (search && search.trim().length > 0) {
+        const term = `%${search.trim()}%`;
+        conditions.push(or(ilike(usersTable.email, term), ilike(usersTable.firstName, term), ilike(usersTable.lastName, term)));
+      }
+      const whereClause = and(...conditions);
+      const [countResult] = await this.db.select({ total: count() }).from(usersTable).where(whereClause);
+      const total = countResult?.total || 0;
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
       const users = await this.db.query.usersTable.findMany({
-        where: sql`${usersTable.deletedAt} IS NOT NULL`,
+        where: whereClause,
         orderBy: [desc(usersTable.deletedAt)],
+        limit,
+        offset,
       });
-
-      return users || [];
+      return { data: users || [], total, page, limit, totalPages };
     }, 'findDeleted');
+  }
+
+  // Backwards compatible: returns just array if needed internally
+  async findDeletedLegacy(): Promise<UsersTable[]> {
+    const res = await this.findDeleted({ page: 1, limit: 100 });
+    return res.data;
   }
 
   async getStatistics(): Promise<{
@@ -877,17 +951,17 @@ export class UsersService {
       const [verifiedUsersResult] = await this.db
         .select({ verifiedUsers: count() })
         .from(usersTable)
-        .where(eq(usersTable.isVerified, true));
+        .where(and(eq(usersTable.isVerified, true), sql`${usersTable.deletedAt} IS NULL`));
 
       const [onlineUsersResult] = await this.db
         .select({ onlineUsers: count() })
         .from(usersTable)
-        .where(eq(usersTable.isOnline, true));
+        .where(and(eq(usersTable.isOnline, true), sql`${usersTable.deletedAt} IS NULL`));
 
       const [adminUsersResult] = await this.db
         .select({ adminUsers: count() })
         .from(usersTable)
-        .where(eq(usersTable.role, 'ADMIN'));
+        .where(and(eq(usersTable.role, 'ADMIN'), sql`${usersTable.deletedAt} IS NULL`));
 
       const [deletedUsersResult] = await this.db
         .select({ deletedUsers: count() })

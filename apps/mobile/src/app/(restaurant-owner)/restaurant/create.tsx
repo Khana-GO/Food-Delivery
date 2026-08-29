@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { ScreenHeader, ContentWidth, useResponsive } from '@/components/owner/kit';
-import { RestaurantForm } from '@/components/restaurant/RestaurantForm';
-import { useCreateRestaurant } from '@/hooks/restaurant/useCreateRestaurant';
-import { useRestaurantStore } from '@/stores/restaurantStore';
+import { ScreenHeader, ContentWidth, useResponsive } from '@/components/res-owner/owner/kit';
+import { RestaurantForm } from '@/components/res-owner/restaurant/RestaurantForm';
+import { useCreateRestaurant } from '@/hooks/owner/restaurant/useCreateRestaurant';
+import { useRestaurantStore } from '@/stores/owner/restaurantStore';
 import { CreateRestaurantPayload } from '@food_delivery/types';
 
 export default function CreateRestaurantScreen() {

@@ -8,7 +8,7 @@ import {
   ContentWidth,
   useResponsive,
   rs,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 const BREAKDOWN = [
   { label: 'Today', amount: 1240, icon: 'clock' as const },

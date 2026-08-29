@@ -12,12 +12,12 @@ import {
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { menuItemService } from '@/services/menu-item/menu-item.service';
-import { useDeleteMenuItem } from '@/hooks/menu-item/useDeleteMenuItem';
-import { useToggleAvailability } from '@/hooks/menu-item/useToggleAvailability';
-import { MenuItemCard } from '@/components/menu-item/MenuItemCard';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
-import { useCategoriesByRestaurant } from '@/hooks/category/useCategoriesByRestaurant';
+import { menuItemService } from '@/services/owner/menu-item/menu-item.service';
+import { useDeleteMenuItem } from '@/hooks/owner/menu-item/useDeleteMenuItem';
+import { useToggleAvailability } from '@/hooks/owner/menu-item/useToggleAvailability';
+import { MenuItemCard } from '@/components/res-owner/menu-item/MenuItemCard';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
+import { useCategoriesByRestaurant } from '@/hooks/owner/category/useCategoriesByRestaurant';
 import type { MenuItemsResponse } from '@food_delivery/types';
 import { menuItemKeys } from '@/lib/query-keys';
 

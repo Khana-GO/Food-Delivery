@@ -29,7 +29,7 @@ export default function AdminLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="(tabs)/index"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="bar-chart-2" label="Dashboard" focused={focused} size={iconSize} labelSize={labelSize} />
@@ -37,7 +37,7 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="users"
+        name="(tabs)/users"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="users" label="Users" focused={focused} size={iconSize} labelSize={labelSize} />
@@ -45,7 +45,7 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="restaurants"
+        name="(tabs)/restaurants"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="home" label="Restaurants" focused={focused} size={iconSize} labelSize={labelSize} />
@@ -53,7 +53,7 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="orders"
+        name="(tabs)/orders"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="shopping-bag" label="Orders" focused={focused} size={iconSize} labelSize={labelSize} />
@@ -61,7 +61,7 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="(tabs)/analytics"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="pie-chart" label="Analytics" focused={focused} size={iconSize} labelSize={labelSize} />
@@ -69,7 +69,7 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="(tabs)/settings"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="settings" label="Settings" focused={focused} size={iconSize} labelSize={labelSize} />
@@ -77,11 +77,13 @@ export default function AdminLayout() {
         }}
       />
 
-      {/* Redirect + detail screens, hidden from the tab bar */}
+      {/* Hide legacy direct children that exist as files but should not appear as tabs */}
+      <Tabs.Screen name="dashboard" options={{ href: null }} />
+      <Tabs.Screen name="analytics" options={{ href: null }} />
+      <Tabs.Screen name="orders" options={{ href: null }} />
+      <Tabs.Screen name="restaurants" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="user/[id]" options={{ href: null }} />
-      <Tabs.Screen name="restaurant/[id]" options={{ href: null }} />
-      <Tabs.Screen name="order/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -4,7 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 
 export default function AdminIndex() {
   useEffect(() => {
-    router.replace('/(admin)/dashboard');
+    router.replace('/(admin)/(tabs)' as any);
   }, []);
 
   return (

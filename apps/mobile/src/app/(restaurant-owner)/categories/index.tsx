@@ -3,10 +3,10 @@ import { View, Text, Pressable, FlatList, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAllOwnerCategories } from '@/hooks/category/useAllOwnerCategories';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
-import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
-import { CategoryCard } from '@/components/category/CategoryCard';
+import { useAllOwnerCategories } from '@/hooks/owner/category/useAllOwnerCategories';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
+import { useDeleteCategory } from '@/hooks/owner/category/useDeleteCategory';
+import { CategoryCard } from '@/components/res-owner/category/CategoryCard';
 import type { Category } from '@food_delivery/types';
 import { getApiErrorMessage } from '@/lib/api-error';
 import {
@@ -16,7 +16,7 @@ import {
   LoadingScreen,
   ContentWidth,
   useResponsive,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 export default function CategoriesScreen() {
   const insets = useSafeAreaInsets();

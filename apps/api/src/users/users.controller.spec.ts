@@ -9,6 +9,7 @@ import { UserRole } from '@food_delivery/types';
 import { DATABASE } from '../db/database.constants';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { ConfigService } from '@nestjs/config';
+import { NotificationsService } from '../notification/notification.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -22,7 +23,8 @@ describe('UsersController', () => {
         Reflector,
         { provide: DATABASE, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: CloudinaryService, useValue: {} },
+        { provide: CloudinaryService, useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() } },
+        { provide: NotificationsService, useValue: { create: jest.fn().mockResolvedValue(null) } },
       ],
     })
       .overrideGuard(JwtAuthGuard)

@@ -3,10 +3,10 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { MenuItemForm } from '@/components/menu-item/MenuItemForm';
-import type { MenuItemFormValues } from '@/components/menu-item/MenuItemForm';
-import { useCreateMenuItem } from '@/hooks/menu-item/useCreateMenuItem';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { MenuItemForm } from '@/components/res-owner/menu-item/MenuItemForm';
+import type { MenuItemFormValues } from '@/components/res-owner/menu-item/MenuItemForm';
+import { useCreateMenuItem } from '@/hooks/owner/menu-item/useCreateMenuItem';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
 
 export default function CreateMenuItemScreen() {
   const { restaurantId: restaurantIdParam } = useLocalSearchParams<{

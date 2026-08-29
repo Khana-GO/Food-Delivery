@@ -45,7 +45,7 @@ export class CreateUserDto {
   )
   password!: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: '+1234567890',
     description: 'User phone number',
   })

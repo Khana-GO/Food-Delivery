@@ -11,8 +11,8 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
-import { useUnreadCount } from '@/hooks/notification/useUnreadCount';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
+import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 import {
   StatCard,
   StatusPill,
@@ -21,7 +21,7 @@ import {
   useResponsive,
   rs,
   type OrderStatus,
-} from '@/components/owner/kit';
+} from '@/components/res-owner/owner/kit';
 
 // ─── Mock live feed (replace with real hooks when order APIs land) ───
 const RECENT_ORDERS: Array<{

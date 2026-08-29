@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { ScreenHeader } from '@/components/owner/kit';
-import { CategoryForm } from '@/components/category/CategoryForm';
-import { useCreateCategory } from '@/hooks/category/useCreateCategory';
-import { useMyRestaurants } from '@/hooks/restaurant/useRestaurants';
+import { ScreenHeader } from '@/components/res-owner/owner/kit';
+import { CategoryForm } from '@/components/res-owner/category/CategoryForm';
+import { useCreateCategory } from '@/hooks/owner/category/useCreateCategory';
+import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
 import { router, useLocalSearchParams } from 'expo-router';
 
 export default function CreateCategoryScreen() {
