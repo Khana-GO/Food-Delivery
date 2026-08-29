@@ -11,6 +11,13 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
+  // Trust proxy for correct X-Forwarded-For / req.ip behind nginx/vercel
+  const httpAdapter = app.getHttpAdapter();
+  const expressInstance = httpAdapter.getInstance();
+  if (expressInstance?.set) {
+    expressInstance.set('trust proxy', 1);
+  }
+
   const allowedOrigins = [
     configService.get<string>('FRONTEND_URL_WEB'),
     configService.get<string>('FRONTEND_URL_IP'),

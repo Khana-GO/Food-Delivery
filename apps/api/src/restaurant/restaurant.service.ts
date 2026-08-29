@@ -22,16 +22,50 @@ import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { RestaurantResponseDto } from './dto/restarurant-response.dto';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@food_delivery/types';
+import { CacheService } from '../redis/cache.service';
 
 @Injectable()
 export class RestaurantsService {
   private readonly logger = new Logger(RestaurantsService.name);
+  // Professional TTLs: lists short (frequent writes/filters), entities longer
+  private readonly LIST_TTL = 60; // 1 min
+  private readonly ENTITY_TTL = 300; // 5 min
+  private readonly OWNER_TTL = 120; // 2 min
 
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly cache: CacheService,
   ) {}
+
+  // ─── CACHE KEYS ───
+  private keyList(hash: string) {
+    return `restaurant:list:${hash}`;
+  }
+  private keyId(id: string) {
+    return `restaurant:id:${id}`;
+  }
+  private keySlug(slug: string) {
+    return `restaurant:slug:${slug}`;
+  }
+  private keyOwner(ownerId: string) {
+    return `restaurant:owner:${ownerId}`;
+  }
+
+  private async invalidateRestaurant(opts: {
+    id?: string;
+    slug?: string;
+    ownerId?: string;
+  }): Promise<void> {
+    const ops: Promise<void>[] = [this.cache.delByPattern('restaurant:list:*')];
+    if (opts.id) ops.push(this.cache.del(this.keyId(opts.id)));
+    if (opts.slug) ops.push(this.cache.del(this.keySlug(opts.slug)));
+    if (opts.ownerId) ops.push(this.cache.del(this.keyOwner(opts.ownerId)));
+    // slug cache depends on id too — blow all slug keys when id changes (cheap via pattern)
+    if (opts.id) ops.push(this.cache.delByPattern('restaurant:slug:*'));
+    await Promise.all(ops);
+  }
 
   /**
    * Owners may only mutate their own restaurants.
@@ -133,6 +167,7 @@ export class RestaurantsService {
         throw new InternalServerErrorException('Failed to create restaurant');
       }
 
+      await this.invalidateRestaurant({ ownerId });
       this.logger.log(
         `Restaurant created: ${restaurant.name} (ID: ${restaurant.id})`,
       );
@@ -140,7 +175,7 @@ export class RestaurantsService {
     }, 'create');
   }
 
-  // ─── FIND ALL ───
+  // ─── FIND ALL ─── (cached — cache-aside, fail-open)
   async findAll(
     options: {
       page?: number;
@@ -159,108 +194,134 @@ export class RestaurantsService {
     limit: number;
     totalPages: number;
   }> {
+    // Normalize for deterministic cache key
+    const normalized = {
+      page: options.page ?? 1,
+      limit: options.limit ?? 10,
+      search: options.search ?? '',
+      cuisineType: options.cuisineType ?? '',
+      isOpen: options.isOpen,
+      isVerified: options.isVerified,
+      sortBy: options.sortBy ?? 'createdAt',
+      sortOrder: options.sortOrder ?? 'DESC',
+    };
+    const hash = CacheService.hashOptions(normalized);
+    const cacheKey = this.keyList(hash);
+
     return this.handleDbOperation(async () => {
-      const {
-        page = 1,
-        limit = 10,
-        search,
-        cuisineType,
-        isOpen,
-        isVerified,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC',
-      } = options;
+      return this.cache.wrap(cacheKey, this.LIST_TTL, async () => {
+        const {
+          page = 1,
+          limit = 10,
+          search,
+          cuisineType,
+          isOpen,
+          isVerified,
+          sortBy = 'createdAt',
+          sortOrder = 'DESC',
+        } = options;
 
-      const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NULL`];
+        const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NULL`];
 
-      if (search) {
-        const searchTerm = `%${search}%`;
-        conditions.push(
-          sql`${restaurantsTable.name} ILIKE ${searchTerm} OR ${restaurantsTable.description} ILIKE ${searchTerm}`,
-        );
-      }
-      if (cuisineType)
-        conditions.push(eq(restaurantsTable.cuisineType, cuisineType));
-      if (isOpen !== undefined)
-        conditions.push(eq(restaurantsTable.isOpen, isOpen));
-      if (isVerified !== undefined)
-        conditions.push(eq(restaurantsTable.isVerified, isVerified));
+        if (search) {
+          const searchTerm = `%${search}%`;
+          conditions.push(
+            sql`${restaurantsTable.name} ILIKE ${searchTerm} OR ${restaurantsTable.description} ILIKE ${searchTerm}`,
+          );
+        }
+        if (cuisineType)
+          conditions.push(eq(restaurantsTable.cuisineType, cuisineType));
+        if (isOpen !== undefined)
+          conditions.push(eq(restaurantsTable.isOpen, isOpen));
+        if (isVerified !== undefined)
+          conditions.push(eq(restaurantsTable.isVerified, isVerified));
 
-      const whereClause =
-        conditions.length > 0 ? and(...conditions) : undefined;
+        const whereClause =
+          conditions.length > 0 ? and(...conditions) : undefined;
 
-      const [countResult] = await this.db
-        .select({ total: count() })
-        .from(restaurantsTable)
-        .where(whereClause);
+        const [countResult] = await this.db
+          .select({ total: count() })
+          .from(restaurantsTable)
+          .where(whereClause);
 
-      const total = countResult?.total || 0;
-      const totalPages = Math.ceil(total / limit);
-      const offset = (page - 1) * limit;
+        const total = countResult?.total || 0;
+        const totalPages = Math.ceil(total / limit);
+        const offset = (page - 1) * limit;
 
-      const restaurants = await this.db
-        .select()
-        .from(restaurantsTable)
-        .where(whereClause)
-        .orderBy(
-          sql`${restaurantsTable[sortBy as keyof typeof restaurantsTable]} ${sql.raw(sortOrder)}`,
-        )
-        .limit(limit)
-        .offset(offset);
+        const restaurants = await this.db
+          .select()
+          .from(restaurantsTable)
+          .where(whereClause)
+          .orderBy(
+            sql`${restaurantsTable[sortBy as keyof typeof restaurantsTable]} ${sql.raw(sortOrder)}`,
+          )
+          .limit(limit)
+          .offset(offset);
 
-      return {
-        data: restaurants as unknown as RestaurantResponseDto[],
-        total,
-        page,
-        limit,
-        totalPages,
-      };
+        return {
+          data: restaurants as unknown as RestaurantResponseDto[],
+          total,
+          page,
+          limit,
+          totalPages,
+        };
+      });
     }, 'findAll');
   }
 
-  // ─── FIND BY ID ───
+  // ─── FIND BY ID ─── (cached)
   async findById(id: string): Promise<RestaurantResponseDto> {
     return this.handleDbOperation(async () => {
-      const restaurant = await this.db.query.restaurantsTable.findFirst({
-        where: and(
-          eq(restaurantsTable.id, id),
-          sql`${restaurantsTable.deletedAt} IS NULL`,
-        ),
+      return this.cache.wrap(this.keyId(id), this.ENTITY_TTL, async () => {
+        const restaurant = await this.db.query.restaurantsTable.findFirst({
+          where: and(
+            eq(restaurantsTable.id, id),
+            sql`${restaurantsTable.deletedAt} IS NULL`,
+          ),
+        });
+        if (!restaurant) {
+          throw new NotFoundException(`Restaurant with ID ${id} not found`);
+        }
+        return restaurant as unknown as RestaurantResponseDto;
       });
-      if (!restaurant) {
-        throw new NotFoundException(`Restaurant with ID ${id} not found`);
-      }
-      return restaurant as unknown as RestaurantResponseDto;
     }, 'findById');
   }
 
-  // ─── FIND BY SLUG ───
+  // ─── FIND BY SLUG ─── (cached)
   async findBySlug(slug: string): Promise<RestaurantResponseDto> {
     return this.handleDbOperation(async () => {
-      const restaurant = await this.db.query.restaurantsTable.findFirst({
-        where: and(
-          eq(restaurantsTable.slug, slug),
-          sql`${restaurantsTable.deletedAt} IS NULL`,
-        ),
+      return this.cache.wrap(this.keySlug(slug), this.ENTITY_TTL, async () => {
+        const restaurant = await this.db.query.restaurantsTable.findFirst({
+          where: and(
+            eq(restaurantsTable.slug, slug),
+            sql`${restaurantsTable.deletedAt} IS NULL`,
+          ),
+        });
+        if (!restaurant) {
+          throw new NotFoundException(`Restaurant with slug ${slug} not found`);
+        }
+        return restaurant as unknown as RestaurantResponseDto;
       });
-      if (!restaurant) {
-        throw new NotFoundException(`Restaurant with slug ${slug} not found`);
-      }
-      return restaurant as unknown as RestaurantResponseDto;
     }, 'findBySlug');
   }
 
-  // ─── FIND BY OWNER ───
+  // ─── FIND BY OWNER ─── (cached)
   async findByOwner(ownerId: string): Promise<RestaurantResponseDto[]> {
     return this.handleDbOperation(async () => {
-      const restaurants = await this.db.query.restaurantsTable.findMany({
-        where: and(
-          eq(restaurantsTable.ownerId, ownerId),
-          sql`${restaurantsTable.deletedAt} IS NULL`,
-        ),
-        orderBy: [desc(restaurantsTable.createdAt)],
-      });
-      return restaurants as unknown as RestaurantResponseDto[];
+      return this.cache.wrap(
+        this.keyOwner(ownerId),
+        this.OWNER_TTL,
+        async () => {
+          const restaurants = await this.db.query.restaurantsTable.findMany({
+            where: and(
+              eq(restaurantsTable.ownerId, ownerId),
+              sql`${restaurantsTable.deletedAt} IS NULL`,
+            ),
+            orderBy: [desc(restaurantsTable.createdAt)],
+          });
+          return restaurants as unknown as RestaurantResponseDto[];
+        },
+      );
     }, 'findByOwner');
   }
 
@@ -301,6 +362,11 @@ export class RestaurantsService {
         throw new InternalServerErrorException('Failed to update restaurant');
       }
 
+      await this.invalidateRestaurant({
+        id,
+        slug: updated.slug,
+        ownerId: updated.ownerId,
+      });
       this.logger.log(`Restaurant updated: ${updated.name} (ID: ${id})`);
       return updated as unknown as RestaurantResponseDto;
     }, 'update');
@@ -341,6 +407,10 @@ export class RestaurantsService {
         .set({ logoUrl, coverImageUrl, updatedAt: new Date() })
         .where(eq(restaurantsTable.id, restaurantId));
 
+      await this.invalidateRestaurant({
+        id: restaurantId,
+        ownerId: restaurant.ownerId,
+      });
       this.logger.log(`Images uploaded for restaurant: ${restaurantId}`);
       return { logoUrl, coverImageUrl };
     }, 'uploadImages');
@@ -389,6 +459,10 @@ export class RestaurantsService {
         .set({ logoUrl, coverImageUrl, updatedAt: new Date() })
         .where(eq(restaurantsTable.id, restaurantId));
 
+      await this.invalidateRestaurant({
+        id: restaurantId,
+        ownerId: restaurant.ownerId,
+      });
       this.logger.log(`Images updated for restaurant: ${restaurantId}`);
       return { logoUrl, coverImageUrl };
     }, 'updateImages');
@@ -423,6 +497,10 @@ export class RestaurantsService {
         .set({ ...updateData, updatedAt: new Date() })
         .where(eq(restaurantsTable.id, restaurantId));
 
+      await this.invalidateRestaurant({
+        id: restaurantId,
+        ownerId: restaurant.ownerId,
+      });
       return { message: `${imageType} image deleted successfully` };
     }, 'deleteImage');
   }
@@ -444,6 +522,7 @@ export class RestaurantsService {
         );
       }
 
+      await this.invalidateRestaurant({ id, ownerId: restaurant.ownerId });
       this.logger.log(`Restaurant ${id} open status: ${updated.isOpen}`);
       return { isOpen: updated.isOpen };
     }, 'toggleOpen');
@@ -465,6 +544,11 @@ export class RestaurantsService {
         );
       }
 
+      await this.invalidateRestaurant({
+        id,
+        slug: restaurant.slug,
+        ownerId: restaurant.ownerId,
+      });
       this.logger.log(
         `Restaurant ${id} verification status: ${updated.isVerified}`,
       );
@@ -482,6 +566,11 @@ export class RestaurantsService {
         .set({ deletedAt: new Date(), updatedAt: new Date() })
         .where(eq(restaurantsTable.id, id));
 
+      await this.invalidateRestaurant({
+        id,
+        slug: restaurant.slug,
+        ownerId: restaurant.ownerId,
+      });
       this.logger.log(`Restaurant soft deleted: ${id}`);
       return { message: 'Restaurant deleted successfully' };
     }, 'delete');
@@ -507,6 +596,11 @@ export class RestaurantsService {
         );
       }
 
+      await this.invalidateRestaurant({
+        id,
+        slug: restored.slug,
+        ownerId: restored.ownerId,
+      });
       this.logger.log(`Restaurant restored: ${restored.name} (ID: ${id})`);
       return restored as unknown as RestaurantResponseDto;
     }, 'restore');

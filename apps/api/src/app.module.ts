@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import type { SignOptions } from 'jsonwebtoken';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DbModule } from './db/database.module';
+import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { UsersModule } from './users/users.module';
@@ -20,6 +23,15 @@ import { SessionsModule } from './sessions/session.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // Redis must be imported before modules that use CacheService / REDIS_CLIENT
+    RedisModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 100, // 100 req / 60s globally — stricter per-route via @Throttle()
+      },
+    ]),
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
@@ -49,6 +61,11 @@ import { SessionsModule } from './sessions/session.module';
     SessionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global throttler: respects @Throttle() overrides per-route. For true distributed
+    // Redis-backed limiting, the critical auth routes use Redis RateLimitGuard explicitly.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

@@ -20,10 +20,12 @@ import type { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { Public } from '../decorators/public.decorator';
 import { UsersService } from '../../users/users.service';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
 
 @Throttle({ default: { limit: 5, ttl: 60_000 } }) // 5 request in per minute from single ip
 @ApiTags('auth')
 @Controller('auth')
+@UseGuards(RateLimitGuard) // Apply globally to all auth routes
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -67,8 +69,14 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  @ApiOperation({ summary: 'Get current authenticated user profile (full DB user)' })
-  @ApiResponse({ status: 200, description: 'Authenticated user profile', type: UserResponseDto })
+  @ApiOperation({
+    summary: 'Get current authenticated user profile (full DB user)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Authenticated user profile',
+    type: UserResponseDto,
+  })
   async getMe(@CurrentUser() user: JwtPayload) {
     const fullUser = await this.usersService.findByIdOrThrow(user.sub);
     return {

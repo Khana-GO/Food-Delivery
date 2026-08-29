@@ -5,13 +5,14 @@ import { AuthController } from './controllers/auth.controller';
 import { RefreshController } from './controllers/refresh.controller';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { RateLimitGuard } from './guards/rate-limit.guard';
 import { AuthService } from './services/auth.service';
 import { SessionsModule } from '../sessions/session.module';
 
 @Module({
   imports: [forwardRef(() => UsersModule), MailModule, SessionsModule],
   controllers: [AuthController, RefreshController],
-  providers: [AuthService, JwtAuthGuard, RolesGuard],
-  exports: [AuthService, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
 })
 export class AuthModule {}

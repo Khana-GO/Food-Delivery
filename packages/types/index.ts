@@ -207,3 +207,24 @@ export interface MenuItemsResponse {
   limit: number;
   totalPages: number;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'order' | 'restaurant' | 'profile' | 'system';
+  title: string;
+  body: string;
+  data?: Record<string, any>;
+  isRead: boolean;
+  isPushSent: boolean;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface NotificationResponse {
+  data: Notification[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

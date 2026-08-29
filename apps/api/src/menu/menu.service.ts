@@ -23,19 +23,59 @@ import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { CreateMenuItemDto } from './dto/create-menu.dto';
 import { UpdateMenuItemDto } from './dto/update-menu.dto';
 import { NotificationsService } from '../notification/notification.service';
+import { CacheService } from '../redis/cache.service';
 
 const SORTABLE_COLUMNS = ['createdAt', 'updatedAt', 'name', 'price'] as const;
 
 @Injectable()
 export class MenuItemsService {
   private readonly logger = new Logger(MenuItemsService.name);
+  private readonly LIST_TTL = 60;
+  private readonly ENTITY_TTL = 300;
+  private readonly GROUPED_TTL = 60;
 
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly notificationsService: NotificationsService,
+    private readonly cache: CacheService,
   ) {}
+
+  // ─── CACHE KEYS & INVALIDATION ───
+  private keyItem(id: string) {
+    return `menu:item:${id}`;
+  }
+  private keyList(restaurantId: string, hash: string) {
+    return `menu:restaurant:${restaurantId}:list:${hash}`;
+  }
+  private keyByCategory(categoryId: string, isAvailable?: boolean) {
+    return `menu:category:${categoryId}:available:${isAvailable ?? 'all'}`;
+  }
+  private keyGrouped(restaurantId: string) {
+    return `menu:grouped:${restaurantId}`;
+  }
+  private async invalidateMenu(
+    restaurantId: string,
+    categoryId?: string,
+    itemId?: string,
+  ) {
+    const ops: Promise<void>[] = [
+      this.cache.delByPattern(`menu:restaurant:${restaurantId}:*`),
+      this.cache.del(this.keyGrouped(restaurantId)),
+    ];
+    if (categoryId)
+      ops.push(
+        this.cache.del(this.keyByCategory(categoryId)),
+        this.cache.del(this.keyByCategory(categoryId, true)),
+        this.cache.del(this.keyByCategory(categoryId, false)),
+      );
+    if (itemId) ops.push(this.cache.del(this.keyItem(itemId)));
+    // Category-level listings share category id — blow all variants
+    if (categoryId)
+      ops.push(this.cache.delByPattern(`menu:category:${categoryId}:*`));
+    await Promise.all(ops);
+  }
 
   private async handleDbOperation<T>(
     operation: () => Promise<T>,
@@ -257,12 +297,13 @@ export class MenuItemsService {
           );
       }
 
+      await this.invalidateMenu(restaurantId, dto.categoryId);
       this.logger.log(`Menu item created: ${item.name} (ID: ${item.id})`);
       return new MenuItemResponseDto(item);
     }, 'create');
   }
 
-  // ─── FIND ALL (By Restaurant) ───
+  // ─── FIND ALL (By Restaurant) ─── (cached)
   async findByRestaurant(
     restaurantId: string,
     options: {
@@ -281,102 +322,123 @@ export class MenuItemsService {
     limit: number;
     totalPages: number;
   }> {
+    const hash = CacheService.hashOptions({
+      page: options.page ?? 1,
+      limit: options.limit ?? 10,
+      search: options.search ?? '',
+      categoryId: options.categoryId ?? '',
+      isAvailable: options.isAvailable,
+      sortBy: options.sortBy ?? 'createdAt',
+      sortOrder: options.sortOrder ?? 'DESC',
+    });
+    const cacheKey = this.keyList(restaurantId, hash);
+
     return this.handleDbOperation(async () => {
-      const {
-        page = 1,
-        limit = 10,
-        search,
-        categoryId,
-        isAvailable,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC',
-      } = options;
+      return this.cache.wrap(cacheKey, this.LIST_TTL, async () => {
+        const {
+          page = 1,
+          limit = 10,
+          search,
+          categoryId,
+          isAvailable,
+          sortBy = 'createdAt',
+          sortOrder = 'DESC',
+        } = options;
 
-      const safeSortBy = (SORTABLE_COLUMNS as readonly string[]).includes(
-        sortBy,
-      )
-        ? sortBy
-        : 'createdAt';
-      const sortColumn = menuItemsTable[
-        safeSortBy as keyof typeof menuItemsTable
-      ] as never;
+        const safeSortBy = (SORTABLE_COLUMNS as readonly string[]).includes(
+          sortBy,
+        )
+          ? sortBy
+          : 'createdAt';
+        const sortColumn = menuItemsTable[
+          safeSortBy as keyof typeof menuItemsTable
+        ] as never;
 
-      const conditions = [eq(menuItemsTable.restaurantId, restaurantId)];
+        const conditions = [eq(menuItemsTable.restaurantId, restaurantId)];
 
-      if (search) {
-        const searchTerm = `%${search}%`;
-        conditions.push(
-          or(
-            ilike(menuItemsTable.name, searchTerm),
-            ilike(menuItemsTable.description, searchTerm),
-          )!,
-        );
-      }
+        if (search) {
+          const searchTerm = `%${search}%`;
+          conditions.push(
+            or(
+              ilike(menuItemsTable.name, searchTerm),
+              ilike(menuItemsTable.description, searchTerm),
+            )!,
+          );
+        }
 
-      if (categoryId) {
-        conditions.push(eq(menuItemsTable.categoryId, categoryId));
-      }
+        if (categoryId) {
+          conditions.push(eq(menuItemsTable.categoryId, categoryId));
+        }
 
-      if (isAvailable !== undefined) {
-        conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
-      }
+        if (isAvailable !== undefined) {
+          conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
+        }
 
-      const whereClause = and(...conditions);
+        const whereClause = and(...conditions);
 
-      const [countResult] = await this.db
-        .select({ total: sql<number>`count(*)` })
-        .from(menuItemsTable)
-        .where(whereClause);
+        const [countResult] = await this.db
+          .select({ total: sql<number>`count(*)` })
+          .from(menuItemsTable)
+          .where(whereClause);
 
-      const total = Number(countResult?.total ?? 0);
-      const totalPages = Math.ceil(total / limit);
-      const offset = (page - 1) * limit;
+        const total = Number(countResult?.total ?? 0);
+        const totalPages = Math.ceil(total / limit);
+        const offset = (page - 1) * limit;
 
-      const items = await this.db
-        .select()
-        .from(menuItemsTable)
-        .where(whereClause)
-        .orderBy(sortOrder === 'ASC' ? asc(sortColumn) : desc(sortColumn))
-        .limit(limit)
-        .offset(offset);
+        const items = await this.db
+          .select()
+          .from(menuItemsTable)
+          .where(whereClause)
+          .orderBy(sortOrder === 'ASC' ? asc(sortColumn) : desc(sortColumn))
+          .limit(limit)
+          .offset(offset);
 
-      return {
-        data: items.map((item) => new MenuItemResponseDto(item)),
-        total,
-        page,
-        limit,
-        totalPages,
-      };
+        return {
+          data: items.map((item) => new MenuItemResponseDto(item)),
+          total,
+          page,
+          limit,
+          totalPages,
+        };
+      });
     }, 'findByRestaurant');
   }
 
-  // ─── FIND ALL (By Category) ───
+  // ─── FIND ALL (By Category) ─── (cached)
   async findByCategory(
     categoryId: string,
     isAvailable?: boolean,
   ): Promise<MenuItemResponseDto[]> {
     return this.handleDbOperation(async () => {
-      const conditions = [eq(menuItemsTable.categoryId, categoryId)];
+      return this.cache.wrap(
+        this.keyByCategory(categoryId, isAvailable),
+        this.LIST_TTL,
+        async () => {
+          const conditions = [eq(menuItemsTable.categoryId, categoryId)];
 
-      if (isAvailable !== undefined) {
-        conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
-      }
+          if (isAvailable !== undefined) {
+            conditions.push(eq(menuItemsTable.isAvailable, isAvailable));
+          }
 
-      const items = await this.db
-        .select()
-        .from(menuItemsTable)
-        .where(and(...conditions))
-        .orderBy(desc(menuItemsTable.createdAt));
+          const items = await this.db
+            .select()
+            .from(menuItemsTable)
+            .where(and(...conditions))
+            .orderBy(desc(menuItemsTable.createdAt));
 
-      return items.map((item) => new MenuItemResponseDto(item));
+          return items.map((item) => new MenuItemResponseDto(item));
+        },
+      );
     }, 'findByCategory');
   }
 
-  // ─── FIND BY ID ───
+  // ─── FIND BY ID ─── (cached)
   async findById(id: string): Promise<MenuItemResponseDto> {
     return this.handleDbOperation(async () => {
-      const item = await this.getRawItem(id);
-      return new MenuItemResponseDto(item);
+      return this.cache.wrap(this.keyItem(id), this.ENTITY_TTL, async () => {
+        const item = await this.getRawItem(id);
+        return new MenuItemResponseDto(item);
+      });
     }, 'findById');
   }
 
@@ -463,6 +525,11 @@ export class MenuItemsService {
           );
       }
 
+      await this.invalidateMenu(updated.restaurantId, updated.categoryId, id);
+      // Also invalidate old category if changed
+      if (existing.categoryId !== updated.categoryId) {
+        await this.invalidateMenu(existing.restaurantId, existing.categoryId);
+      }
       this.logger.log(`Menu item updated: ${updated.name} (ID: ${id})`);
       return new MenuItemResponseDto(updated);
     }, 'update');
@@ -490,6 +557,7 @@ export class MenuItemsService {
         throw new InternalServerErrorException('Failed to toggle availability');
       }
 
+      await this.invalidateMenu(updated.restaurantId, updated.categoryId, id);
       this.logger.log(`Menu item ${id} availability: ${updated.isAvailable}`);
       return { isAvailable: updated.isAvailable };
     }, 'toggleAvailability');
@@ -535,6 +603,7 @@ export class MenuItemsService {
           );
       }
 
+      await this.invalidateMenu(item.restaurantId, item.categoryId, id);
       this.logger.log(`Menu item deleted: ${item.name} (ID: ${id})`);
       return { message: 'Menu item deleted successfully' };
     }, 'delete');
@@ -574,6 +643,13 @@ export class MenuItemsService {
 
         return rows;
       });
+
+      await this.cache.delByPattern(`menu:restaurant:${restaurantId}:*`);
+      await this.cache.del(this.keyGrouped(restaurantId));
+      // Categories affected
+      const catIds = [...new Set(items.map((i) => i.categoryId))];
+      for (const cid of catIds)
+        await this.cache.delByPattern(`menu:category:${cid}:*`);
 
       this.logger.log(
         `Bulk created ${createdItems.length} menu items for restaurant ${restaurantId}`,
@@ -615,6 +691,17 @@ export class MenuItemsService {
         });
       }
 
+      // Invalidate affected restaurant/categ caches
+      const affected = new Set<string>();
+      // Re-use orphanImages already collected — need restaurant scope; safest to blow by pattern for each deleted item's restaurant
+      // For simplicity, delete all menu list patterns (cheap, still correct)
+      await this.cache.delByPattern('menu:restaurant:*');
+      await this.cache.delByPattern('menu:category:*');
+      await this.cache.delByPattern('menu:grouped:*');
+      // Also del individual item keys (already gone, but clear)
+      for (const id of ids) await this.cache.del(this.keyItem(id));
+      void affected;
+
       this.logger.log(`Bulk deleted ${deletedCount} menu items`);
       return {
         message: `${deletedCount} menu items deleted successfully`,
@@ -623,38 +710,44 @@ export class MenuItemsService {
     }, 'bulkDelete');
   }
 
-  // ─── GET GROUPED BY CATEGORY ───
+  // ─── GET GROUPED BY CATEGORY ─── (cached)
   async getGroupedByCategory(
     restaurantId: string,
   ): Promise<{ categoryId: string; items: MenuItemResponseDto[] }[]> {
     return this.handleDbOperation(async () => {
-      const items = await this.db
-        .select()
-        .from(menuItemsTable)
-        .where(
-          and(
-            eq(menuItemsTable.restaurantId, restaurantId),
-            eq(menuItemsTable.isAvailable, true),
-          ),
-        )
-        .orderBy(desc(menuItemsTable.createdAt));
+      return this.cache.wrap(
+        this.keyGrouped(restaurantId),
+        this.GROUPED_TTL,
+        async () => {
+          const items = await this.db
+            .select()
+            .from(menuItemsTable)
+            .where(
+              and(
+                eq(menuItemsTable.restaurantId, restaurantId),
+                eq(menuItemsTable.isAvailable, true),
+              ),
+            )
+            .orderBy(desc(menuItemsTable.createdAt));
 
-      const grouped = items.reduce<Record<string, MenuItemResponseDto[]>>(
-        (acc, item) => {
-          const categoryId = item.categoryId;
-          if (!acc[categoryId]) {
-            acc[categoryId] = [];
-          }
-          acc[categoryId].push(new MenuItemResponseDto(item));
-          return acc;
+          const grouped = items.reduce<Record<string, MenuItemResponseDto[]>>(
+            (acc, item) => {
+              const categoryId = item.categoryId;
+              if (!acc[categoryId]) {
+                acc[categoryId] = [];
+              }
+              acc[categoryId].push(new MenuItemResponseDto(item));
+              return acc;
+            },
+            {},
+          );
+
+          return Object.entries(grouped).map(([categoryId, groupedItems]) => ({
+            categoryId,
+            items: groupedItems,
+          }));
         },
-        {},
       );
-
-      return Object.entries(grouped).map(([categoryId, groupedItems]) => ({
-        categoryId,
-        items: groupedItems,
-      }));
     }, 'getGroupedByCategory');
   }
 }
