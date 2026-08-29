@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useUsers } from '@/hooks/admin/useUsers';
-import { useDeletedUsers } from '@/hooks/admin/useDeletedUsers';
-import { useUserStats } from '@/hooks/admin/useUserStats';
+import { useUsers } from '@/hooks/admin/user/useUsers';
+import { useDeletedUsers } from '@/hooks/admin/user/useDeletedUsers';
+import { useUserStats } from '@/hooks/admin/user/useUserStats';
 import { UserCard } from '@/components/admin/users/UserCard';
 import { UserRole } from '@food_delivery/types';
 
@@ -52,7 +52,7 @@ export default function AdminUsersScreen() {
 
   const isDeletedTab = statusFilter === 'deleted';
 
-  // ✅ Fix: Hooks must be called unconditionally (Rules of Hooks)
+  // Hooks must be called unconditionally (Rules of Hooks)
   const activeQuery = useUsers(filters, { enabled: !isDeletedTab });
   const deletedQuery = useDeletedUsers(filters as any, { enabled: isDeletedTab });
   const query = isDeletedTab ? deletedQuery : activeQuery;

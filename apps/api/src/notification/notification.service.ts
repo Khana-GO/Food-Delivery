@@ -15,6 +15,7 @@ import { NotificationResponseDto } from './dto/notification-response.dto';
 import { NotificationPaginationDto } from './dto/notification-pagination.dto';
 import * as schema from '../db/schema';
 import { notificationsTable } from '../db/schema';
+import { usersTable } from '../db/schema/user.schema';
 
 @Injectable()
 export class NotificationsService {
@@ -234,5 +235,79 @@ export class NotificationsService {
       this.logger.log(`Deleted all ${count} notifications for user ${userId}`);
       return { message: `Deleted ${count} notifications`, count };
     }, 'deleteAll');
+  }
+
+  // ─── BULK CREATE ───
+  async createMany(
+    dtos: CreateNotificationDto[],
+  ): Promise<NotificationResponseDto[]> {
+    if (!dtos.length) return [];
+    return this.handleDbOperation(async () => {
+      const rows = await this.db
+        .insert(notificationsTable)
+        .values(
+          dtos.map((dto) => ({
+            userId: dto.userId,
+            type: dto.type,
+            title: dto.title,
+            body: dto.body,
+            data: dto.data,
+            isRead: dto.isRead ?? false,
+            isPushSent: dto.isPushSent ?? false,
+            createdAt: new Date(),
+          })),
+        )
+        .returning();
+
+      this.logger.log(`Bulk created ${rows.length} notifications`);
+      return rows.map((r) => new NotificationResponseDto(r));
+    }, 'createMany');
+  }
+
+  // ─── NOTIFY ALL ADMINS (reusable for restaurant approval etc) ───
+  async notifyAdmins(
+    payload: Omit<CreateNotificationDto, 'userId'>,
+  ): Promise<NotificationResponseDto[]> {
+    return this.handleDbOperation(async () => {
+      const admins = await this.db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.role, 'ADMIN'),
+            sql`${usersTable.deletedAt} IS NULL`,
+          ),
+        );
+
+      if (!admins.length) {
+        this.logger.warn('[notifyAdmins] No admin users found');
+        return [];
+      }
+
+      const dtos: CreateNotificationDto[] = admins.map((a) => ({
+        userId: a.id,
+        ...payload,
+      }));
+
+      // Use single INSERT for efficiency
+      const rows = await this.db
+        .insert(notificationsTable)
+        .values(
+          dtos.map((dto) => ({
+            userId: dto.userId,
+            type: dto.type,
+            title: dto.title,
+            body: dto.body,
+            data: dto.data,
+            isRead: false,
+            isPushSent: false,
+            createdAt: new Date(),
+          })),
+        )
+        .returning();
+
+      this.logger.log(`Notified ${rows.length} admins: ${payload.title}`);
+      return rows.map((r) => new NotificationResponseDto(r));
+    }, 'notifyAdmins');
   }
 }

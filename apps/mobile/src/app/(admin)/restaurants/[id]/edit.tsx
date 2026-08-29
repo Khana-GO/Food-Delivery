@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useAdminRestaurant } from '@/hooks/admin/useAdminRestaurant';
-import { useUpdateRestaurant } from '@/hooks/admin/useUpdateRestaurant';
+import { useAdminRestaurant } from '@/hooks/admin/restaurant/useAdminRestaurant';
+import { useUpdateRestaurant } from '@/hooks/admin/restaurant/useUpdateRestaurant';
 import { RestaurantForm } from '@/components/res-owner/restaurant/RestaurantForm';
 export default function EditRestaurantScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useAdminRestaurants } from '@/hooks/admin/useAdminRestaurants';
-import { useDeletedRestaurants } from '@/hooks/admin/useDeletedRestaurants';
-import { useAdminRestaurantStats } from '@/hooks/admin/useAdminRestaurantStats';
+import { useAdminRestaurants } from '@/hooks/admin/restaurant/useAdminRestaurants';
+import { useDeletedRestaurants } from '@/hooks/admin/restaurant/useDeletedRestaurants';
+import { useAdminRestaurantStats } from '@/hooks/admin/restaurant/useAdminRestaurantStats';
 import { RestaurantCard } from '@/components/admin/restaurants/RestaurantCard';
 
 const CUISINES = ['All', 'Nepali', 'Newari', 'Thakali', 'Indian', 'Chinese', 'Tibetan', 'Italian', 'Fast Food', 'Continental', 'Street Food', 'Bakeries', 'Desserts', 'Drinks'];

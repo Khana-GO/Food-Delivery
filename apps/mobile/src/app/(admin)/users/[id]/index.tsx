@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useUser } from '@/hooks/admin/useUser';
-import { useDeleteUser } from '@/hooks/admin/useDeleteUser';
-import { useRestoreUser } from '@/hooks/admin/useRestoreUser';
-import { usePermanentDeleteUser } from '@/hooks/admin/usePermanentDeleteUser';
-import { useChangeUserRole } from '@/hooks/admin/useChangeUserRole';
+import { useUser } from '@/hooks/admin/user/useUser';
+import { useDeleteUser } from '@/hooks/admin/user/useDeleteUser';
+import { useRestoreUser } from '@/hooks/admin/user/useRestoreUser';
+import { usePermanentDeleteUser } from '@/hooks/admin/user/usePermanentDeleteUser';
+import { useChangeUserRole } from '@/hooks/admin/user/useChangeUserRole';
 import { UserDetails as UserDetailsComponent } from '@/components/admin/users/UserDetails';
 import type { UserRole } from '@food_delivery/types';
 

@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useUser } from '@/hooks/admin/useUser';
-import { useUpdateUser } from '@/hooks/admin/useUpdateUser';
+import { useUser } from '@/hooks/admin/user/useUser';
+import { useUpdateUser } from '@/hooks/admin/user/useUpdateUser';
 import { UserForm } from '@/components/admin/users/UserForm';
 
 export default function EditUserScreen() {

@@ -17,6 +17,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { MenuModule } from './menu/menu.module';
 import { CategoriesModule } from './menu-categories/menu-categories.module';
 import { SessionsModule } from './sessions/session.module';
+import { TrackingModule } from './tracking/tracking.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { SessionsModule } from './sessions/session.module';
     CloudinaryModule,
     MenuModule,
     SessionsModule,
+    TrackingModule,
   ],
   controllers: [AppController],
   providers: [

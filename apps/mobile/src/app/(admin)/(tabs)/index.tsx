@@ -10,8 +10,8 @@ import {
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUserStats } from '@/hooks/admin/useUserStats';
-import { useAdminRestaurantStats } from '@/hooks/admin/useAdminRestaurantStats';
+import { useUserStats } from '@/hooks/admin/user/useUserStats';
+import { useAdminRestaurantStats } from '@/hooks/admin/restaurant/useAdminRestaurantStats';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Stat = {
@@ -252,11 +252,11 @@ export default function AdminDashboard() {
                   <Text className="text-[11px] font-bold tracking-[1.2px] text-white uppercase">Admin Console</Text>
                 </View>
                 <Text className="text-[22px] font-extrabold text-white mt-2 leading-6">Welcome back,</Text>
-                <Text className="text-[22px] font-extrabold text-white leading-7">{user?.firstName || 'Admin'} 👋</Text>
+                <Text className="text-[22px] font-extrabold text-white leading-7">{user?.firstName || 'Admin'} </Text>
                 <Text className="text-[11px] text-white/80 mt-1.5 font-medium">{today} • All systems operational</Text>
               </View>
               <View className="items-center gap-3">
-                <View className="w-12 h-12 rounded-2xl bg-white/20 border border-white/20 items-center justify-center">
+                <View className="items-center justify-center w-12 h-12 border rounded-2xl bg-white/20 border-white/20">
                   <Text className="text-white font-black text-[17px]">
                     {(user?.firstName?.[0] || 'A').toUpperCase()}
                     {(user?.lastName?.[0] || '').toUpperCase()}

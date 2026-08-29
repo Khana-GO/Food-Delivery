@@ -1,4 +1,4 @@
-import { integer, pgTable, real, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { integer, numeric, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { cartsTable } from './cart.schema';
 import { menuItemsTable } from './menu.items.schema';
@@ -20,7 +20,7 @@ export const cartItemsTable = pgTable('cart_items', {
 
   quantity: integer('quantity').notNull().default(1),
 
-  price: real('price').notNull(),
+  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
 
   createdAt: timestamp('created_at').notNull().defaultNow(),
 

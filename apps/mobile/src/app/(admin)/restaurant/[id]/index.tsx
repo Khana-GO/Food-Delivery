@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useAdminRestaurant } from '@/hooks/admin/useAdminRestaurant';
-import { useToggleVerification } from '@/hooks/admin/useToggleVerification';
-import { useToggleActive } from '@/hooks/admin/useToggleActive';
-import { useSoftDeleteRestaurant } from '@/hooks/admin/useSoftDeleteRestaurant';
-import { useRestoreRestaurant } from '@/hooks/admin/useRestoreRestaurant';
-import { useHardDeleteRestaurant } from '@/hooks/admin/useHardDeleteRestaurant';
-import { useToggleOpen } from '@/hooks/admin/useToggleOpen';
+import { useAdminRestaurant } from '@/hooks/admin/restaurant/useAdminRestaurant';
+import { useToggleVerification } from '@/hooks/admin/restaurant/useToggleVerification';
+import { useToggleActive } from '@/hooks/admin/restaurant/useToggleActive';
+import { useSoftDeleteRestaurant } from '@/hooks/admin/restaurant/useSoftDeleteRestaurant';
+import { useRestoreRestaurant } from '@/hooks/admin/restaurant/useRestoreRestaurant';
+import { useHardDeleteRestaurant } from '@/hooks/admin/restaurant/useHardDeleteRestaurant';
+import { useToggleOpen } from '@/hooks/admin/restaurant/useToggleOpen';
 import { RestaurantDetails } from '@/components/admin/restaurants/RestaurantDetails';
 
 export default function RestaurantDetailsScreenLegacy() {

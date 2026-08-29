@@ -187,7 +187,7 @@ export class RestaurantsService {
           userId: ownerId,
           type: 'restaurant',
           title: 'Restaurant Created',
-          body: `Your restaurant "${restaurant.name}" has been created successfully.`,
+          body: `Your restaurant "${restaurant.name}" has been created successfully. Awaiting admin approval.`,
           data: { restaurantId: restaurant.id, slug: restaurant.slug },
         })
         .catch((err) =>
@@ -195,6 +195,26 @@ export class RestaurantsService {
             `Failed to create restaurant notification: ${err?.message}`,
           ),
         );
+
+      // Notify all admins for approval (fail-open, non-blocking for owner flow)
+      await this.notificationsService
+        .notifyAdmins({
+          type: 'restaurant',
+          title: 'New Restaurant Pending Approval',
+          body: `New restaurant "${restaurant.name}" (slug: ${restaurant.slug}) needs approval.`,
+          data: {
+            restaurantId: restaurant.id,
+            slug: restaurant.slug,
+            ownerId,
+            name: restaurant.name,
+          },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to notify admins for restaurant ${restaurant.id}: ${err?.message}`,
+          ),
+        );
+
       this.logger.log(
         `Restaurant created: ${restaurant.name} (ID: ${restaurant.id})`,
       );

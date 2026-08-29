@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { UserForm } from '@/components/admin/users/UserForm';
-import { useCreateUser } from '@/hooks/admin/useCreateUser';
+import { useCreateUser } from '@/hooks/admin/user/useCreateUser';
 
 export default function CreateUserScreen() {
   const { mutate: createUser, isPending } = useCreateUser();
