@@ -21,6 +21,7 @@ import { SessionsModule } from './sessions/session.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { RecommendationsModule } from './recommendation/recommendation.module';
 import { DashboardModule } from './dasboard/dasboard.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { DashboardModule } from './dasboard/dasboard.module';
     FavoritesModule,
     RecommendationsModule,
     DashboardModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [

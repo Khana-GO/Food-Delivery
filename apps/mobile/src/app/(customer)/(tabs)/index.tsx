@@ -84,16 +84,25 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
         contentContainerStyle={{ paddingBottom: 16 }}
       >
-        {/* Header — premium with subtle gradient */}
+        {/* Header — premium with subtle gradient + profile */}
         <View style={styles.header}>
           <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
             <View style={styles.headerInner}>
-              <View>
-                <Text style={styles.greeting}>{getGreeting()},</Text>
-                <Text style={styles.userName}>{user?.firstName || 'Customer'} 👋</Text>
-                <Text style={styles.subtle}>What are you craving today?</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/profile' as any)} activeOpacity={0.85} style={styles.avatarWrap}>
+                  {user?.imageUrl ? (
+                    <Image source={{ uri: user.imageUrl }} style={styles.avatarImg} />
+                  ) : (
+                    <Text style={styles.avatarText}>{(user?.firstName?.charAt(0) || 'C').toUpperCase()}</Text>
+                  )}
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.greeting}>{getGreeting()},</Text>
+                  <Text style={styles.userName} numberOfLines={1}>{user?.firstName || 'Customer'} 👋</Text>
+                  <Text style={styles.subtle} numberOfLines={1}>What are you craving today?</Text>
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginLeft: 8 }}>
                 <TouchableOpacity onPress={() => router.push('/(customer)/notifications' as any)} activeOpacity={0.8} style={styles.headerIcon}>
                   <Feather name="bell" size={18} color={Colors.textDark} />
                   <View style={styles.dot} />
@@ -167,10 +176,10 @@ export default function HomeScreen() {
                   {filteredMenus.slice(0, 8).map((item: any) => (
                     <TouchableOpacity
                       key={item.id}
-                      activeOpacity={0.85}
+                      activeOpacity={0.88}
                       onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
                       style={{
-                        width: 160,
+                        width: 168,
                         backgroundColor: '#FFFFFF',
                         borderRadius: Radius.xl,
                         overflow: 'hidden',
@@ -179,23 +188,32 @@ export default function HomeScreen() {
                         ...Shadow.sm,
                       }}
                     >
-                      <View style={{ height: 110, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ height: 118, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
                         {item.imageUrl ? (
                           <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                         ) : (
-                          <Text style={{ fontSize: 36 }}>🍽️</Text>
+                          <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDE68A' }}>
+                            <Text style={{ fontSize: 28 }}>🍽️</Text>
+                          </View>
                         )}
-                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.96)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textDark }}>Rs. {item.price}</Text>
+                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.textDark, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full }}>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
+                        </View>
+                        <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
+                          <Feather name="star" size={10} color={Colors.accent} />
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textDark }}>4.6</Text>
                         </View>
                       </View>
-                      <View style={{ padding: 10 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>
+                      <View style={{ padding: 12, paddingBottom: 10 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.2 }}>
                           {item.name}
                         </Text>
-                        <Text numberOfLines={1} style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>
-                          {item.restaurantName || 'Restaurant'} • {item.description?.slice(0, 30) || 'Fresh & tasty'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                          <Feather name="map-pin" size={10} color={Colors.textTertiary} />
+                          <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, color: Colors.textSecondary, fontWeight: '500' }}>
+                            {item.restaurantName || 'Restaurant'}
+                          </Text>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -281,10 +299,24 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingBottom: 16,
   },
-  headerInner: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 8 },
-  greeting: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
-  userName: { fontSize: 22, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.5, marginTop: 2 },
-  subtle: { fontSize: 12, color: Colors.textTertiary, marginTop: 2, fontWeight: '500' },
+  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 },
+  greeting: { fontSize: 11, color: Colors.textSecondary, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
+  userName: { fontSize: 20, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.4, marginTop: 1 },
+  subtle: { fontSize: 11, color: Colors.textTertiary, marginTop: 1, fontWeight: '500' },
+  avatarWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FECACA',
+    overflow: 'hidden',
+    ...Shadow.sm,
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarText: { fontSize: 18, fontWeight: '800', color: Colors.primary },
   headerIcon: {
     width: 40,
     height: 40,

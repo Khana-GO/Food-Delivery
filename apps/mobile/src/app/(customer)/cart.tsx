@@ -1,29 +1,28 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import Button from '@/components/ui/Button';
+import { useCartStore } from '@/stores/customer/cartStore';
 import PremiumCard from '@/components/ui/PremiumCard';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
+import AnimatedPage from '@/components/ui/AnimatedPage';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
-const MOCK_CART = [
-  { id: '1', name: 'Chicken Momo', price: 220, qty: 2, emoji: '🥟', note: 'Extra achar' },
-  { id: '2', name: 'Masala Chai', price: 90, qty: 1, emoji: '🍵', note: '' },
-];
+export default function CartScreen() {
+  const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart, restaurantId } = useCartStore();
+  const deliveryFee = 50;
+  const grandTotal = totalPrice + deliveryFee;
 
-export default function Cart() {
-  const [items, setItems] = useState(MOCK_CART);
-  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const fee = 45;
-  const total = subtotal + fee;
-
-  const updateQty = (id: string, delta: number) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)).filter((i) => i.qty > 0));
+  const handleClear = () => {
+    Alert.alert('Clear cart?', 'Remove all items from your cart?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: () => clearCart() },
+    ]);
   };
 
-  if (!items.length) {
+  if (items.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
         <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
@@ -35,7 +34,13 @@ export default function Cart() {
             <View style={{ width: 36 }} />
           </View>
         </SafeAreaView>
-        <EmptyState icon="shopping-bag" title="Your cart is empty" description="Add delicious items from restaurants to get started." actionLabel="Explore Restaurants" onAction={() => router.push('/(customer)/(tabs)/explore' as any)} />
+        <EmptyState
+          icon="shopping-bag"
+          title="Your cart is empty"
+          description="Add delicious dishes from verified restaurants to get started. Your cart will be saved securely."
+          actionLabel="Browse Restaurants"
+          onAction={() => router.push('/(customer)/(tabs)/explore' as any)}
+        />
       </View>
     );
   }
@@ -47,56 +52,96 @@ export default function Cart() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={18} color={Colors.textDark} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Your Cart • {items.length} items</Text>
-          <TouchableOpacity onPress={() => setItems([])}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.primary }}>Clear</Text>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={styles.headerTitle}>Your Cart</Text>
+            <Text style={styles.headerSub}>{totalItems} {totalItems === 1 ? 'item' : 'items'} • Verified restaurant</Text>
+          </View>
+          <TouchableOpacity onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.clearBtn}>
+            <Feather name="trash-2" size={14} color="#EF4444" />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#EF4444' }}>Clear</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 140 }}>
-        {items.map((item) => (
-          <PremiumCard key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 } as any}>
-            <View style={styles.imgBox}>
-              <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 140, gap: 12 }}>
+        <AnimatedPage slide>
+          {/* Restaurant note */}
+          <View style={styles.secureBanner}>
+            <View style={styles.secureIcon}>
+              <Feather name="shield" size={14} color="#15803D" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark }}>{item.name}</Text>
-              {item.note ? <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>{item.note}</Text> : null}
-              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.primary, marginTop: 4 }}>Rs. {item.price}</Text>
+              <Text style={styles.secureTitle}>Secure checkout • Premium packaging</Text>
+              <Text style={styles.secureDesc}>Only from verified restaurants • Fresh & hygienic</Text>
             </View>
-            <View style={styles.qtyWrap}>
-              <TouchableOpacity onPress={() => updateQty(item.id, -1)} style={styles.qtyBtn}>
-                <Feather name="minus" size={14} color={Colors.textDark} />
-              </TouchableOpacity>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark, minWidth: 20, textAlign: 'center' }}>{item.qty}</Text>
-              <TouchableOpacity onPress={() => updateQty(item.id, 1)} style={styles.qtyBtnAdd}>
-                <Feather name="plus" size={14} color="#FFFFFF" />
-              </TouchableOpacity>
+          </View>
+
+          {items.map((item) => (
+            <PremiumCard key={item.menuItemId} style={styles.itemCard as any}>
+              <View style={styles.itemImageWrap}>
+                {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.itemImage} /> : <Text style={{ fontSize: 26 }}>🍽️</Text>}
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={styles.pricePillSmall}>
+                    <Text style={styles.priceSmall}>Rs. {item.price}</Text>
+                  </View>
+                  {!item.isAvailable ? <Text style={{ fontSize: 10, color: '#EF4444', fontWeight: '700' }}>Unavailable</Text> : null}
+                </View>
+              </View>
+
+              <View style={styles.qtyWrap}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (item.quantity <= 1) removeItem(item.menuItemId);
+                    else updateQuantity(item.menuItemId, item.quantity - 1);
+                  }}
+                  style={styles.qtyBtn}
+                >
+                  <Feather name="minus" size={14} color={Colors.textDark} />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{item.quantity}</Text>
+                <TouchableOpacity onPress={() => updateQuantity(item.menuItemId, item.quantity + 1)} style={styles.qtyAdd}>
+                  <Feather name="plus" size={14} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </PremiumCard>
+          ))}
+
+          {/* Order Summary – premium */}
+          <PremiumCard style={{ padding: 16 } as any}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECACA' }}>
+                <Feather name="file-text" size={14} color={Colors.primary} />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textDark }}>Order Summary</Text>
+            </View>
+            <View style={{ gap: 10 }}>
+              <Row label="Subtotal" value={`Rs. ${totalPrice}`} />
+              <Row label="Delivery fee" value={`Rs. ${deliveryFee}`} />
+              <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#F1F5F9', marginVertical: 4 }} />
+              <Row label="Total" value={`Rs. ${grandTotal}`} bold />
+              <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 6, fontWeight: '500' }}>Inclusive of all taxes • Delivery by verified rider</Text>
             </View>
           </PremiumCard>
-        ))}
 
-        <PremiumCard>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark, marginBottom: 12 }}>Order Summary</Text>
-          <View style={{ gap: 8 }}>
-            <Row label="Subtotal" value={`Rs. ${subtotal}`} />
-            <Row label="Delivery fee" value={`Rs. ${fee}`} />
-            <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#F1F5F9', marginVertical: 4 }} />
-            <Row label="Total" value={`Rs. ${total}`} bold />
+          <View style={styles.trustRow}>
+            <Trust icon="clock" label="30 min" />
+            <View style={styles.vDivider} />
+            <Trust icon="shield" label="Safe" />
+            <View style={styles.vDivider} />
+            <Trust icon="award" label="Premium" />
           </View>
-        </PremiumCard>
-
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: Radius.lg, padding: 12 }}>
-          <Feather name="shield" size={14} color="#15803D" />
-          <Text style={{ fontSize: 11, color: '#15803D', fontWeight: '600', flex: 1 }}>Secure checkout • Fresh & hygienic packaging</Text>
-        </View>
+        </AnimatedPage>
       </ScrollView>
 
+      {/* Sticky checkout – premium */}
       <View style={styles.checkoutBar}>
         <View>
-          <Text style={{ fontSize: 11, color: Colors.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 }}>Total</Text>
-          <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textDark }}>Rs. {total}</Text>
+          <Text style={styles.totalLabel}>TOTAL</Text>
+          <Text style={styles.totalValue}>Rs. {grandTotal}</Text>
+          <Text style={styles.totalSub}>{totalItems} items • Free packaging</Text>
         </View>
         <Button label="Checkout" onPress={() => router.push('/(customer)/checkout' as any)} style={{ paddingHorizontal: 28, borderRadius: Radius.full }} />
       </View>
@@ -106,9 +151,17 @@ export default function Cart() {
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Text style={{ fontSize: 13, color: bold ? Colors.textDark : Colors.textSecondary, fontWeight: bold ? '700' : '500' }}>{label}</Text>
-      <Text style={{ fontSize: 13, color: bold ? Colors.textDark : Colors.textMedium, fontWeight: bold ? '800' : '600' }}>{value}</Text>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 13, color: bold ? Colors.textDark : Colors.textSecondary, fontWeight: bold ? '800' : '500' }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: bold ? Colors.primary : Colors.textDark, fontWeight: bold ? '800' : '700' }}>{value}</Text>
+    </View>
+  );
+}
+function Trust({ icon, label }: { icon: any; label: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+      <Feather name={icon} size={14} color={Colors.textSecondary} />
+      <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.textSecondary }}>{label}</Text>
     </View>
   );
 }
@@ -135,8 +188,34 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E2E8F0',
   },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.2 },
-  imgBox: {
+  headerTitle: { fontSize: 16, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.2, textAlign: 'center' },
+  headerSub: { fontSize: 11, color: Colors.textTertiary, fontWeight: '500', textAlign: 'center', marginTop: 1 },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  secureBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    padding: 12,
+    borderRadius: Radius.xl,
+  },
+  secureIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BBF7D0' },
+  secureTitle: { fontSize: 12, fontWeight: '700', color: '#15803D' },
+  secureDesc: { fontSize: 11, color: '#15803D', opacity: 0.8, marginTop: 1, fontWeight: '500' },
+  itemCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 } as any,
+  itemImageWrap: {
     width: 64,
     height: 64,
     borderRadius: Radius.lg,
@@ -145,20 +224,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#FFEDD5',
+    overflow: 'hidden',
   },
+  itemImage: { width: '100%', height: '100%' },
+  itemName: { fontSize: 14, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.2 },
+  pricePillSmall: { backgroundColor: Colors.textDark, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
+  priceSmall: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
   qtyWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 6,
-    paddingVertical: 6,
     borderRadius: Radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
+    padding: 3,
+    gap: 8,
   },
-  qtyBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' },
-  qtyBtnAdd: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.textDark, alignItems: 'center', justifyContent: 'center' },
+  qtyBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' },
+  qtyAdd: { width: 30, height: 30, borderRadius: 15, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  qtyText: { fontSize: 14, fontWeight: '800', color: Colors.textDark, minWidth: 16, textAlign: 'center' },
+  trustRow: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: Radius.xl, paddingVertical: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0', ...Shadow.xs },
+  vDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#E2E8F0' },
   checkoutBar: {
     position: 'absolute',
     bottom: 0,
@@ -168,11 +254,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 14,
     paddingBottom: 18,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(255,255,255,0.98)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E2E8F0',
     ...Shadow.lg,
   },
+  totalLabel: { fontSize: 10, color: Colors.textTertiary, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  totalValue: { fontSize: 18, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
+  totalSub: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginTop: 1 },
 });

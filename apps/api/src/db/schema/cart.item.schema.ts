@@ -26,8 +26,8 @@ export const cartItemsTable = pgTable('cart_items', {
 
   quantity: integer('quantity').notNull().default(1),
 
-  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
-
+  unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
+  totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

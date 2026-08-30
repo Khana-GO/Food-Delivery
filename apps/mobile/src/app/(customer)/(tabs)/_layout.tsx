@@ -49,6 +49,7 @@ export default function TabsLayout() {
       />
 
       <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+      <Stack.Screen name="cart" options={{ headerShown: false }} />
     </Tabs>
   );
 }
