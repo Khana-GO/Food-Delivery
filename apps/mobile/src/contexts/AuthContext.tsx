@@ -14,6 +14,7 @@ import {
   saveAccessToken,
   saveRefreshToken,
   getAccessToken,
+  getRefreshToken,
   deleteTokens,
 } from "../../lib/secure-storage";
 
@@ -206,9 +207,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     setIsAuthenticating(true);
     try {
-      await api.post("/auth/logout");
-    } catch (error) {
-      console.warn("Logout API call failed, clearing local session anyway:", error);
+      const refreshToken = await getRefreshToken();
+      // Send refreshToken if available — backend now accepts optional token (no 400)
+      await api.post("/auth/logout", refreshToken ? { refreshToken } : {});
+    } catch (error: any) {
+      const status = error?.response?.status;
+      // Don't spam WARN for expected 400/401 when session already expired; just clear locally
+      if (status !== 400 && status !== 401) {
+        console.warn("Logout API call failed, clearing local session anyway:", error?.message ?? error);
+      }
     } finally {
       await deleteTokens();
       if (isMountedRef.current) {

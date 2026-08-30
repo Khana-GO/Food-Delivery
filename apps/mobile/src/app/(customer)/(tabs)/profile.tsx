@@ -40,7 +40,7 @@ export default function Profile() {
     setShowLogoutModal(false);
     try {
       await logout();
-      router.replace('/auth/login');
+      router.replace('/(auth)/login' as any);
     } catch (error) {
       Alert.alert('Error', 'Failed to logout. Please try again.');
     }
@@ -59,7 +59,7 @@ export default function Profile() {
   }, []);
 
   const handleFavorites = useCallback(() => {
-    router.push('/(customer)/(tabs)/favourites' as any);
+    router.push('/(customer)/(tabs)/favorites' as any);
   }, []);
 
   const handleNotifications = useCallback(() => {

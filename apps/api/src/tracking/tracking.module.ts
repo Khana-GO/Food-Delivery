@@ -4,5 +4,6 @@
 
 // @Module({
 //   providers: [TrackingGateway, TrackingService],
+//   exports: [TrackingService],
 // })
 // export class TrackingModule {}

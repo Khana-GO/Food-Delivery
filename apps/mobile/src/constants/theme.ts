@@ -2,16 +2,16 @@ import { Platform } from 'react-native';
 
 // KhanaGo Brand Design Tokens
 export const Colors = {
-  // Primary Brand
-  primary: '#F97316',
-  primaryDark: '#EA580C',
-  primaryLight: '#FED7AA',
-  primaryBg: '#FFF7ED',
+  // Primary Brand — deeper, more premium
+  primary: '#B91C1C',
+  primaryDark: '#7F1D1D',
+  primaryLight: '#FEE2E2',
+  primaryBg: '#FEF2F2',
 
-  // Semantic
-  success: '#22C55E',
+  // Semantic — darker, more attractive
+  success: '#15803D',
   successLight: '#DCFCE7',
-  error: '#EF4444',
+  error: '#B91C1C',
   errorLight: '#FEE2E2',
   warning: '#F59E0B',
   warningLight: '#FEF3C7',

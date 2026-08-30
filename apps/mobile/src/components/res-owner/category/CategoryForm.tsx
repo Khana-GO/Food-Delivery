@@ -62,11 +62,12 @@ export function CategoryForm({
       <View className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm shadow-gray-100">
         <Field label="Category Name" required error={error}>
           <TextInput
-            className={`rounded-2xl border bg-white px-4 py-3 text-sm text-gray-900 ${
-              error ? 'border-red-300' : 'border-gray-200'
+            className={`rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-gray-900 ${
+              error ? 'border-red-400' : 'border-gray-200'
             }`}
             placeholder="e.g., Appetizers"
             placeholderTextColor="#94A3B8"
+            style={{ fontWeight: '400' }}
             value={name}
             maxLength={100}
             onChangeText={(t) => {

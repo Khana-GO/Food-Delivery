@@ -182,19 +182,20 @@ export const MenuItemForm = ({
       {/* Name */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">
-          Item Name <Text className="text-red-500">*</Text>
+          Item Name <Text className="text-[#B91C1C]">*</Text>
         </Text>
         <TextInput
-          className={`border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
+          className={`border ${errors.name ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-base font-normal text-black bg-white`}
           placeholder="e.g., Chicken Momo"
           placeholderTextColor="#94A3B8"
+          style={{ fontWeight: '400' }}
           value={name}
           onChangeText={(text) => {
             setName(text);
             if (errors.name) setErrors({ ...errors, name: '' });
           }}
         />
-        {errors.name && <Text className="mt-1 text-xs text-red-500">{errors.name}</Text>}
+        {errors.name && <Text className="mt-1 text-xs font-normal text-[#B91C1C]">{errors.name}</Text>}
       </View>
 
       {/* Description */}
@@ -215,12 +216,13 @@ export const MenuItemForm = ({
       {/* Price */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">
-          Price (Rs.) <Text className="text-red-500">*</Text>
+          Price (Rs.) <Text className="text-[#B91C1C]">*</Text>
         </Text>
         <TextInput
-          className={`border ${errors.price ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
+          className={`border ${errors.price ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-base font-normal text-black bg-white`}
           placeholder="e.g., 299"
           placeholderTextColor="#94A3B8"
+          style={{ fontWeight: '400' }}
           value={price}
           onChangeText={(text) => {
             setPrice(text);
@@ -228,13 +230,13 @@ export const MenuItemForm = ({
           }}
           keyboardType="decimal-pad"
         />
-        {errors.price && <Text className="mt-1 text-xs text-red-500">{errors.price}</Text>}
+        {errors.price && <Text className="mt-1 text-xs font-normal text-[#B91C1C]">{errors.price}</Text>}
       </View>
 
       {/* Category */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">
-          Category <Text className="text-red-500">*</Text>
+          Category <Text className="text-[#B91C1C]">*</Text>
         </Text>
         {!restaurantId ? (
           <View className="items-center p-4 bg-amber-50 border border-amber-200 rounded-xl">

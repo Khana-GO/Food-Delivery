@@ -1,8 +1,8 @@
 // src/auth/dto/logout.dto.ts
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class LogoutDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  refreshToken!: string;
+  refreshToken?: string;
 }

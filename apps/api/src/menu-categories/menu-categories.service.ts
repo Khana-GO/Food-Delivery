@@ -69,15 +69,17 @@ export class CategoriesService {
     try {
       return await operation();
     } catch (error) {
-      this.logger.error(`[${context}] Error:`, error);
+      // Expected client errors — downgrade to WARN to avoid log flooding on 404 retries
       if (
         error instanceof NotFoundException ||
         error instanceof ConflictException ||
         error instanceof ForbiddenException ||
         error instanceof BadRequestException
       ) {
+        this.logger.warn(`[${context}] ${error.message}`);
         throw error;
       }
+      this.logger.error(`[${context}] Error:`, error);
       throw new InternalServerErrorException(
         'An error occurred while processing your request',
       );
@@ -320,7 +322,21 @@ export class CategoriesService {
   }
 
   // ─── FIND BY ID ─── (cached)
-  async findById(id: string): Promise<CategoryResponseDto> {
+  async findById(
+    id: string,
+    opts: { bypassCache?: boolean } = {},
+  ): Promise<CategoryResponseDto> {
+    if (opts.bypassCache) {
+      return this.handleDbOperation(async () => {
+        const category = await this.db.query.menuCategoriesTable.findFirst({
+          where: eq(schema.menuCategoriesTable.id, id),
+        });
+        if (!category) {
+          throw new NotFoundException(`Category with ID ${id} not found`);
+        }
+        return new CategoryResponseDto(category);
+      }, 'findById');
+    }
     return this.handleDbOperation(async () => {
       return this.cache.wrap(this.keyId(id), this.ENTITY_TTL, async () => {
         const category = await this.db.query.menuCategoriesTable.findFirst({
@@ -336,6 +352,11 @@ export class CategoriesService {
     }, 'findById');
   }
 
+  /** Fresh DB lookup without cache — use inside update/delete to avoid stale cache. */
+  private async findByIdFresh(id: string): Promise<CategoryResponseDto> {
+    return this.findById(id, { bypassCache: true });
+  }
+
   // ─── UPDATE ───
   async update(
     id: string,
@@ -343,14 +364,21 @@ export class CategoriesService {
     ownerUserId?: string,
   ): Promise<CategoryResponseDto> {
     return this.handleDbOperation(async () => {
-      const existing = await this.findById(id);
+      // Use fresh DB lookup to avoid stale cache causing 500 on deleted rows
+      const existing = await this.findByIdFresh(id);
       await this.assertOwnershipByUser(existing.restaurantId, ownerUserId);
 
-      // Check if new name conflicts with another category in the same restaurant
-      if (dto.name && dto.name !== existing.name) {
+      // Nothing to update — drift: still bump updatedAt? We treat empty dto as no-op.
+      if (!dto.name || dto.name.trim() === '') {
+        // If client sent no name, just return existing without DB write
+        this.logger.warn(`[update] No updatable fields for category ${id}`);
+        return existing;
+      }
+
+      if (dto.name !== existing.name) {
         const conflict = await this.db.query.menuCategoriesTable.findFirst({
           where: and(
-            eq(schema.menuCategoriesTable.name, dto.name),
+            eq(schema.menuCategoriesTable.name, dto.name.trim()),
             eq(schema.menuCategoriesTable.restaurantId, existing.restaurantId),
           ),
         });
@@ -363,14 +391,16 @@ export class CategoriesService {
       const [updated] = await this.db
         .update(schema.menuCategoriesTable)
         .set({
-          ...(dto.name ? { name: dto.name } : {}),
+          name: dto.name.trim(),
           updatedAt: new Date(),
         })
         .where(eq(schema.menuCategoriesTable.id, id))
         .returning();
 
       if (!updated) {
-        throw new InternalServerErrorException('Failed to update category');
+        // Row disappeared between findById and update (race) — treat as 404, evict stale cache
+        await this.cache.del(this.keyId(id));
+        throw new NotFoundException(`Category with ID ${id} not found`);
       }
 
       if (ownerUserId) {
@@ -397,7 +427,7 @@ export class CategoriesService {
     ownerUserId?: string,
   ): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
-      const category = await this.findById(id);
+      const category = await this.findByIdFresh(id);
       await this.assertOwnershipByUser(category.restaurantId, ownerUserId);
 
       // Check if category has menu items

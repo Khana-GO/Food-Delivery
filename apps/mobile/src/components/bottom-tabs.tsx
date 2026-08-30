@@ -13,6 +13,41 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type TabIconName = React.ComponentProps<typeof Feather>['name'];
 
+// Feather glyph map — generated from @expo/vector-icons Feather
+// Used to validate incoming name and prevent WARN "store is not a valid icon name"
+const FEATHER_GLYPH_MAP: Record<string, number> | undefined = (Feather as any)?.glyphMap;
+
+// Common alias map for legacy/invalid names seen in logs (e.g. "store" from older tab config or cached bundles)
+// Owner pages reported "soret is not a valid icon" — typo for store/sort
+const ICON_ALIASES: Record<string, TabIconName> = {
+  store: 'shopping-bag',
+  soret: 'shopping-bag',
+  sort: 'filter',
+  shop: 'shopping-bag',
+  restaurant: 'home',
+  food: 'coffee',
+};
+
+// Monkey-patch Feather glyphMap so direct <Feather name="store" /> doesn't spam warnings
+// This handles cached bundles and any component that bypasses TabIcon
+if (FEATHER_GLYPH_MAP) {
+  for (const [invalid, valid] of Object.entries(ICON_ALIASES)) {
+    if (!(invalid in FEATHER_GLYPH_MAP) && valid in FEATHER_GLYPH_MAP) {
+      (FEATHER_GLYPH_MAP as Record<string, number>)[invalid] = FEATHER_GLYPH_MAP[valid];
+    }
+  }
+}
+
+function resolveIconName(input: TabIconName): TabIconName {
+  const aliased = ICON_ALIASES[input as string] ?? input;
+  if (FEATHER_GLYPH_MAP && !(aliased in FEATHER_GLYPH_MAP)) {
+    // Fallback to safe icon instead of triggering Feather warning flood
+    if (__DEV__) console.warn(`[TabIcon] "${String(input)}" is not a Feather icon, falling back to "circle"`);
+    return 'circle' as TabIconName;
+  }
+  return aliased;
+}
+
 interface TabIconProps {
   name: TabIconName;
   label: string;
@@ -23,10 +58,11 @@ interface TabIconProps {
 
 // Centered icon + label used by every role's tab bar.
 export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps) {
+  const resolvedName = resolveIconName(name);
   return (
     <View style={styles.iconWrap}>
       <Feather
-        name={name}
+        name={resolvedName}
         size={size}
         color={focused ? ACCENT : MUTED}
         strokeWidth={focused ? 2.5 : 2}
@@ -50,7 +86,7 @@ export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps)
   );
 }
 
-const ACCENT = '#E23744';
+const ACCENT = '#B91C1C'; // darker red — was #E23744
 const MUTED = '#94A3B8';
 
 // Shared safe-area + responsive sizing for all role tab bars.

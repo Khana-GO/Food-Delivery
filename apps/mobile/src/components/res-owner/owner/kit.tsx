@@ -18,8 +18,8 @@ import { Feather } from '@expo/vector-icons';
 // Design tokens
 // ──────────────────────────────────────────────────────────────────────────
 
-export const BRAND = '#E23744';
-export const GREEN = '#16A34A';
+export const BRAND = '#B91C1C'; // darker red — was #E23744
+export const GREEN = '#15803D'; // darker green — was #16A34A
 
 /** Formats a number as Nepali Rupees, e.g. rs(12500) -> "Rs. 12,500" */
 export const rs = (n: number) => `Rs. ${Math.round(n).toLocaleString('en-IN')}`;
@@ -147,8 +147,8 @@ const TONE_ICONS: Record<Tone, React.ComponentProps<typeof Feather>['name']> = {
 };
 
 const TONE_ICON_COLORS: Record<Tone, string> = {
-  brand: '#E23744',
-  green: '#16A34A',
+  brand: BRAND,
+  green: GREEN,
   amber: '#D97706',
   slate: '#475569',
 };
@@ -339,9 +339,9 @@ export function EmptyState({
 type DialogTone = 'danger' | 'success' | 'brand';
 
 const DIALOG_TONES: Record<DialogTone, { iconBg: string; btn: string; iconColor: string }> = {
-  danger: { iconBg: 'bg-red-50', btn: 'bg-red-500 active:bg-red-600', iconColor: '#DC2626' },
-  success: { iconBg: 'bg-green-50', btn: 'bg-green-600 active:bg-green-700', iconColor: GREEN },
-  brand: { iconBg: 'bg-red-50', btn: 'bg-primary active:opacity-90', iconColor: BRAND },
+  danger: { iconBg: 'bg-[#FEE2E2]', btn: 'bg-[#B91C1C] active:bg-[#7F1D1D]', iconColor: '#B91C1C' },
+  success: { iconBg: 'bg-[#DCFCE7]', btn: 'bg-[#15803D] active:bg-[#14532D]', iconColor: GREEN },
+  brand: { iconBg: 'bg-[#FEE2E2]', btn: 'bg-[#B91C1C] active:bg-[#7F1D1D]', iconColor: BRAND },
 };
 
 export function ConfirmDialog({
@@ -497,10 +497,10 @@ export function Field({
     <View className="mb-4">
       <Text className="mb-1.5 text-sm font-semibold text-slate-700">
         {label}
-        {required ? <Text className="text-primary"> *</Text> : null}
+        {required ? <Text className="text-[#B91C1C]"> *</Text> : null}
       </Text>
       {children}
-      {error ? <Text className="mt-1 text-xs font-medium text-red-500">{error}</Text> : null}
+      {error ? <Text className="mt-1 text-xs font-normal text-[#B91C1C]">{error}</Text> : null}
     </View>
   );
 }

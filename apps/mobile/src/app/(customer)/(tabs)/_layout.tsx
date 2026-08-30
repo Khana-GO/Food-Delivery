@@ -39,7 +39,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="favourites"
+        name="favorites"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon name="heart" label="Favorites" focused={focused} size={iconSize} labelSize={labelSize} />

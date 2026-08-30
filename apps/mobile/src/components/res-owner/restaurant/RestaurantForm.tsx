@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { WARD_NUMBERS, CreateRestaurantPayload, Restaurant } from '@food_delivery/types';
 import { Field } from '@/components/res-owner/owner/kit';
 import { useCuisines } from '@/hooks/owner/restaurant/useRestaurants';
@@ -61,8 +62,8 @@ function Section({
   return (
     <View className="mb-4 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100">
       <View className="flex-row items-center gap-3 border-b border-gray-50 px-4 pb-3 pt-4">
-        <View className="h-9 w-9 items-center justify-center rounded-xl bg-red-50">
-          <Feather name={icon} size={16} color="#E23744" />
+        <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#FEE2E2]">
+          <Feather name={icon} size={16} color="#B91C1C" />
         </View>
         <View className="flex-1">
           <Text className="text-sm font-bold text-gray-900">{title}</Text>
@@ -75,12 +76,12 @@ function Section({
 }
 
 const inputClass = (hasError?: string | boolean) =>
-  `h-14 rounded-xl border px-4 text-[16px] font-medium text-slate-900 ${
-    hasError ? 'border-red-300 bg-red-50/40' : 'border-gray-200 bg-gray-50'
+  `h-14 rounded-xl border px-4 text-[16px] font-normal text-slate-900 ${
+    hasError ? 'border-red-400 bg-white' : 'border-gray-200 bg-gray-50'
   }`;
 
 /** Guarantees readable input text even if NativeWind classes fail to apply. */
-const inputTextStyle = { fontSize: 16, color: '#0F172A' } as const;
+const inputTextStyle = { fontSize: 16, color: '#0F172A', fontWeight: '400' } as const;
 
 function TextField({
   label,
@@ -109,7 +110,7 @@ function TextField({
         className={inputClass(error)}
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"
-        selectionColor="#E23744"
+        selectionColor="#B91C1C"
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}
@@ -144,7 +145,7 @@ function PickerTrigger({
       <Pressable
         onPress={onPress}
         className={`h-14 flex-row items-center justify-between rounded-xl border px-4 active:bg-gray-100 ${
-          error ? 'border-red-300 bg-red-50/40' : 'border-gray-200 bg-gray-50'
+          error ? 'border-red-400 bg-white' : 'border-gray-200 bg-gray-50'
         }`}
       >
         <View className="flex-row items-center">
@@ -154,7 +155,7 @@ function PickerTrigger({
             </View>
           ) : null}
           <Text
-            className={`text-[16px] font-medium ${value ? 'text-slate-900' : 'text-gray-400'}`}
+            className={`text-[16px] font-normal ${value ? 'text-slate-900' : 'text-gray-400'}`}
             numberOfLines={1}
           >
             {value || placeholder}
@@ -220,30 +221,51 @@ export const RestaurantForm = ({
 }: RestaurantFormProps) => {
   const { data: cuisineOptions } = useCuisines();
 
-  // ─── State ───
-  const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    slug: initialData?.slug || '',
-    description: initialData?.description || '',
-    phone: initialData?.phone || '',
-    email: initialData?.email || '',
-    address: initialData?.address || '',
-    wardNumber: initialData?.wardNumber ? String(initialData.wardNumber) : '',
-    latitude: initialData?.latitude != null ? String(initialData.latitude) : '',
-    longitude: initialData?.longitude != null ? String(initialData.longitude) : '',
-    cuisineType: initialData?.cuisineType || '',
-    openingTime: initialData?.openingTime ? initialData.openingTime.slice(0, 5) : '',
-    closingTime: initialData?.closingTime ? initialData.closingTime.slice(0, 5) : '',
-    deliveryFee: initialData?.deliveryFee != null ? String(initialData.deliveryFee) : '0',
-    minimumOrderAmount:
-      initialData?.minimumOrderAmount != null ? String(initialData.minimumOrderAmount) : '0',
-    estimatedDeliveryTime:
-      initialData?.estimatedDeliveryTime != null ? String(initialData.estimatedDeliveryTime) : '',
-  });
+  // ─── State helpers ───
+  const buildFormData = useCallback(
+    (data?: Partial<Restaurant> | null) => ({
+      name: data?.name || '',
+      slug: data?.slug || '',
+      description: data?.description || '',
+      phone: data?.phone || '',
+      email: data?.email || '',
+      address: data?.address || '',
+      wardNumber: data?.wardNumber ? String(data.wardNumber) : '',
+      latitude: data?.latitude != null ? String(data.latitude) : '',
+      longitude: data?.longitude != null ? String(data.longitude) : '',
+      cuisineType: data?.cuisineType || '',
+      openingTime: data?.openingTime ? data.openingTime.slice(0, 5) : '',
+      closingTime: data?.closingTime ? data.closingTime.slice(0, 5) : '',
+      deliveryFee: data?.deliveryFee != null ? String(data.deliveryFee) : '0',
+      minimumOrderAmount: data?.minimumOrderAmount != null ? String(data.minimumOrderAmount) : '0',
+      estimatedDeliveryTime: data?.estimatedDeliveryTime != null ? String(data.estimatedDeliveryTime) : '',
+    }),
+    [],
+  );
+
+  const [formData, setFormData] = useState(() => buildFormData(initialData));
   const [slugTouched, setSlugTouched] = useState(Boolean(initialData?.slug));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cuisineSheetOpen, setCuisineSheetOpen] = useState(false);
   const [wardSheetOpen, setWardSheetOpen] = useState(false);
+
+  // Sync when initialData changes (edit vs create) — prevents stale old data showing on create
+  useEffect(() => {
+    setFormData(buildFormData(initialData));
+    setSlugTouched(Boolean(initialData?.slug));
+    setErrors({});
+  }, [initialData, buildFormData]);
+
+  // Also clear when create screen regains focus (user created one, went back, taps Add again)
+  useFocusEffect(
+    useCallback(() => {
+      if (!initialData) {
+        setFormData(buildFormData(null));
+        setSlugTouched(false);
+        setErrors({});
+      }
+    }, [initialData, buildFormData]),
+  );
 
   // ─── Handlers ───
   const updateField = useCallback((field: string, value: string) => {
@@ -371,12 +393,12 @@ export const RestaurantForm = ({
           <Field label="Web Address (slug)" required error={errors.slug}>
             <View className="flex-row items-center">
               <TextInput
-                className={`h-14 flex-1 rounded-l-xl border px-4 text-[16px] font-medium text-slate-900 ${
-                  errors.slug ? 'border-red-300 bg-red-50/40' : 'border-gray-200 bg-gray-50'
+                className={`h-14 flex-1 rounded-l-xl border px-4 text-[16px] font-normal text-slate-900 ${
+                  errors.slug ? 'border-red-400 bg-white' : 'border-gray-200 bg-gray-50'
                 } ${slugTouched ? '' : 'opacity-70'}`}
                 placeholder="himalayan-spice-kitchen"
                 placeholderTextColor="#94A3B8"
-                selectionColor="#E23744"
+                selectionColor="#B91C1C"
                 value={formData.slug}
                 onChangeText={(t) => {
                   setSlugTouched(true);
@@ -405,12 +427,12 @@ export const RestaurantForm = ({
 
           <Field label="Short Description" error={errors.description}>
             <TextInput
-              className={`min-h-[110px] rounded-xl border px-4 py-3 text-[16px] leading-[22px] text-slate-900 ${
-                errors.description ? 'border-red-300 bg-red-50/40' : 'border-gray-200 bg-gray-50'
+              className={`min-h-[110px] rounded-xl border px-4 py-3 text-[16px] font-normal leading-[22px] text-slate-900 ${
+                errors.description ? 'border-red-400 bg-white' : 'border-gray-200 bg-gray-50'
               }`}
               placeholder="What makes your kitchen special?"
               placeholderTextColor="#94A3B8"
-              selectionColor="#E23744"
+              selectionColor="#B91C1C"
               value={formData.description}
               onChangeText={(t) => updateField('description', t)}
               multiline

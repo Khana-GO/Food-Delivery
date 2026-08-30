@@ -284,3 +284,35 @@ export interface RestaurantListResponse {
   limit: number;
   totalPages: number;
 }
+
+
+
+export interface Category {
+  id: string;
+  name: string;
+  restaurantId: string;
+  itemCount?: number;
+}
+
+export interface DashboardData {
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    imageUrl?: string;
+  };
+  popularRestaurants: Restaurant[];
+  recommendations: Restaurant[];
+  recentlyOrdered: Restaurant[];
+  categories: Category[];
+}
+
+export interface Favorite {
+  id: string;
+  restaurantId: string;
+  userId: string;
+  createdAt: string;
+  restaurant?: Restaurant;
+}

@@ -17,7 +17,10 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { MenuModule } from './menu/menu.module';
 import { CategoriesModule } from './menu-categories/menu-categories.module';
 import { SessionsModule } from './sessions/session.module';
-import { TrackingModule } from './tracking/tracking.module';
+// import { TrackingModule } from './tracking/tracking.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { RecommendationsModule } from './recommendation/recommendation.module';
+import { DashboardModule } from './dasboard/dasboard.module';
 
 @Module({
   imports: [
@@ -60,7 +63,10 @@ import { TrackingModule } from './tracking/tracking.module';
     CloudinaryModule,
     MenuModule,
     SessionsModule,
-    TrackingModule,
+    // TrackingModule,
+    FavoritesModule,
+    RecommendationsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

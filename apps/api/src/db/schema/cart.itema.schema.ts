@@ -1,4 +1,10 @@
-import { integer, numeric, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  integer,
+  numeric,
+  pgTable,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { cartsTable } from './cart.schema';
 import { menuItemsTable } from './menu.items.schema';

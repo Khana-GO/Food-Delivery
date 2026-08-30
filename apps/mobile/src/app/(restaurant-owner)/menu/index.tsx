@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -46,6 +47,11 @@ export default function MenuItemsScreen() {
     const timer = setTimeout(() => setSearchQuery(searchInput.trim()), 400);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Responsive helpers for stat bar — ensures "Unavailable" fits on 320px screens
+  const { width } = useWindowDimensions();
+  const isVeryCompact = width < 360;
+  const isCompact = width < 380;
 
   // When switching restaurant, clear category filter (categories are per-restaurant)
   useEffect(() => {
@@ -139,29 +145,37 @@ export default function MenuItemsScreen() {
     key: StatFilter;
     label: string;
     value: number;
+    icon: React.ComponentProps<typeof Feather>['name'];
     activeClass: string;
+    inactiveClass: string;
     textClass: string;
   }[] = [
     {
       key: 'all',
       label: 'Total Items',
       value: totalCount,
-      activeClass: 'border-primary bg-primary/5',
-      textClass: 'text-black',
+      icon: 'layers',
+      activeClass: 'border-[#7F1D1D] bg-[#B91C1C] shadow-md',
+      inactiveClass: 'border-gray-100 bg-white shadow-sm',
+      textClass: 'text-white',
     },
     {
       key: 'available',
       label: 'Available',
       value: availableCount ?? 0,
-      activeClass: 'border-green-500 bg-green-50',
-      textClass: 'text-green-500',
+      icon: 'check-circle',
+      activeClass: 'border-[#14532D] bg-[#15803D] shadow-md',
+      inactiveClass: 'border-gray-100 bg-white shadow-sm',
+      textClass: 'text-white',
     },
     {
       key: 'unavailable',
       label: 'Unavailable',
       value: unavailableCount ?? 0,
-      activeClass: 'border-red-500 bg-red-50',
-      textClass: 'text-red-500',
+      icon: 'x-circle',
+      activeClass: 'border-[#7F1D1D] bg-[#B91C1C] shadow-md',
+      inactiveClass: 'border-gray-100 bg-white shadow-sm',
+      textClass: 'text-white',
     },
   ];
 
@@ -197,19 +211,39 @@ export default function MenuItemsScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1 gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+      {/* Header — professional with darker accent, responsive */}
+      <View className={`${isVeryCompact ? 'px-4 pt-10 pb-3' : 'px-6 pt-12 pb-4'} bg-white border-b border-gray-100 shadow-sm`}>
+        <View className="flex-row items-center justify-between gap-2">
+          <View className="flex-row items-center flex-1 min-w-0 gap-2">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className={`${isVeryCompact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-full bg-gray-50 border border-gray-100 shrink-0`}
+            >
+              <Feather name="arrow-left" size={isVeryCompact ? 16 : 18} color="#1A1A1A" />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-black" numberOfLines={1}>
-              Menu Items
-            </Text>
+            <View
+              className={`${isVeryCompact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-xl bg-[#B91C1C] shadow-sm shrink-0`}
+            >
+              <Feather name="book-open" size={isVeryCompact ? 14 : 16} color="#FFFFFF" />
+            </View>
+            <View className="flex-1 min-w-0">
+              <Text
+                className={`${isVeryCompact ? 'text-lg' : 'text-xl'} font-extrabold text-gray-900 leading-none`}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                Menu Items
+              </Text>
+              <Text className="text-[11px] font-semibold text-gray-400" numberOfLines={1}>
+                {totalCount} total dishes
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
-            className="flex-row items-center gap-2 px-4 py-2 rounded-lg bg-primary"
+            activeOpacity={0.85}
+            className={`flex-row items-center justify-center rounded-xl bg-[#B91C1C] shadow-md border border-[#7F1D1D] shrink-0 ${
+              isVeryCompact ? 'h-9 w-9 px-0' : 'gap-2 px-4 py-2.5'
+            }`}
             onPress={() =>
               router.push({
                 pathname: '/(restaurant-owner)/menu/create',
@@ -217,8 +251,8 @@ export default function MenuItemsScreen() {
               } as never)
             }
           >
-            <Feather name="plus" size={18} color="#FFF" />
-            <Text className="text-sm font-semibold text-white">Add Item</Text>
+            <Feather name="plus" size={isVeryCompact ? 16 : 18} color="#FFF" />
+            {!isVeryCompact ? <Text className="text-sm font-semibold text-white">Add Item</Text> : null}
           </TouchableOpacity>
         </View>
       </View>
@@ -226,20 +260,17 @@ export default function MenuItemsScreen() {
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-        }
-        stickyHeaderIndices={[0]}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
       >
         {/* Restaurant selector — only shown when the owner has multiple */}
       {hasMultipleRestaurants && (
-        <View>
+        <View className="border-b border-gray-100 bg-white">
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{
               paddingHorizontal: 16,
-              paddingVertical: 8,
+              paddingVertical: 10,
               gap: 8,
             }}
           >
@@ -248,22 +279,23 @@ export default function MenuItemsScreen() {
               return (
                 <TouchableOpacity
                   key={r.id}
-                  className={`flex-row items-center px-4 py-2 border rounded-full ${
+                  activeOpacity={0.85}
+                  className={`flex-row items-center px-4 py-2.5 border rounded-full shadow-sm ${
                     isActive
-                      ? 'bg-primary border-primary'
+                      ? 'bg-[#B91C1C] border-[#7F1D1D] shadow-md'
                       : 'bg-white border-gray-200'
                   }`}
                   onPress={() => setSelectedRestaurantId(r.id)}
                 >
-                  <Feather
-                    name="shopping-bag"
-                    size={14}
-                    color={isActive ? '#FFF' : '#64748B'}
-                  />
+                  <View className={`h-6 w-6 items-center justify-center rounded-full mr-2 ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                    <Feather
+                      name="shopping-bag"
+                      size={12}
+                      color={isActive ? '#FFF' : '#64748B'}
+                    />
+                  </View>
                   <Text
-                    className={`ml-1.5 text-xs font-medium ${
-                      isActive ? 'text-white' : 'text-gray-600'
-                    }`}
+                    className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-700'}`}
                     numberOfLines={1}
                   >
                     {r.name}
@@ -275,100 +307,125 @@ export default function MenuItemsScreen() {
         </View>
       )}
 
-      {/* Search */}
-        <View className="px-4 pt-4 pb-1 bg-gray-50">
-          <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-xl">
-            <Feather name="search" size={20} color="#94A3B8" />
+      {/* Search — elevated, professional with darker accent */}
+        <View className="px-4 pt-3 pb-2 bg-gray-50">
+          <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-2xl shadow-sm">
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-[#FEF2F2]">
+              <Feather name="search" size={16} color="#B91C1C" />
+            </View>
             <TextInput
-              className="flex-1 ml-3 text-base text-black"
-              placeholder="Search menu items..."
+              className="flex-1 ml-3 text-[15px] font-normal text-gray-900"
+              placeholder="Search menu items, categories..."
               placeholderTextColor="#94A3B8"
+              style={{ fontWeight: '400' }}
               value={searchInput}
               onChangeText={setSearchInput}
               returnKeyType="search"
             />
-            {searchInput.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchInput('')}>
-                <Feather name="x-circle" size={20} color="#94A3B8" />
+            {searchInput.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearchInput('')} className="p-1 ml-2 bg-gray-50 rounded-full">
+                <Feather name="x-circle" size={18} color="#94A3B8" />
               </TouchableOpacity>
+            ) : (
+              <View className="ml-2 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100">
+                <Text className="text-[11px] font-bold text-gray-500">{totalCount} items</Text>
+              </View>
             )}
           </View>
         </View>
 
-        {/* Stats double as availability filters */}
-        <View className="flex-row flex-wrap gap-3 px-4 py-2">
+        {/* Stats double as availability filters — fully responsive, fits 320px */}
+        <View className={`flex-row px-4 ${isVeryCompact ? 'gap-2 py-2' : isCompact ? 'gap-2 py-3' : 'gap-3 py-3'}`}>
           {statCards.map((stat) => {
             const isActive = availability === stat.key;
             return (
               <TouchableOpacity
                 key={stat.key}
-                className={`flex-1 min-w-[96px] items-center justify-center p-3 bg-white border rounded-xl ${
-                  isActive
-                    ? stat.activeClass
-                    : 'border-gray-100'
-                }`}
+                activeOpacity={0.85}
+                className={`flex-1 min-w-0 flex-row items-center border rounded-2xl overflow-hidden ${
+                  isVeryCompact ? 'gap-1.5 p-2' : isCompact ? 'gap-2 p-2.5' : 'gap-3 p-3'
+                } ${isActive ? stat.activeClass : stat.inactiveClass}`}
                 onPress={() => setAvailability(stat.key)}
               >
-                <Text
-                  className={`text-lg font-bold ${isActive ? stat.textClass : 'text-black'}`}
+                <View
+                  className={`items-center justify-center rounded-xl shrink-0 ${isVeryCompact ? 'h-7 w-7' : 'h-9 w-9'} ${
+                    isActive ? 'bg-white/20' : stat.key === 'available' ? 'bg-[#DCFCE7]' : stat.key === 'unavailable' ? 'bg-[#FEE2E2]' : 'bg-gray-100'
+                  }`}
                 >
-                  {stat.value}
-                </Text>
-                <Text className="text-xs text-gray-500">{stat.label}</Text>
+                  <Feather
+                    name={stat.icon}
+                    size={isVeryCompact ? 13 : 16}
+                    color={isActive ? '#FFFFFF' : stat.key === 'available' ? '#15803D' : stat.key === 'unavailable' ? '#B91C1C' : '#475569'}
+                  />
+                </View>
+                <View className="flex-1 min-w-0">
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    className={`font-extrabold leading-none ${isVeryCompact ? 'text-base' : 'text-lg'} ${isActive ? stat.textClass : 'text-gray-900'}`}
+                  >
+                    {stat.value}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    allowFontScaling={false}
+                    className={`font-semibold ${isVeryCompact ? 'text-[9px]' : 'text-[11px]'} ${isActive ? 'text-white/80' : 'text-gray-500'}`}
+                  >
+                    {stat.label}
+                  </Text>
+                </View>
+                {isActive ? <View className="h-1.5 w-1.5 rounded-full bg-white shrink-0 ml-1" /> : null}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Category chips */}
+        {/* Category chips — professional segmented bar */}
         {categories && categories.length > 0 && (
-          <View>
+          <View className="bg-white border-y border-gray-100">
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{
                 paddingHorizontal: 16,
-                paddingVertical: 8,
+                paddingVertical: 10,
                 gap: 8,
               }}
             >
               <TouchableOpacity
-                className={`px-4 py-2 rounded-full border ${
+                activeOpacity={0.85}
+                className={`px-4 py-2.5 rounded-full border shadow-sm ${
                   selectedCategory === ''
-                    ? 'bg-primary border-primary'
+                    ? 'bg-[#B91C1C] border-[#7F1D1D] shadow-md'
                     : 'bg-white border-gray-200'
                 }`}
                 onPress={() => setSelectedCategory('')}
               >
                 <Text
-                  className={`text-xs font-medium ${
-                    selectedCategory === '' ? 'text-white' : 'text-gray-600'
-                  }`}
+                  className={`text-xs font-bold ${selectedCategory === '' ? 'text-white' : 'text-gray-700'}`}
                 >
                   All Categories
                 </Text>
               </TouchableOpacity>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  className={`px-4 py-2 border rounded-full ${
-                    selectedCategory === cat.id
-                      ? 'bg-primary border-primary'
-                      : 'bg-white border-gray-200'
-                  }`}
-                  onPress={() => setSelectedCategory(cat.id)}
-                >
-                  <Text
-                    className={`text-xs font-medium ${
-                      selectedCategory === cat.id
-                        ? 'text-white'
-                        : 'text-gray-600'
+              {categories.map((cat) => {
+                const isActive = selectedCategory === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    activeOpacity={0.85}
+                    className={`px-4 py-2.5 border rounded-full shadow-sm flex-row items-center gap-1.5 ${
+                      isActive ? 'bg-[#B91C1C] border-[#7F1D1D] shadow-md' : 'bg-white border-gray-200'
                     }`}
+                    onPress={() => setSelectedCategory(cat.id)}
                   >
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Feather name="tag" size={12} color={isActive ? '#FFFFFF' : '#94A3B8'} />
+                    <Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-700'}`}>
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}

@@ -19,10 +19,12 @@ export default function CustomerLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="restaurant/[id]" />
+      <Stack.Screen name="restaurant/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="menu/[id]" />
-      <Stack.Screen name="cart" />
+      <Stack.Screen name="cart" options={{ presentation: 'modal' }} />
       <Stack.Screen name="checkout" />
+      <Stack.Screen name="checkout/success" options={{ presentation: 'modal', gestureEnabled: false }} />
+      <Stack.Screen name="checkout/failure" options={{ presentation: 'modal', gestureEnabled: false }} />
       <Stack.Screen name="payment" />
       <Stack.Screen name="order/[id]" />
       <Stack.Screen name="order-tracking/[id]" />
@@ -30,6 +32,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="notifications" />
       <Stack.Screen name="chatbot" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
     </Stack>
   );
 }

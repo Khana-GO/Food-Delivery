@@ -1,4 +1,4 @@
-import { pgTable, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, timestamp, unique, uuid, index } from 'drizzle-orm/pg-core';
 
 import { usersTable } from './user.schema';
 import { restaurantsTable } from './restaurant.schema';
@@ -27,5 +27,8 @@ export const favoriteRestaurantsTable = pgTable(
       table.userId,
       table.restaurantId,
     ),
+    index('favorite_restaurants_user_id_idx').on(table.userId),
+    index('favorite_restaurants_restaurant_id_idx').on(table.restaurantId),
+    index('favorite_restaurants_created_at_idx').on(table.createdAt),
   ],
 );
