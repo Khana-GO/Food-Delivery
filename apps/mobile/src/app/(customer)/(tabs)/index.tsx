@@ -1,44 +1,39 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, StyleSheet, Animated, Image, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { RestaurantCard } from '@/components/customer/RestaurantCard';
 import { CategoryChip } from '@/components/customer/CategoryChip';
 import { LoadingSkeleton } from '@/components/customer/LoadingSkeleton';
+import EmptyState from '@/components/ui/EmptyState';
+import AnimatedPage from '@/components/ui/AnimatedPage';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useDashboard } from '@/hooks/customer/useDashboard';
 import { useFavorites } from '@/hooks/customer/useFavorites';
 import { useAddFavorite } from '@/hooks/customer/useAddFavorite';
 import { useRemoveFavorite } from '@/hooks/customer/useRemoveFavorite';
 import { useDashboardStore } from '@/stores/customer/dashboardStore';
 import { useFavoritesStore } from '@/stores/customer/favoritesStore';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const searchFocus = useRef(new Animated.Value(0)).current;
+  const { width } = useWindowDimensions();
+  const isVeryCompact = width < 360;
 
-  // ─── Data Fetching ───
   const { refetch: refetchDashboard, isRefetching: isDashboardRefetching } = useDashboard();
   const { refetch: refetchFavorites, isRefetching: isFavoritesRefetching } = useFavorites();
   const { mutate: addFavorite, isPending: isAddingFavorite } = useAddFavorite();
   const { mutate: removeFavorite, isPending: isRemovingFavorite } = useRemoveFavorite();
-
-  // ─── State ───
-  const { popularRestaurants, recommendations, recentlyOrdered, categories, isLoading } = useDashboardStore();
+  const { popularRestaurants, recommendations, recentlyOrdered, categories, featuredMenuItems, isLoading } = useDashboardStore();
   const { favoriteIds } = useFavoritesStore();
-
   const isRefreshing = isDashboardRefetching || isFavoritesRefetching;
 
-  // ─── Handlers ───
   const handleRefresh = useCallback(() => {
     refetchDashboard();
     refetchFavorites();
@@ -47,12 +42,8 @@ export default function HomeScreen() {
   const handleToggleFavorite = useCallback(
     (restaurantId: string) => {
       if (isAddingFavorite || isRemovingFavorite) return;
-
-      if (favoriteIds.has(restaurantId)) {
-        removeFavorite(restaurantId);
-      } else {
-        addFavorite(restaurantId);
-      }
+      if (favoriteIds.has(restaurantId)) removeFavorite(restaurantId);
+      else addFavorite(restaurantId);
     },
     [favoriteIds, addFavorite, removeFavorite, isAddingFavorite, isRemovingFavorite]
   );
@@ -64,186 +55,262 @@ export default function HomeScreen() {
     return 'Good Evening';
   }, []);
 
-  // ─── Filtering ───
-  const filteredPopular = popularRestaurants.filter((r) =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPopular = popularRestaurants.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // ─── Render ───
   if (isLoading && !popularRestaurants.length) {
     return (
-      <View className="flex-1 bg-gray-50">
-        <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-          <View className="flex-row items-center justify-between">
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <View style={styles.headerShimmer}>
+          <View style={styles.headerInner}>
             <View>
-              <View className="w-32 h-6 bg-gray-200 rounded animate-pulse" />
-              <View className="w-48 h-4 mt-1 bg-gray-200 rounded animate-pulse" />
+              <Text style={styles.greeting}>{getGreeting()},</Text>
+              <Text style={styles.userName}>{user?.firstName || 'Customer'}</Text>
             </View>
-            <View className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={styles.iconSkeleton} />
+              <View style={styles.iconSkeleton} />
+            </View>
           </View>
-          <View className="h-12 mt-4 bg-gray-200 rounded-xl animate-pulse" />
         </View>
-        <LoadingSkeleton count={4} variant="grid" />
+        <PageSkeleton />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
+        contentContainerStyle={{ paddingBottom: 16 }}
       >
-        {/* ─── Header ─── */}
-        <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-sm text-gray-500">{getGreeting()},</Text>
-              <Text className="text-xl font-bold text-black">
-                {user?.firstName || 'Customer'} 
-              </Text>
+        {/* Header — premium with subtle gradient */}
+        <View style={styles.header}>
+          <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
+            <View style={styles.headerInner}>
+              <View>
+                <Text style={styles.greeting}>{getGreeting()},</Text>
+                <Text style={styles.userName}>{user?.firstName || 'Customer'} 👋</Text>
+                <Text style={styles.subtle}>What are you craving today?</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity onPress={() => router.push('/(customer)/notifications' as any)} activeOpacity={0.8} style={styles.headerIcon}>
+                  <Feather name="bell" size={18} color={Colors.textDark} />
+                  <View style={styles.dot} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/(customer)/chatbot' as any)} activeOpacity={0.8} style={[styles.headerIcon, { backgroundColor: '#FEF2F2' }]}>
+                  <Feather name="message-circle" size={18} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="items-center justify-center w-10 h-10 bg-gray-100 rounded-full"
-                onPress={() => router.push('/(customer)/notifications' as any)}
-              >
-                <Feather name="bell" size={20} color="#1A1A1A" />
-                <View className="absolute w-2 h-2 bg-red-500 rounded-full top-2 right-2" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="items-center justify-center w-10 h-10 rounded-full bg-primary/10"
-                onPress={() => router.push('/(customer)/chatbot' as any)}
-              >
-                <Feather name="message-circle" size={20} color="#E23744" />
-              </TouchableOpacity>
-            </View>
-          </View>
 
-          {/* Search Bar */}
-          <View className="flex-row items-center h-12 px-4 mt-4 border border-gray-100 bg-gray-50 rounded-xl">
-            <Feather name="search" size={20} color="#94A3B8" />
-            <TextInput
-              className="flex-1 ml-3 text-base text-black"
-              placeholder="Search restaurants, food..."
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Feather name="x-circle" size={20} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-          </View>
+            {/* Search — responsive: prevents cut on 320px */}
+            <Animated.View style={[styles.searchWrap, isVeryCompact && { height: 44, paddingHorizontal: 12 } as any, { borderColor: searchFocus.interpolate({ inputRange: [0, 1], outputRange: ['#E2E8F0', Colors.primary] }) } as any]}>
+              <Feather name="search" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
+              <TextInput
+                style={[styles.searchInput, isVeryCompact && { fontSize: 13 } as any]}
+                placeholder={isVeryCompact ? 'Search...' : 'Search restaurants, food...'}
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onFocus={() => Animated.timing(searchFocus, { toValue: 1, duration: 160, useNativeDriver: false }).start()}
+                onBlur={() => Animated.timing(searchFocus, { toValue: 0, duration: 160, useNativeDriver: false }).start()}
+                allowFontScaling={false}
+              />
+              {searchQuery.length > 0 ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Feather name="x-circle" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
+                </TouchableOpacity>
+              ) : null}
+            </Animated.View>
+          </SafeAreaView>
         </View>
 
-        {/* ─── Categories ─── */}
-        {categories.length > 0 && (
-          <View className="py-4">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4">
-              {categories.map((category) => (
-                <CategoryChip
-                  key={category.id}
-                  label={category.name}
-                  isSelected={selectedCategory === category.id}
-                  onPress={() =>
-                    setSelectedCategory(
-                      selectedCategory === category.id ? null : category.id
-                    )
-                  }
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ─── Popular Restaurants ─── */}
-        {popularRestaurants.length > 0 && (
-          <View className="px-4">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-lg font-bold text-black">Popular Restaurants</Text>
-              <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)}>
-                <Text className="text-sm font-semibold text-primary">See all</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
-              {popularRestaurants.slice(0, 6).map((restaurant) => (
-                <View key={restaurant.id} className="mx-1">
-                  <RestaurantCard
-                    restaurant={restaurant}
-                    isFavorite={favoriteIds.has(restaurant.id)}
-                    onToggleFavorite={handleToggleFavorite}
+        <AnimatedPage delay={40} slide>
+          {/* Categories – only from approved restaurants */}
+          {categories.length > 0 ? (
+            <View style={{ paddingVertical: 14 }}>
+              <View style={{ paddingHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Browse by category</Text>
+                <Text style={{ fontSize: 11, color: Colors.textTertiary }}>{categories.length} categories</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }} bounces={false}>
+                {categories.map((category) => (
+                  <CategoryChip
+                    key={category.id}
+                    label={category.name}
+                    isSelected={selectedCategory === category.id}
+                    onPress={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
                   />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ─── Personalized Recommendations ─── */}
-        {recommendations.length > 0 && (
-          <View className="px-4 mt-6">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-lg font-bold text-black">Recommended For You</Text>
-              <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)}>
-                <Text className="text-sm font-semibold text-primary">See all</Text>
-              </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
+          ) : null}
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
-              {recommendations.slice(0, 6).map((restaurant) => (
-                <View key={restaurant.id} className="mx-1">
-                  <RestaurantCard
-                    restaurant={restaurant}
-                    isFavorite={favoriteIds.has(restaurant.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
+          {/* Featured Dishes – only from approved restaurants */}
+          {(() => {
+            const filteredMenus = (featuredMenuItems || []).filter((m: any) => {
+              if (selectedCategory && m.categoryId !== selectedCategory) return false;
+              if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+              return true;
+            });
+            if (filteredMenus.length === 0) return null;
+            return (
+              <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Popular Dishes</Text>
+                  <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)}>
+                    <Text style={styles.sectionAction}>See all</Text>
+                  </TouchableOpacity>
                 </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }} bounces={false}>
+                  {filteredMenus.slice(0, 8).map((item: any) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      activeOpacity={0.85}
+                      onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
+                      style={{
+                        width: 160,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: Radius.xl,
+                        overflow: 'hidden',
+                        borderWidth: StyleSheet.hairlineWidth,
+                        borderColor: '#E2E8F0',
+                        ...Shadow.sm,
+                      }}
+                    >
+                      <View style={{ height: 110, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
+                        {item.imageUrl ? (
+                          <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        ) : (
+                          <Text style={{ fontSize: 36 }}>🍽️</Text>
+                        )}
+                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.96)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textDark }}>Rs. {item.price}</Text>
+                        </View>
+                      </View>
+                      <View style={{ padding: 10 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>
+                          {item.name}
+                        </Text>
+                        <Text numberOfLines={1} style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>
+                          {item.restaurantName || 'Restaurant'} • {item.description?.slice(0, 30) || 'Fresh & tasty'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          })()}
 
-        {/* ─── Recently Ordered ─── */}
-        {recentlyOrdered.length > 0 && (
-          <View className="px-4 mt-6">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-lg font-bold text-black">Recently Ordered</Text>
+          {/* Popular */}
+          {(filteredPopular.length > 0 || popularRestaurants.length > 0) && (
+            <View style={{ paddingHorizontal: 16, marginTop: 4 }}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Popular near you</Text>
+                <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.sectionAction}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
+                {(searchQuery ? filteredPopular : popularRestaurants).slice(0, 6).map((restaurant) => (
+                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
+                ))}
+              </ScrollView>
             </View>
+          )}
 
-            {recentlyOrdered.slice(0, 3).map((restaurant) => (
-              <RestaurantCard
-                key={restaurant.id}
-                restaurant={restaurant}
-                isFavorite={favoriteIds.has(restaurant.id)}
-                onToggleFavorite={handleToggleFavorite}
-                variant="list"
-              />
-            ))}
-          </View>
-        )}
+          {/* Recommendations */}
+          {recommendations.length > 0 ? (
+            <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recommended for you</Text>
+                <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)}>
+                  <Text style={styles.sectionAction}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
+                {recommendations.slice(0, 6).map((restaurant) => (
+                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
 
-        {/* ─── Empty State ─── */}
-        {!popularRestaurants.length && !recommendations.length && !recentlyOrdered.length && (
-          <View className="items-center justify-center px-6 py-12">
-            <Feather name="home" size={64} color="#D1D5DB" />
-            <Text className="mt-4 text-lg font-medium text-gray-400">Welcome to KhanaGo!</Text>
-            <Text className="mt-1 text-sm text-center text-gray-400">
-              Start exploring restaurants and discover delicious food near you.
-            </Text>
-            <TouchableOpacity
-              className="px-6 py-3 mt-6 bg-primary rounded-xl"
-              onPress={() => router.push('/(customer)/explore' as any)}
-            >
-              <Text className="font-semibold text-white">Explore Now</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {/* Recently ordered */}
+          {recentlyOrdered.length > 0 ? (
+            <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 10 }]}>Recently ordered</Text>
+              {recentlyOrdered.slice(0, 3).map((restaurant) => (
+                <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} variant="list" />
+              ))}
+            </View>
+          ) : null}
 
-        <View className="h-6" />
+          {/* Empty */}
+          {!popularRestaurants.length && !recommendations.length && !recentlyOrdered.length ? (
+            <EmptyState
+              icon="search"
+              title="Welcome to KhanaGo!"
+              description="Start exploring restaurants and discover delicious food near you."
+              actionLabel="Explore Restaurants"
+              onAction={() => router.push('/(customer)/explore' as any)}
+            />
+          ) : null}
+        </AnimatedPage>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    ...Shadow.xs,
+  },
+  headerShimmer: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 16,
+  },
+  headerInner: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 8 },
+  greeting: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
+  userName: { fontSize: 22, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.5, marginTop: 2 },
+  subtle: { fontSize: 12, color: Colors.textTertiary, marginTop: 2, fontWeight: '500' },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E2E8F0',
+    ...Shadow.xs,
+  },
+  dot: { position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, borderWidth: 2, borderColor: '#FFFFFF' },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    paddingHorizontal: 14,
+    marginTop: 14,
+    backgroundColor: '#F8FAFC',
+    borderRadius: Radius.xl,
+    borderWidth: 1.4,
+    gap: 10,
+  },
+  searchInput: { flex: 1, minWidth: 0 as any, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.3 },
+  sectionAction: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  iconSkeleton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2E8F0' },
+});

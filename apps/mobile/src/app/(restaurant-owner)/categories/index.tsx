@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, FlatList, RefreshControl } from 'react-native';
+import { View, Text, Pressable, FlatList, RefreshControl, useWindowDimensions, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,6 @@ import { CategoryCard } from '@/components/res-owner/category/CategoryCard';
 import type { Category } from '@food_delivery/types';
 import { getApiErrorMessage } from '@/lib/api-error';
 import {
-  SearchInput,
   EmptyState,
   ConfirmDialog,
   LoadingScreen,
@@ -21,6 +20,8 @@ import {
 export default function CategoriesScreen() {
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
+  const { width } = useWindowDimensions();
+  const isVeryCompact = width < 360;
   const {
     data: categories,
     isLoading,
@@ -76,43 +77,60 @@ export default function CategoriesScreen() {
 
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-      {/* ─── Header ─── */}
-      <View className="bg-white px-4 pb-3 pt-3">
+      {/* ─── Header – premium, responsive ─── */}
+      <View className="bg-white px-4 pb-3 pt-3 border-b border-gray-100 shadow-sm">
         <View style={{ maxWidth: isTablet ? 688 : undefined, alignSelf: 'center', width: '100%' }}>
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-xl font-extrabold tracking-tight text-gray-900">Categories</Text>
-              <Text className="mt-0.5 text-xs text-gray-500">
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1 min-w-0">
+              <Text className={`${isVeryCompact ? 'text-lg' : 'text-xl'} font-extrabold tracking-tight text-gray-900`} numberOfLines={1} adjustsFontSizeToFit>Categories</Text>
+              <Text className="mt-0.5 text-xs text-gray-500" numberOfLines={1}>
                 Organise your menu into sections
               </Text>
             </View>
             <Pressable
               onPress={handleCreate}
-              className="h-11 flex-row items-center rounded-full bg-green-600 px-4 active:bg-green-700"
+              className={`flex-row items-center rounded-xl bg-[#B91C1C] border border-[#7F1D1D] shadow-sm active:bg-[#7F1D1D] shrink-0 ${isVeryCompact ? 'h-9 w-9 justify-center px-0' : 'h-11 px-4 gap-1'}`}
             >
-              <Feather name="plus" size={16} color="#FFFFFF" />
-              <Text className="ml-1 text-sm font-bold text-white">Add</Text>
+              <Feather name="plus" size={isVeryCompact ? 16 : 16} color="#FFFFFF" />
+              {!isVeryCompact ? <Text className="text-sm font-bold text-white">Add</Text> : null}
             </Pressable>
           </View>
 
-          {/* mini stats */}
-          <View className="mt-3 flex-row gap-3">
-            <View className="flex-1 rounded-xl bg-red-50 p-3">
-              <Text className="text-lg font-extrabold text-primary">{categories?.length ?? 0}</Text>
-              <Text className="text-[11px] font-medium text-red-400">Total categories</Text>
+          {/* mini stats – premium */}
+          <View className="mt-3 flex-row gap-2">
+            <View className="flex-1 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3">
+              <Text className="text-lg font-extrabold text-[#B91C1C]">{categories?.length ?? 0}</Text>
+              <Text className="text-[10px] font-bold uppercase tracking-wide text-[#B91C1C]/70" numberOfLines={1} adjustsFontSizeToFit>Total</Text>
             </View>
-            <View className="flex-1 rounded-xl bg-green-50 p-3">
+            <View className="flex-1 rounded-xl bg-green-50 border border-green-200 p-3">
               <Text className="text-lg font-extrabold text-green-600">{withItemsCount}</Text>
-              <Text className="text-[11px] font-medium text-green-500">With items</Text>
+              <Text className="text-[10px] font-bold uppercase tracking-wide text-green-600/70" numberOfLines={1} adjustsFontSizeToFit>With items</Text>
             </View>
-            <View className="flex-1 rounded-xl bg-slate-100 p-3">
+            <View className="flex-1 rounded-xl bg-slate-50 border border-slate-200 p-3">
               <Text className="text-lg font-extrabold text-slate-600">{Math.max(emptyCount, 0)}</Text>
-              <Text className="text-[11px] font-medium text-slate-400">Empty</Text>
+              <Text className="text-[10px] font-bold uppercase tracking-wide text-slate-500" numberOfLines={1} adjustsFontSizeToFit>Empty</Text>
             </View>
           </View>
 
           <View className="mt-3">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search categories…" />
+            {/* Responsive search – ensures text never cuts on 320px */}
+            <View className={`flex-row items-center bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden ${isVeryCompact ? 'h-11 px-3' : 'h-12 px-4'}`}>
+              <Feather name="search" size={isVeryCompact ? 15 : 18} color="#94A3B8" />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder={isVeryCompact ? 'Search...' : 'Search categories…'}
+                placeholderTextColor="#94A3B8"
+                style={{ flex: 1, minWidth: 0, marginLeft: isVeryCompact ? 8 : 12, fontSize: isVeryCompact ? 13 : 14, color: '#0F172A', paddingVertical: 0 } as any}
+                returnKeyType="search"
+                allowFontScaling={false}
+              />
+              {search.length > 0 ? (
+                <Pressable hitSlop={8} onPress={() => setSearch('')} className="p-1 ml-2 shrink-0">
+                  <Feather name="x-circle" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </View>
       </View>

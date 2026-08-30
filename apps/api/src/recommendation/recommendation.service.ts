@@ -80,6 +80,7 @@ export class RecommendationsService {
                 notInArray(restaurantsTable.id, allUserRestaurantIds),
                 isNull(restaurantsTable.deletedAt),
                 eq(restaurantsTable.isActive, true),
+                eq(restaurantsTable.isVerified, true),
               ),
             )
             .limit(limit * 2);
@@ -136,6 +137,7 @@ export class RecommendationsService {
         const whereClauses = [
           isNull(restaurantsTable.deletedAt),
           eq(restaurantsTable.isActive, true),
+          eq(restaurantsTable.isVerified, true),
           ...(excludeIds.length > 0
             ? [notInArray(restaurantsTable.id, excludeIds)]
             : []),
@@ -201,6 +203,7 @@ export class RecommendationsService {
           and(
             isNull(restaurantsTable.deletedAt),
             eq(restaurantsTable.isActive, true),
+            eq(restaurantsTable.isVerified, true),
           ),
         )
         .orderBy(
@@ -247,6 +250,8 @@ export class RecommendationsService {
           and(
             inArray(restaurantsTable.id, restaurantIds),
             isNull(restaurantsTable.deletedAt),
+            eq(restaurantsTable.isActive, true),
+            eq(restaurantsTable.isVerified, true),
           ),
         );
 

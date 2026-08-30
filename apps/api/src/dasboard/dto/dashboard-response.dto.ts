@@ -18,4 +18,7 @@ export class DashboardResponseDto {
 
   @ApiProperty({ type: [CategoryResponseDto] })
   categories!: CategoryResponseDto[];
+
+  @ApiProperty({ required: false })
+  featuredMenuItems?: any[];
 }

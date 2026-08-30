@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, RefreshControl, ActivityIndicator, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useNotifications } from '@/hooks/owner/notification/useNotifications';
@@ -29,23 +22,23 @@ export default function CustomerNotifications() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+    <View style={{ flex: 1, backgroundColor: '#FAFAFB' }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 48, paddingBottom: 14, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
+              <Feather name="arrow-left" size={18} color="#0F172A" />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-black">Notifications</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', letterSpacing: -0.3 }}>Notifications</Text>
           </View>
-          {unreadCount > 0 && (
-            <TouchableOpacity onPress={() => markAllAsRead()} className="flex-row items-center gap-1">
-              <Feather name="check-circle" size={16} color="#E23744" />
-              <Text className="text-sm font-semibold text-primary">Mark all read</Text>
+          {unreadCount > 0 ? (
+            <TouchableOpacity onPress={() => markAllAsRead()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
+              <Feather name="check-circle" size={14} color="#B91C1C" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#B91C1C' }}>Mark all read</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
-        <Text className="mt-1 text-sm text-gray-500">{unreadCount} unread • real-time</Text>
+        <Text style={{ marginTop: 6, fontSize: 12, color: '#64748B', fontWeight: '500' }}>{unreadCount} unread • real-time</Text>
       </View>
 
       <FlatList

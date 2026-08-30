@@ -307,28 +307,40 @@ export default function MenuItemsScreen() {
         </View>
       )}
 
-      {/* Search — elevated, professional with darker accent */}
+      {/* Search — responsive: prevents text cut on 320-360px */}
         <View className="px-4 pt-3 pb-2 bg-gray-50">
-          <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-2xl shadow-sm">
-            <View className="h-8 w-8 items-center justify-center rounded-full bg-[#FEF2F2]">
-              <Feather name="search" size={16} color="#B91C1C" />
+          <View
+            className={`flex-row items-center bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden ${
+              isVeryCompact ? 'h-11 px-3' : 'h-12 px-4'
+            }`}
+          >
+            <View className={`${isVeryCompact ? 'h-7 w-7' : 'h-8 w-8'} items-center justify-center rounded-full bg-[#FEF2F2] shrink-0`}>
+              <Feather name="search" size={isVeryCompact ? 14 : 16} color="#B91C1C" />
             </View>
             <TextInput
-              className="flex-1 ml-3 text-[15px] font-normal text-gray-900"
-              placeholder="Search menu items, categories..."
+              className={`${isVeryCompact ? 'text-[13px]' : 'text-[15px]'} font-normal text-gray-900`}
+              placeholder={isVeryCompact ? 'Search dishes...' : isCompact ? 'Search menu...' : 'Search menu items, categories...'}
               placeholderTextColor="#94A3B8"
-              style={{ fontWeight: '400' }}
+              style={{ flex: 1, minWidth: 0, marginLeft: isVeryCompact ? 8 : 12, fontWeight: '400', paddingVertical: 0 } as any}
               value={searchInput}
               onChangeText={setSearchInput}
               returnKeyType="search"
+              numberOfLines={1}
+              allowFontScaling={false}
             />
             {searchInput.length > 0 ? (
-              <TouchableOpacity onPress={() => setSearchInput('')} className="p-1 ml-2 bg-gray-50 rounded-full">
-                <Feather name="x-circle" size={18} color="#94A3B8" />
+              <TouchableOpacity
+                onPress={() => setSearchInput('')}
+                className="p-1 ml-2 bg-gray-50 rounded-full shrink-0"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x-circle" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
               </TouchableOpacity>
             ) : (
-              <View className="ml-2 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100">
-                <Text className="text-[11px] font-bold text-gray-500">{totalCount} items</Text>
+              <View className={`ml-2 rounded-full bg-gray-50 border border-gray-100 shrink-0 ${isVeryCompact ? 'px-2 py-0.5' : 'px-2.5 py-1'}`}>
+                <Text className={`${isVeryCompact ? 'text-[10px]' : 'text-[11px]'} font-bold text-gray-500`} numberOfLines={1} allowFontScaling={false}>
+                  {totalCount} items
+                </Text>
               </View>
             )}
           </View>

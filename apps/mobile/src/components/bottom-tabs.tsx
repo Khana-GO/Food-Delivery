@@ -1,24 +1,12 @@
 import React from 'react';
-import {
-  Text,
-  View,
-  useWindowDimensions,
-  StyleProp,
-  ViewStyle,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { Text, View, useWindowDimensions, StyleProp, ViewStyle, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from '@/constants/theme';
 
 export type TabIconName = React.ComponentProps<typeof Feather>['name'];
 
-// Feather glyph map — generated from @expo/vector-icons Feather
-// Used to validate incoming name and prevent WARN "store is not a valid icon name"
 const FEATHER_GLYPH_MAP: Record<string, number> | undefined = (Feather as any)?.glyphMap;
-
-// Common alias map for legacy/invalid names seen in logs (e.g. "store" from older tab config or cached bundles)
-// Owner pages reported "soret is not a valid icon" — typo for store/sort
 const ICON_ALIASES: Record<string, TabIconName> = {
   store: 'shopping-bag',
   soret: 'shopping-bag',
@@ -27,9 +15,6 @@ const ICON_ALIASES: Record<string, TabIconName> = {
   restaurant: 'home',
   food: 'coffee',
 };
-
-// Monkey-patch Feather glyphMap so direct <Feather name="store" /> doesn't spam warnings
-// This handles cached bundles and any component that bypasses TabIcon
 if (FEATHER_GLYPH_MAP) {
   for (const [invalid, valid] of Object.entries(ICON_ALIASES)) {
     if (!(invalid in FEATHER_GLYPH_MAP) && valid in FEATHER_GLYPH_MAP) {
@@ -37,12 +22,10 @@ if (FEATHER_GLYPH_MAP) {
     }
   }
 }
-
 function resolveIconName(input: TabIconName): TabIconName {
   const aliased = ICON_ALIASES[input as string] ?? input;
   if (FEATHER_GLYPH_MAP && !(aliased in FEATHER_GLYPH_MAP)) {
-    // Fallback to safe icon instead of triggering Feather warning flood
-    if (__DEV__) console.warn(`[TabIcon] "${String(input)}" is not a Feather icon, falling back to "circle"`);
+    if (__DEV__) console.warn(`[TabIcon] "${String(input)}" fallback to circle`);
     return 'circle' as TabIconName;
   }
   return aliased;
@@ -56,23 +39,29 @@ interface TabIconProps {
   labelSize: number;
 }
 
-// Centered icon + label used by every role's tab bar.
 export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps) {
   const resolvedName = resolveIconName(name);
   return (
     <View style={styles.iconWrap}>
-      <Feather
-        name={resolvedName}
-        size={size}
-        color={focused ? ACCENT : MUTED}
-        strokeWidth={focused ? 2.5 : 2}
-      />
+      <View
+        style={[
+          styles.iconCircle,
+          focused && styles.iconCircleFocused,
+        ]}
+      >
+        <Feather
+          name={resolvedName}
+          size={size}
+          color={focused ? Colors.primary : '#94A3B8'}
+          strokeWidth={focused ? 2.4 : 2}
+        />
+      </View>
       <Text
         style={[
           styles.label,
           {
             fontSize: labelSize,
-            color: focused ? ACCENT : MUTED,
+            color: focused ? Colors.primary : '#94A3B8',
             fontWeight: focused ? '700' : '500',
           },
         ]}
@@ -86,68 +75,37 @@ export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps)
   );
 }
 
-const ACCENT = '#B91C1C'; // darker red — was #E23744
-const MUTED = '#94A3B8';
-
-// Shared safe-area + responsive sizing for all role tab bars.
 export function useTabBarConstants() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-
   const isTablet = width >= 768;
   const isVeryCompact = width < 360;
   const isCompact = width < 375;
   const isLandscape = width > height && !isTablet;
 
-  // Responsive icon/label sizes – optimized for 6 tabs (admin) on small screens
-  const iconSize = isTablet
-    ? 24
-    : isVeryCompact
-      ? 18
-      : isCompact
-        ? 19
-        : isLandscape
-          ? 18
-          : 22;
+  // Increased sizes & height so labels are never clipped on 320-360px
+  const iconSize = isTablet ? 24 : isVeryCompact ? 20 : isCompact ? 21 : 22;
+  const labelSize = isTablet ? 11 : isVeryCompact ? 9 : isCompact ? 9.5 : 10;
 
-  const labelSize = isTablet
-    ? 11
-    : isVeryCompact
-      ? 7
-      : isCompact
-        ? 7.5
-        : isLandscape
-          ? 8
-          : 9;
+  const baseBarHeight = isTablet ? 78 : isLandscape ? 56 : isVeryCompact ? 66 : isCompact ? 68 : 70;
 
-  const baseBarHeight = isTablet
-    ? 76
-    : isLandscape
-      ? 52
-      : isVeryCompact
-        ? 56
-        : isCompact
-          ? 58
-          : 62;
-
-  // Use minHeight on Android to allow content to fit when labels are slightly larger
   const tabBarStyle: StyleProp<ViewStyle> = {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.98)',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E8ECF0',
+    borderTopColor: 'rgba(226,232,240,0.9)',
     height: Platform.OS === 'ios' ? baseBarHeight + insets.bottom : baseBarHeight + Math.max(insets.bottom, 0),
     minHeight: baseBarHeight + Math.max(insets.bottom, 0),
-    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 4 : 6),
-    paddingTop: isTablet ? 10 : isVeryCompact ? 4 : 6,
-    paddingHorizontal: isTablet ? 16 : isVeryCompact ? 2 : isCompact ? 4 : 6,
+    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 6 : 8),
+    paddingTop: isTablet ? 10 : isVeryCompact ? 8 : 10,
+    paddingHorizontal: isTablet ? 12 : isVeryCompact ? 4 : 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    elevation: isTablet ? 12 : 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: isTablet ? 0.1 : 0.05,
-    shadowRadius: isTablet ? 16 : 8,
+    elevation: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
   };
 
   const tabBarItemStyle: StyleProp<ViewStyle> = {
@@ -155,8 +113,8 @@ export function useTabBarConstants() {
     minWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: isVeryCompact ? 1 : isCompact ? 2 : 4,
-    paddingVertical: 2,
+    paddingHorizontal: isVeryCompact ? 2 : isCompact ? 3 : 6,
+    paddingVertical: 4,
   };
 
   return { iconSize, labelSize, tabBarStyle, tabBarItemStyle, isTablet, isVeryCompact, isCompact, insets };
@@ -166,15 +124,30 @@ const styles = StyleSheet.create({
   iconWrap: {
     flex: 1,
     minWidth: 0,
-    maxWidth: 72,
+    maxWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 5,
     paddingHorizontal: 2,
+  },
+  iconCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  iconCircleFocused: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#FECACA',
   },
   label: {
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
+    letterSpacing: 0.15,
+    lineHeight: 12,
   },
 });

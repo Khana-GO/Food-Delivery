@@ -1,267 +1,204 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Modal,
-  Pressable,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, Text, ScrollView, Alert, Modal, Pressable, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUploadProfileImage, useDeleteProfileImage } from '@/hooks/user';
+import { ProfileHeader } from '@/components/customer/ProfileHeader';
+import { ProfileMenuItem } from '@/components/customer/ProfileMenuItem';
+import PremiumCard from '@/components/ui/PremiumCard';
+import AnimatedPage from '@/components/ui/AnimatedPage';
+import { Colors, Radius, Shadow } from '@/constants/theme';
+import * as ImagePicker from 'expo-image-picker';
 
-// ──────────────────────────────────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────────────────────────────────
-
-interface MenuItem {
-  id: string;
-  icon: React.ComponentProps<typeof Feather>['name'];
-  label: string;
-  onPress: () => void;
-  badge?: number;
-  color?: string;
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────────────────────────────────────
-
-export default function Profile() {
+export default function CustomerProfile() {
   const { user, logout, isAuthenticating } = useAuth();
+  const { mutate: uploadImage, isPending: isUploading } = useUploadProfileImage();
+  const { mutate: deleteImage, isPending: isDeleting } = useDeleteProfileImage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // ─── Handlers ───
+  const handleEditProfile = useCallback(() => router.push('/(customer)/profile/edit' as any), []);
+
+  const handlePickImage = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please allow photo library access.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) uploadImage(result.assets[0]);
+  }, [uploadImage]);
+
+  const handleDeleteImage = useCallback(() => {
+    Alert.alert('Remove Photo', 'Remove your profile photo?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
+    ]);
+  }, [deleteImage]);
+
   const handleLogout = useCallback(async () => {
     setShowLogoutModal(false);
     try {
       await logout();
       router.replace('/(auth)/login' as any);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to logout. Please try again.');
     }
   }, [logout]);
 
-  const handleEditProfile = useCallback(() => {
-    router.push('/(customer)/settings' as any);
-  }, []);
-
-  const handleAddresses = useCallback(() => {
-    router.push('/(customer)/addresses' as any);
-  }, []);
-
-  const handleOrders = useCallback(() => {
-    router.push('/(customer)/(tabs)/orders' as any);
-  }, []);
-
-  const handleFavorites = useCallback(() => {
-    router.push('/(customer)/(tabs)/favorites' as any);
-  }, []);
-
-  const handleNotifications = useCallback(() => {
-    router.push('/(customer)/notifications' as any);
-  }, []);
-
-  const handlePayment = useCallback(() => {
-    router.push('/(customer)/payment' as any);
-  }, []);
-
-  const handleChatbot = useCallback(() => {
-    router.push('/(customer)/chatbot' as any);
-  }, []);
-
-  // ─── Menu Items ───
-  const menuItems: MenuItem[] = [
-    {
-      id: '1',
-      icon: 'shopping-bag',
-      label: 'My Orders',
-      onPress: handleOrders,
-      badge: 3,
-    },
-    {
-      id: '2',
-      icon: 'heart',
-      label: 'Favorites',
-      onPress: handleFavorites,
-    },
-    {
-      id: '3',
-      icon: 'map-pin',
-      label: 'Saved Addresses',
-      onPress: handleAddresses,
-    },
-    {
-      id: '4',
-      icon: 'credit-card',
-      label: 'Payment Methods',
-      onPress: handlePayment,
-    },
-    {
-      id: '5',
-      icon: 'bell',
-      label: 'Notifications',
-      onPress: handleNotifications,
-      badge: 5,
-    },
-    {
-      id: '6',
-      icon: 'message-circle',
-      label: 'Chat Support',
-      onPress: handleChatbot,
-    },
-    {
-      id: '7',
-      icon: 'settings',
-      label: 'Settings',
-      onPress: handleEditProfile,
-    },
+  const menuItems = [
+    { icon: 'shopping-bag' as const, label: 'My Orders', onPress: () => router.push('/(customer)/(tabs)/orders' as any) },
+    { icon: 'heart' as const, label: 'Favorites', onPress: () => router.push('/(customer)/(tabs)/favorites' as any) },
+    { icon: 'map-pin' as const, label: 'Saved Addresses', onPress: () => router.push('/(customer)/addresses' as any) },
+    { icon: 'credit-card' as const, label: 'Payment Methods', onPress: () => router.push('/(customer)/payment' as any) },
+    { icon: 'bell' as const, label: 'Notifications', badge: 2, onPress: () => router.push('/(customer)/notifications' as any) },
+    { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(customer)/settings' as any) },
   ];
 
-  // ─── Render ───
+  if (!user) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View className="flex-1 bg-gray-50">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View className="bg-primary px-6 pt-12 pb-8">
-          <View className="items-center">
-            {/* Avatar */}
-            <View className="w-24 h-24 rounded-full bg-white/20 items-center justify-center border-4 border-white/30">
-              {user?.imageUrl ? (
-                <Image
-                  source={{ uri: user.imageUrl }}
-                  className="w-24 h-24 rounded-full"
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
+          <ProfileHeader
+            user={user}
+            onEditPress={handleEditProfile}
+            onImagePress={handlePickImage}
+            onDeleteImage={handleDeleteImage}
+            isUploading={isUploading || isDeleting}
+          />
+        </SafeAreaView>
+
+        <AnimatedPage delay={30} slide>
+          {/* Stats — premium 3 cards */}
+          <View style={styles.statsRow}>
+            <PremiumCard style={styles.statCard as any}>
+              <Text style={styles.statValue}>12</Text>
+              <Text style={styles.statLabel}>Orders</Text>
+            </PremiumCard>
+            <PremiumCard style={styles.statCard as any}>
+              <Text style={[styles.statValue, { color: Colors.primary }]}>4.8</Text>
+              <Text style={styles.statLabel}>Rating</Text>
+            </PremiumCard>
+            <PremiumCard style={styles.statCard as any}>
+              <Text style={[styles.statValue, { color: '#15803D' }]}>8</Text>
+              <Text style={styles.statLabel}>Favorites</Text>
+            </PremiumCard>
+          </View>
+
+          {/* Menu */}
+          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+            <PremiumCard style={{ padding: 0, overflow: 'hidden' } as any}>
+              {menuItems.map((item) => (
+                <ProfileMenuItem
+                  key={item.label}
+                  icon={item.icon}
+                  label={item.label}
+                  onPress={item.onPress}
+                  badge={(item as any).badge}
                 />
-              ) : (
-                <Text className="text-4xl font-bold text-white">
-                  {user?.firstName?.charAt(0) || 'U'}
-                  {user?.lastName?.charAt(0) || ''}
-                </Text>
-              )}
-            </View>
+              ))}
+            </PremiumCard>
 
-            {/* Name & Email */}
-            <Text className="text-xl font-bold text-white mt-3">
-              {user?.firstName} {user?.lastName}
-            </Text>
-            <Text className="text-sm text-white/80 mt-0.5">{user?.email}</Text>
-
-            {/* Edit Profile Button */}
             <TouchableOpacity
-              className="flex-row items-center gap-2 bg-white/20 px-5 py-2 rounded-full mt-3"
-              onPress={handleEditProfile}
+              onPress={() => setShowLogoutModal(true)}
+              disabled={!!isAuthenticating}
+              activeOpacity={0.85}
+              style={styles.logoutBtn}
             >
-              <Feather name="edit-2" size={14} color="#FFF" />
-              <Text className="text-white text-sm font-medium">Edit Profile</Text>
+              <Feather name="log-out" size={16} color="#EF4444" />
+              <Text style={styles.logoutText}>{isAuthenticating ? 'Logging out...' : 'Logout'}</Text>
             </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* Stats Cards */}
-        <View className="flex-row px-4 -mt-4 gap-3">
-          <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <Text className="text-2xl font-bold text-black">12</Text>
-            <Text className="text-xs text-gray-500">Total Orders</Text>
+            <Text style={styles.version}>KhanaGo v1.0.0 • Fresh · Reliable · Premium</Text>
           </View>
-          <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <Text className="text-2xl font-bold text-primary">4.8</Text>
-            <Text className="text-xs text-gray-500">Rating</Text>
-          </View>
-          <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <Text className="text-2xl font-bold text-green-500">8</Text>
-            <Text className="text-xs text-gray-500">Favorites</Text>
-          </View>
-        </View>
-
-        {/* Menu Items */}
-        <View className="bg-white rounded-2xl mx-4 mt-4 border border-gray-100 overflow-hidden">
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
-              className={`flex-row items-center px-4 py-3.5 ${
-                index !== menuItems.length - 1 ? 'border-b border-gray-50' : ''
-              }`}
-              onPress={item.onPress}
-              activeOpacity={0.7}
-            >
-              <View className="w-9 h-9 rounded-full bg-primary/10 items-center justify-center">
-                <Feather name={item.icon} size={18} color="#E23744" />
-              </View>
-              <Text className="flex-1 ml-3 text-sm font-medium text-black">
-                {item.label}
-              </Text>
-              {item.badge && (
-                <View className="bg-primary px-2 py-0.5 rounded-full mr-2">
-                  <Text className="text-white text-xs font-bold">{item.badge}</Text>
-                </View>
-              )}
-              <Feather name="chevron-right" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          className="mx-4 mt-4 bg-red-50 py-4 rounded-xl border border-red-200"
-          onPress={() => setShowLogoutModal(true)}
-          disabled={isAuthenticating}
-        >
-          <View className="flex-row items-center justify-center gap-2">
-            <Feather name="log-out" size={20} color="#EF4444" />
-            <Text className="text-red-500 font-semibold text-base">
-              {isAuthenticating ? 'Logging out...' : 'Logout'}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* App Version */}
-        <Text className="text-center text-xs text-gray-400 mt-4 mb-6">Version 1.0.0</Text>
+        </AnimatedPage>
       </ScrollView>
 
-      {/* ─── Logout Confirmation Modal ─── */}
-      <Modal visible={showLogoutModal} transparent animationType="fade">
-        <Pressable
-          className="flex-1 bg-black/50"
-          onPress={() => setShowLogoutModal(false)}
-        >
-          <View className="flex-1 items-center justify-center px-6">
-            <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <View className="items-center mb-4">
-                <View className="w-16 h-16 rounded-full bg-red-50 items-center justify-center">
-                  <Feather name="log-out" size={32} color="#EF4444" />
-                </View>
-              </View>
-              <Text className="text-xl font-bold text-black text-center">Logout</Text>
-              <Text className="text-gray-500 text-center mt-2">
-                Are you sure you want to logout?
-              </Text>
-              <View className="flex-row gap-3 mt-6">
-                <TouchableOpacity
-                  className="flex-1 py-3 rounded-xl bg-gray-100"
-                  onPress={() => setShowLogoutModal(false)}
-                >
-                  <Text className="text-black font-semibold text-center">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  className="flex-1 py-3 rounded-xl bg-red-500"
-                  onPress={handleLogout}
-                  disabled={isAuthenticating}
-                >
-                  {isAuthenticating ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Text className="text-white font-semibold text-center">Logout</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+      <Modal visible={showLogoutModal} transparent animationType="fade" statusBarTranslucent>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowLogoutModal(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <View style={styles.modalIcon}>
+              <Feather name="log-out" size={26} color="#EF4444" />
             </View>
-          </View>
+            <Text style={styles.modalTitle}>Logout?</Text>
+            <Text style={styles.modalDesc}>Are you sure you want to logout? You’ll need to sign in again.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity onPress={() => setShowLogoutModal(false)} activeOpacity={0.8} style={[styles.modalBtn, styles.modalCancel]}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleLogout} disabled={!!isAuthenticating} activeOpacity={0.85} style={[styles.modalBtn, styles.modalConfirm]}>
+                {isAuthenticating ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.modalConfirmText}>Logout</Text>}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background, gap: 12 },
+  loadingText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 16 },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: 16 } as any,
+  statValue: { fontSize: 20, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
+  statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    backgroundColor: '#FEF2F2',
+    paddingVertical: 14,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  logoutText: { color: '#EF4444', fontWeight: '700', fontSize: 14 },
+  version: { textAlign: 'center', fontSize: 11, color: Colors.textTertiary, marginTop: 14, fontWeight: '500' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    padding: 22,
+    alignItems: 'center',
+    ...Shadow.xl,
+  },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textDark, marginTop: 12 },
+  modalDesc: { fontSize: 13, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 19 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 18, width: '100%' },
+  modalBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: Radius.full },
+  modalCancel: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  modalCancelText: { fontWeight: '700', color: Colors.textDark, fontSize: 14 },
+  modalConfirm: { backgroundColor: '#EF4444' },
+  modalConfirmText: { fontWeight: '700', color: '#FFFFFF', fontSize: 14 },
+});

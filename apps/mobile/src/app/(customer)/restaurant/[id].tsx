@@ -14,6 +14,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import AnimatedPage from '@/components/ui/AnimatedPage';
+import { CardSkeleton } from '@/components/ui/Skeleton';
+import { Feather } from '@expo/vector-icons';
 import { useRestaurant } from '@/hooks/owner/restaurant/useRestaurants';
 
 const { width } = Dimensions.get('window');
@@ -147,39 +150,41 @@ export default function RestaurantDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.screen, styles.center]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={styles.screen}>
+        <View style={[styles.hero, { backgroundColor: '#F1F5F9' }]} />
+        <View style={{ padding: 16, gap: 12 }}>
+          <View style={{ height: 18, backgroundColor: '#E2E8F0', borderRadius: 8, width: '40%' }} />
+          <CardSkeleton count={3} variant="list" />
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.screen}>
-      {/* Hero image (cover photo uploaded by the owner) */}
+      {/* Hero image — premium with soft overlay */}
       <View style={styles.hero}>
         {restaurant?.coverImageUrl ? (
-          <Image
-            source={{ uri: restaurant.coverImageUrl }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-          />
+          <Image source={{ uri: restaurant.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <View style={styles.heroImageBg}>
             <Text style={styles.heroEmoji}>🏔️</Text>
           </View>
         )}
-        <TouchableOpacity style={[styles.heroBtn, styles.heroBtnLeft]} onPress={() => router.back()}>
-          <Text>←</Text>
+        <View style={styles.heroOverlay} />
+        <TouchableOpacity style={[styles.heroBtn, styles.heroBtnLeft]} onPress={() => router.back()} activeOpacity={0.85}>
+          <Feather name="arrow-left" size={16} color={Colors.textDark} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.heroBtn, styles.heroBtnRight]}>
-          <Text>↗️</Text>
+        <TouchableOpacity style={[styles.heroBtn, styles.heroBtnRight]} activeOpacity={0.85}>
+          <Feather name="share-2" size={14} color={Colors.textDark} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.heroBtn, styles.heroBtnRight2]}>
-          <Text>🤍</Text>
+        <TouchableOpacity style={[styles.heroBtn, styles.heroBtnRight2]} activeOpacity={0.85}>
+          <Feather name="heart" size={14} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <AnimatedPage slide>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Info card */}
         <View style={styles.infoCard}>
           <View style={styles.infoHeaderRow}>
@@ -304,6 +309,7 @@ export default function RestaurantDetailScreen() {
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
+      </AnimatedPage>
 
       {/* Cart floating button */}
       {totalInCart > 0 && (
@@ -328,23 +334,31 @@ export default function RestaurantDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   center: { alignItems: 'center', justifyContent: 'center' },
-  hero: { height: 220, position: 'relative' },
+  hero: { height: 236, position: 'relative', overflow: 'hidden' },
   heroImageBg: {
     flex: 1,
     backgroundColor: '#1F2937',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.08)' } as any,
   heroEmoji: { fontSize: 72 },
   heroBtn: {
     position: 'absolute',
     top: 48,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.96)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(226,232,240,0.9)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   heroBtnLeft: { left: 16 },
   heroBtnRight: { right: 16 },

@@ -307,6 +307,7 @@ export interface DashboardData {
   recommendations: Restaurant[];
   recentlyOrdered: Restaurant[];
   categories: Category[];
+  featuredMenuItems?: (MenuItem & { restaurantName?: string })[];
 }
 
 export interface Favorite {

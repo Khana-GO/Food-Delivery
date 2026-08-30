@@ -77,17 +77,17 @@ export function CategoryForm({
           />
         </Field>
 
-        {/* live preview */}
+        {/* live preview – premium */}
         <Text className="mb-3 mt-1 text-[13px] font-semibold text-gray-700">Preview</Text>
-        <View className="mb-1 flex-row items-center rounded-xl bg-gray-50 p-3">
-          <View className="h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-            <Feather name="grid" size={17} color={GREEN} />
+        <View className="mb-1 flex-row items-center rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3">
+          <View className="h-10 w-10 items-center justify-center rounded-lg bg-white border border-[#FECACA]">
+            <Feather name="grid" size={17} color="#B91C1C" />
           </View>
           <View className="ml-3">
             <Text className="text-sm font-bold text-gray-900">
               {name.trim() || 'Category name'}
             </Text>
-            <Text className="text-[11px] text-gray-400">
+            <Text className="text-[11px] text-gray-500">
               Shown as a section on your menu
             </Text>
           </View>
@@ -98,7 +98,7 @@ export function CategoryForm({
         <PrimaryButton
           label={submitLabel}
           icon="check"
-          variant="green"
+          variant="brand"
           loading={isLoading}
           onPress={submit}
         />

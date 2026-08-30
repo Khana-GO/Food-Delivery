@@ -66,7 +66,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   forgotPassword: (data: ForgotPasswordData) => Promise<void>;
   resetPassword: (data: ResetPasswordData) => Promise<void>;
-  // ✅ NEW: Expose setUser for profile updates
+  // NEW: Expose setUser for profile updates
   setUser: (user: User | null) => void;
 }
 
@@ -251,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshUser,
       forgotPassword,
       resetPassword,
-      setUser, // ✅ Expose setUser
+      setUser, //   Expose setUser
     }),
     [
       user,

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Category, DashboardData, Restaurant } from '@food_delivery/types';
+import { Category, DashboardData, Restaurant, MenuItem } from '@food_delivery/types';
 
 interface DashboardState {
   // ─── State ───
@@ -8,6 +8,7 @@ interface DashboardState {
   recommendations: Restaurant[];
   recentlyOrdered: Restaurant[];
   categories: Category[];
+  featuredMenuItems: (MenuItem & { restaurantName?: string })[];
   isLoading: boolean;
   error: string | null;
 
@@ -17,6 +18,7 @@ interface DashboardState {
   setRecommendations: (restaurants: Restaurant[]) => void;
   setRecentlyOrdered: (restaurants: Restaurant[]) => void;
   setCategories: (categories: Category[]) => void;
+  setFeaturedMenuItems: (items: (MenuItem & { restaurantName?: string })[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
@@ -28,6 +30,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   recommendations: [],
   recentlyOrdered: [],
   categories: [],
+  featuredMenuItems: [],
   isLoading: false,
   error: null,
 
@@ -38,12 +41,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       recommendations: data.recommendations,
       recentlyOrdered: data.recentlyOrdered,
       categories: data.categories,
+      featuredMenuItems: (data as any).featuredMenuItems || [],
     }),
 
   setPopularRestaurants: (restaurants) => set({ popularRestaurants: restaurants }),
   setRecommendations: (restaurants) => set({ recommendations: restaurants }),
   setRecentlyOrdered: (restaurants) => set({ recentlyOrdered: restaurants }),
   setCategories: (categories) => set({ categories }),
+  setFeaturedMenuItems: (items) => set({ featuredMenuItems: items }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
   reset: () =>
@@ -53,6 +58,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       recommendations: [],
       recentlyOrdered: [],
       categories: [],
+      featuredMenuItems: [],
       isLoading: false,
       error: null,
     }),

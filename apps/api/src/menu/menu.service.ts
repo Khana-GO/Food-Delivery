@@ -710,6 +710,37 @@ export class MenuItemsService {
     }, 'bulkDelete');
   }
 
+  // ─── GET FEATURED (public – only from approved restaurants) ───
+  async getFeatured(limit = 12): Promise<MenuItemResponseDto[]> {
+    const cacheKey = `menu:featured:${limit}`;
+    return this.handleDbOperation(async () => {
+      return this.cache.wrap(cacheKey, this.LIST_TTL, async () => {
+        // Join with restaurants to ensure only verified & active
+        const items = await this.db
+          .select({
+            menuItem: menuItemsTable,
+          })
+          .from(menuItemsTable)
+          .innerJoin(
+            restaurantsTable,
+            eq(menuItemsTable.restaurantId, restaurantsTable.id),
+          )
+          .where(
+            and(
+              eq(menuItemsTable.isAvailable, true),
+              eq(restaurantsTable.isVerified, true),
+              eq(restaurantsTable.isActive, true),
+              isNull(restaurantsTable.deletedAt),
+            ),
+          )
+          .orderBy(desc(menuItemsTable.createdAt))
+          .limit(limit);
+
+        return items.map((row) => new MenuItemResponseDto(row.menuItem));
+      });
+    }, 'getFeatured');
+  }
+
   // ─── GET GROUPED BY CATEGORY ─── (cached)
   async getGroupedByCategory(
     restaurantId: string,

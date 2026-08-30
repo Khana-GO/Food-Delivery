@@ -16,12 +16,13 @@ export function CategoryCard({ category, restaurantName, onEdit, onDelete }: Cat
   return (
     <Pressable
       onPress={() => onEdit(category)}
-      className="rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm shadow-gray-100 active:bg-gray-50"
+      className="rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm active:bg-gray-50"
+      style={{ shadowColor: '#0F172A', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 } as any}
     >
       <View className="flex-row items-center">
-        {/* icon tile */}
-        <View className="h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50">
-          <Feather name="grid" size={18} color="#16A34A" />
+        {/* icon tile – premium primary */}
+        <View className="h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FEF2F2] border border-[#FECACA]">
+          <Feather name="grid" size={18} color="#B91C1C" />
         </View>
 
         {/* info */}
@@ -39,13 +40,13 @@ export function CategoryCard({ category, restaurantName, onEdit, onDelete }: Cat
           ) : null}
           <View className="mt-1 flex-row items-center gap-2">
             <View
-              className={`rounded-md px-2 py-0.5 ${
-                hasItems ? 'bg-slate-100' : 'bg-green-50'
+              className={`rounded-full px-2.5 py-1 border ${
+                hasItems ? 'bg-slate-50 border-slate-200' : 'bg-amber-50 border-amber-200'
               }`}
             >
               <Text
                 className={`text-[10px] font-bold uppercase tracking-wide ${
-                  hasItems ? 'text-slate-500' : 'text-green-600'
+                  hasItems ? 'text-slate-600' : 'text-amber-600'
                 }`}
               >
                 {hasItems ? `${category.itemCount} item${category.itemCount === 1 ? '' : 's'}` : 'Empty'}
