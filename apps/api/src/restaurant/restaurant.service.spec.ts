@@ -13,9 +13,27 @@ describe('RestaurantsService', () => {
       providers: [
         RestaurantsService,
         { provide: DATABASE, useValue: {} },
-        { provide: CloudinaryService, useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() } },
-        { provide: CacheService, useValue: { wrap: jest.fn((k, ttl, fn) => fn()), del: jest.fn(), delByPattern: jest.fn(), hashOptions: jest.fn(() => 'hash') } },
-        { provide: NotificationsService, useValue: { create: jest.fn().mockResolvedValue({}), createMany: jest.fn().mockResolvedValue([]), notifyAdmins: jest.fn().mockResolvedValue([]) } },
+        {
+          provide: CloudinaryService,
+          useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            wrap: jest.fn((k, ttl, fn) => fn()),
+            del: jest.fn(),
+            delByPattern: jest.fn(),
+            hashOptions: jest.fn(() => 'hash'),
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            create: jest.fn().mockResolvedValue({}),
+            createMany: jest.fn().mockResolvedValue([]),
+            notifyAdmins: jest.fn().mockResolvedValue([]),
+          },
+        },
       ],
     }).compile();
 

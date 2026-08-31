@@ -1,37 +1,50 @@
 import {
+  index,
   integer,
   numeric,
   pgTable,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
 import { cartsTable } from './cart.schema';
 import { menuItemsTable } from './menu.items.schema';
 
-export const cartItemsTable = pgTable('cart_items', {
-  id: uuid('id').primaryKey().defaultRandom(),
+export const cartItemsTable = pgTable(
+  'cart_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
 
-  cartId: uuid('cart_id')
-    .notNull()
-    .references(() => cartsTable.id, {
-      onDelete: 'cascade',
-    }),
+    cartId: uuid('cart_id')
+      .notNull()
+      .references(() => cartsTable.id, {
+        onDelete: 'cascade',
+      }),
 
-  menuItemId: uuid('menu_item_id')
-    .notNull()
-    .references(() => menuItemsTable.id, {
-      onDelete: 'cascade',
-    }),
+    menuItemId: uuid('menu_item_id')
+      .notNull()
+      .references(() => menuItemsTable.id, {
+        onDelete: 'cascade',
+      }),
 
-  quantity: integer('quantity').notNull().default(1),
+    quantity: integer('quantity').notNull().default(1),
 
-  unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
-  totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+    unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
+    totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('cart_items_cart_menu_unique').on(
+      table.cartId,
+      table.menuItemId,
+    ),
+    index('cart_items_cart_id_idx').on(table.cartId),
+    index('cart_items_menu_item_id_idx').on(table.menuItemId),
+  ],
+);
 
 export type CartItem = typeof cartItemsTable.$inferSelect;
 export type NewCartItem = typeof cartItemsTable.$inferInsert;

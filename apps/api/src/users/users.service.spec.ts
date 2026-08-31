@@ -14,8 +14,14 @@ describe('UsersService', () => {
         UsersService,
         { provide: DATABASE, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: CloudinaryService, useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() } },
-        { provide: NotificationsService, useValue: { create: jest.fn().mockResolvedValue(null) } },
+        {
+          provide: CloudinaryService,
+          useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() },
+        },
+        {
+          provide: NotificationsService,
+          useValue: { create: jest.fn().mockResolvedValue(null) },
+        },
       ],
     }).compile();
 

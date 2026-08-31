@@ -8,6 +8,7 @@ import { DATABASE } from '../db/database.constants';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import * as schema from '../db/schema';
 import { desc, eq, and, isNull, sql } from 'drizzle-orm';
+import { CacheService } from '../redis/cache.service';
 
 @Injectable()
 export class DashboardService {
@@ -18,52 +19,58 @@ export class DashboardService {
     private readonly recommendationsService: RecommendationsService,
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
+    private readonly cache: CacheService,
   ) {}
 
   async getDashboard(userId: string): Promise<DashboardResponseDto> {
-    try {
-      // 1. Get user profile
-      const user = await this.usersService.findByIdOrThrow(userId);
-      const userData = new UserResponseDto(user);
+    const cacheKey = `dashboard:user:${userId}`;
+    return this.cache.wrap(cacheKey, 30, async () => {
+      try {
+        const user = await this.usersService.findByIdOrThrow(userId);
+        const userData = new UserResponseDto(user);
 
-      // Parallelize independent fetches
-      const [categories, popularRestaurants, recommendations, recentlyOrdered, featuredMenuItems] =
-        await Promise.all([
+        const [
+          categories,
+          popularRestaurants,
+          recommendations,
+          recentlyOrdered,
+          featuredMenuItems,
+        ] = await Promise.all([
           this.getCategoriesForUser(),
           this.recommendationsService.getPopularRestaurants(6),
           this.recommendationsService.getPersonalizedRecommendations(userId, 6),
           this.recommendationsService.getRecentlyOrdered(userId, 4),
-          this.getFeaturedMenuItems(8),
+          this.getFeaturedMenuItems(16),
         ]);
 
-      return {
-        user: userData,
-        popularRestaurants,
-        recommendations,
-        recentlyOrdered,
-        categories,
-        featuredMenuItems,
-      } as DashboardResponseDto;
-    } catch (error) {
-      this.logger.error(`Failed to get dashboard: ${(error as Error).message}`);
-      throw error;
-    }
+        return {
+          user: userData,
+          popularRestaurants,
+          recommendations,
+          recentlyOrdered,
+          categories,
+          featuredMenuItems,
+        };
+      } catch (error) {
+        this.logger.error(`Failed to get dashboard: ${(error as Error).message}`);
+        throw error;
+      }
+    });
   }
 
   private async getCategoriesForUser(): Promise<CategoryResponseDto[]> {
-    try {
-      // Only categories from APPROVED restaurants (isVerified + isActive, not deleted)
-      // Join via restaurantsTable to filter
-      const approvedRestaurantIds = await this.db
-        .select({ id: schema.restaurantsTable.id })
-        .from(schema.restaurantsTable)
-        .where(
-          and(
-            eq(schema.restaurantsTable.isVerified, true),
-            eq(schema.restaurantsTable.isActive, true),
-            isNull(schema.restaurantsTable.deletedAt),
-          ),
-        );
+    return this.cache.wrap('dashboard:categories:approved', 60, async () => {
+      try {
+        const approvedRestaurantIds = await this.db
+          .select({ id: schema.restaurantsTable.id })
+          .from(schema.restaurantsTable)
+          .where(
+            and(
+              eq(schema.restaurantsTable.isVerified, true),
+              eq(schema.restaurantsTable.isActive, true),
+              isNull(schema.restaurantsTable.deletedAt),
+            ),
+          );
 
       const ids = approvedRestaurantIds.map((r) => r.id);
       if (ids.length === 0) return [];
@@ -89,19 +96,27 @@ export class DashboardService {
         if (deduped.length >= 8) break;
       }
 
-      return deduped.map((cat) => new CategoryResponseDto(cat as any));
-    } catch (error) {
-      this.logger.warn(`Failed to get categories: ${(error as Error).message}`);
-      return [];
-    }
+        return deduped.map((cat) => new CategoryResponseDto(cat as any));
+      } catch (error) {
+        this.logger.warn(`Failed to get categories: ${(error as Error).message}`);
+        return [];
+      }
+    });
   }
 
   private async getFeaturedMenuItems(limit = 8): Promise<any[]> {
-    try {
-      const items = await this.db
-        .select({ menuItem: schema.menuItemsTable, restaurantName: schema.restaurantsTable.name })
+    return this.cache.wrap(`dashboard:featured:${limit}`, 60, async () => {
+      try {
+        const items = await this.db
+          .select({
+          menuItem: schema.menuItemsTable,
+          restaurantName: schema.restaurantsTable.name,
+        })
         .from(schema.menuItemsTable)
-        .innerJoin(schema.restaurantsTable, eq(schema.menuItemsTable.restaurantId, schema.restaurantsTable.id))
+        .innerJoin(
+          schema.restaurantsTable,
+          eq(schema.menuItemsTable.restaurantId, schema.restaurantsTable.id),
+        )
         .where(
           and(
             eq(schema.menuItemsTable.isAvailable, true),
@@ -117,19 +132,20 @@ export class DashboardService {
       return items.map((row) => ({
         id: row.menuItem.id,
         restaurantId: row.menuItem.restaurantId,
-        categoryId: row.menuItem.categoryId,
-        name: row.menuItem.name,
-        description: row.menuItem.description,
-        price: Number(row.menuItem.price),
-        imageUrl: row.menuItem.imageUrl,
-        isAvailable: row.menuItem.isAvailable,
-        createdAt: row.menuItem.createdAt,
-        updatedAt: row.menuItem.updatedAt,
-        restaurantName: row.restaurantName,
-      }));
-    } catch (error) {
-      this.logger.warn(`Failed to get featured menus: ${(error as Error).message}`);
-      return [];
-    }
+          categoryId: row.menuItem.categoryId,
+          name: row.menuItem.name,
+          description: row.menuItem.description,
+          price: Number(row.menuItem.price),
+          imageUrl: row.menuItem.imageUrl,
+          isAvailable: row.menuItem.isAvailable,
+          createdAt: row.menuItem.createdAt,
+          updatedAt: row.menuItem.updatedAt,
+          restaurantName: row.restaurantName,
+        }));
+      } catch (error) {
+        this.logger.warn(`Failed to get featured menus: ${(error as Error).message}`);
+        return [];
+      }
+    });
   }
 }

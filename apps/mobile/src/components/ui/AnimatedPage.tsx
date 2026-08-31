@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, ViewStyle } from 'react-native';
+import React from 'react';
+import { StyleSheet, ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut, SlideInUp } from 'react-native-reanimated';
 
 interface Props {
   children: React.ReactNode;
@@ -9,24 +10,10 @@ interface Props {
   slide?: boolean;
 }
 
-export default function AnimatedPage({ children, style, delay = 0, duration = 220, slide = false }: Props) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(slide ? 10 : 0)).current;
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }),
-        slide
-          ? Animated.timing(translateY, { toValue: 0, duration, useNativeDriver: true })
-          : Animated.timing(translateY, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ]).start();
-    }, delay);
-    return () => clearTimeout(t);
-  }, [opacity, translateY, delay, duration, slide]);
-
+export default function AnimatedPage({ children, style, delay = 0, duration = 180, slide = false }: Props) {
+  const entering = slide ? SlideInUp.duration(duration).delay(delay).springify().damping(18) : FadeIn.duration(duration).delay(delay);
   return (
-    <Animated.View style={[styles.base, { opacity, transform: [{ translateY }] }, style]}>
+    <Animated.View entering={entering} exiting={FadeOut.duration(140)} style={[styles.base, style]}>
       {children}
     </Animated.View>
   );

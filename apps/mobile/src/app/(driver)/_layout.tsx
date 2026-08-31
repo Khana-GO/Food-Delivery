@@ -27,17 +27,17 @@ export default function DriverLayout() {
         tabBarStyle,
         tabBarItemStyle,
         tabBarHideOnKeyboard: true,
-        animation: 'fade',
         sceneStyle: { backgroundColor: '#FAFAFB' },
+        animation: 'fade',
       }}
     >
-      <Tabs.Screen name="index" options={{ tabBarIcon: ({ focused }) => <TabIcon name="navigation" label="Deliveries" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="available-orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="clipboard" label="Available" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="active-delivery" options={{ tabBarIcon: ({ focused }) => <TabIcon name="truck" label="Active" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="earnings" options={{ tabBarIcon: ({ focused }) => <TabIcon name="dollar-sign" label="Earnings" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="delivery-history" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="(tabs)/index" options={{ tabBarIcon: ({ focused }) => <TabIcon name="home" label="Home" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="(tabs)/available-orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="shopping-bag" label="Orders" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="(tabs)/active" options={{ tabBarIcon: ({ focused }) => <TabIcon name="truck" label="Active" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="(tabs)/earnings" options={{ tabBarIcon: ({ focused }) => <TabIcon name="dollar-sign" label="Earnings" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="(tabs)/profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="(tabs)/notifications" options={{ href: null }} />
+      <Tabs.Screen name="(tabs)/delivery-history" options={{ href: null }} />
     </Tabs>
   );
 }

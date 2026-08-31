@@ -1,5 +1,5 @@
 import { User } from '@food_delivery/types';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 
 export interface UpdateProfilePayload {
   firstName?: string;

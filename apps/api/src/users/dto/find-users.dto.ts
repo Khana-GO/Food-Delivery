@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsEnum, IsBooleanString, IsInt, Min, Max } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsBooleanString,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@food_delivery/types';
@@ -29,12 +37,18 @@ export class FindUsersDto {
   @IsEnum(UserRole, { message: 'Invalid user role' })
   role?: UserRole;
 
-  @ApiPropertyOptional({ example: true, description: 'Filter by verification status' })
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Filter by verification status',
+  })
   @IsOptional()
   @IsBooleanString()
   isVerified?: string;
 
-  @ApiPropertyOptional({ example: true, description: 'Filter by online status' })
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Filter by online status',
+  })
   @IsOptional()
   @IsBooleanString()
   isOnline?: string;

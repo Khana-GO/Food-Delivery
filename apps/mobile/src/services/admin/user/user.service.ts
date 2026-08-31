@@ -1,6 +1,6 @@
 
 import { User, UserListFilters, UserRole, UserStats } from '@food_delivery/types';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 
 export const userAdminService = {
   // ─── Admin: Get all users ───

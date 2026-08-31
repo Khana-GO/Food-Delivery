@@ -30,7 +30,9 @@ export default function CustomerProfile() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.95,
+      exif: false,
+      allowsMultipleSelection: false,
     });
     if (!result.canceled) uploadImage(result.assets[0]);
   }, [uploadImage]);

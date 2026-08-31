@@ -77,9 +77,10 @@ export default function RestaurantManageScreen() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: target === 'logo' ? [1, 1] : [16, 9],
-        quality: 0.8,
+        allowsEditing: false, // keep full original — backend will not force crop
+        quality: 0.92,
+        exif: false,
+        selectionLimit: 1,
       });
 
       if (result.canceled || !restaurant) return;
@@ -162,9 +163,9 @@ export default function RestaurantManageScreen() {
       >
         {/* ─── Cover photo ─── */}
         <View className="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-2xl shadow-gray-100">
-          <View className="w-full h-44 bg-green-600/90">
+          <View className="w-full h-48 bg-green-600/90">
             {restaurant.coverImageUrl ? (
-              <Image source={{ uri: restaurant.coverImageUrl }} className="w-full h-full" contentFit="cover" />
+              <Image source={{ uri: restaurant.coverImageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={250} cachePolicy="memory-disk" placeholder={{ blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' }} />
             ) : (
               <>
                 <View className="absolute rounded-full -right-8 -top-12 h-36 w-36 bg-white/15" />
@@ -208,10 +209,10 @@ export default function RestaurantManageScreen() {
             <Pressable
               onPress={() => pickAndUpload('logo')}
               disabled={busyPhoto}
-              className="h-[72px] w-[72px] overflow-hidden rounded-2xl border-4 border-white bg-red-50 active:opacity-80"
+              className="h-[78px] w-[78px] overflow-hidden rounded-2xl border-4 border-white bg-white active:opacity-80 shadow-sm"
             >
               {restaurant.logoUrl ? (
-                <Image source={{ uri: restaurant.logoUrl }} className="w-full h-full" contentFit="cover" />
+                <Image source={{ uri: restaurant.logoUrl }} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
               ) : (
                 <View className="items-center justify-center w-full h-full">
                   <Text className="text-2xl font-extrabold text-primary">
@@ -315,12 +316,14 @@ export default function RestaurantManageScreen() {
               key={row.key}
               className={`flex-row items-center px-4 py-3.5 ${i !== arr.length - 1 ? 'border-b border-gray-50' : ''}`}
             >
-                <View className="items-center justify-center w-10 h-10 overflow-hidden bg-gray-100 rounded-xl">
+                <View className={`items-center justify-center w-10 h-10 overflow-hidden rounded-xl ${row.key === 'logo' ? 'bg-white border border-gray-200' : 'bg-gray-100'}`}>
                   {(row.key === 'logo' ? restaurant.logoUrl : restaurant.coverImageUrl) ? (
                     <Image
                       source={{ uri: (row.key === 'logo' ? restaurant.logoUrl : restaurant.coverImageUrl)! }}
-                      className="w-full h-full"
-                      contentFit="cover"
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit={row.key === 'logo' ? 'contain' : 'cover'}
+                      transition={200}
+                      cachePolicy="memory-disk"
                     />
                   ) : (
                     <Feather name={row.icon} size={17} color="#94A3B8" />

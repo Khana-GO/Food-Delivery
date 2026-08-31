@@ -84,7 +84,7 @@ export class CategoriesController {
   @Get('my/all')
   @Roles(UserRole.RESTAURANT_OWNER)
   @ApiOperation({
-    summary: "Get all categories across all restaurants owned by the user",
+    summary: 'Get all categories across all restaurants owned by the user',
   })
   async findAllForOwner(
     @CurrentUser() user: JwtPayload,

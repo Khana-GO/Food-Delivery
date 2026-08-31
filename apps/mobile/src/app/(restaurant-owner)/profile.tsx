@@ -72,7 +72,8 @@ export default function OwnerProfile() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.95,
+      exif: false,
     });
 
     if (!result.canceled) {

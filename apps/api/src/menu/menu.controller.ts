@@ -115,8 +115,15 @@ export class MenuItemsController {
 
   // ─── GET FEATURED (only approved restaurants) ───
   @Get('featured')
-  @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.RESTAURANT_OWNER, UserRole.DRIVER)
-  @ApiOperation({ summary: 'Get featured menu items from approved restaurants' })
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.ADMIN,
+    UserRole.RESTAURANT_OWNER,
+    UserRole.DRIVER,
+  )
+  @ApiOperation({
+    summary: 'Get featured menu items from approved restaurants',
+  })
   getFeatured(@Query('limit') limit?: string) {
     return this.menuItemsService.getFeatured(limit ? parseInt(limit, 10) : 12);
   }

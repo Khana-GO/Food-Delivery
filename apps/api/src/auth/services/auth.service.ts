@@ -22,6 +22,7 @@ import { DATABASE } from '../../db/database.constants';
 import * as schema from '../../db/schema';
 import { usersTable } from '../../db/schema';
 import { eq } from 'drizzle-orm/sql/expressions/conditions';
+import { NotificationsService } from '../../notification/notification.service';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,7 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
     private readonly sessionService: SessionsService,
+    private readonly notificationsService: NotificationsService,
     @Inject(DATABASE) private readonly db: NeonDatabase<typeof schema>,
   ) {}
 
@@ -70,12 +72,24 @@ export class AuthService {
           verificationTokenExpiry: this.expiryInMinutes(10),
           isVerified: false,
         },
-        tx,
+        tx as any,
       );
 
       await this.mailService.sendVerificationCode(createdUser.email, otp);
       return createdUser;
     });
+
+    // Welcome notification after commit (outside transaction) – FK now valid
+    await this.notificationsService
+      .create({
+        userId: user.id,
+        type: 'profile',
+        title: 'Welcome to KhanaGo!',
+        body: `Your account has been created as ${user.role}.`,
+        data: { role: user.role },
+      })
+      .catch((err) => this.logger.warn(`Failed to create welcome notification: ${err?.message}`));
+
     return {
       message: 'Check your email for a verification code',
       email: user.email,

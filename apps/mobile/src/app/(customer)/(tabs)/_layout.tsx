@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stack, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
 
 export default function TabsLayout() {
@@ -47,9 +47,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} />,
         }}
       />
-
-      <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
-      <Stack.Screen name="cart" options={{ headerShown: false }} />
     </Tabs>
   );
 }

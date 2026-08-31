@@ -1,4 +1,13 @@
-import { IsOptional, IsString, IsEnum, IsBooleanString, IsInt, Min, Max, IsIn } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsBooleanString,
+  IsInt,
+  Min,
+  Max,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CuisineType } from './create-restaurant.dto';

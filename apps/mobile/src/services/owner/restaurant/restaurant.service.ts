@@ -1,5 +1,5 @@
 import { CreateRestaurantPayload, Restaurant } from '@food_delivery/types';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 
 /** A locally picked image (expo-image-picker asset subset) ready for upload. */
 export interface UploadableImage {

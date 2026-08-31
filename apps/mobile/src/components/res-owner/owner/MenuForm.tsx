@@ -5,9 +5,9 @@ import {
   TextInput,
   ScrollView,
   Pressable,
-  Image,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import {
@@ -55,9 +55,10 @@ export function MenuForm({ initial, categories, submitLabel, onSubmit }: MenuFor
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: false, // keep full image
+      quality: 0.9,
+      exif: false,
+      selectionLimit: 1,
     });
     if (!result.canceled) setImage({ uri: result.assets[0].uri });
   };
@@ -94,23 +95,33 @@ export function MenuForm({ initial, categories, submitLabel, onSubmit }: MenuFor
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[{ padding: 16 }, ContentWidth(isTablet ? 640 : 9999)]}
     >
-      {/* ─── Photo picker ─── */}
+      {/* ─── Photo picker — show full image with contain ─── */}
       <Pressable
         onPress={pickImage}
-        className="mb-5 h-44 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-green-300 bg-green-50/60 active:bg-green-50"
+        className="mb-5 h-56 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-green-300 bg-green-50/60 active:bg-green-50"
       >
         {image ? (
-          <Image source={{ uri: image.uri }} className="h-full w-full" resizeMode="cover" />
+          <Image source={{ uri: image.uri }} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
         ) : (
-          <View className="items-center">
+          <View className="items-center px-6">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-white">
               <Feather name="camera" size={20} color={GREEN} />
             </View>
             <Text className="mt-2 text-sm font-semibold text-gray-700">Upload dish photo</Text>
-            <Text className="mt-0.5 text-xs text-gray-400">Square shots look best · PNG or JPG</Text>
+            <Text className="mt-1 text-xs text-center text-gray-400">Full image preserved • High quality • PNG or JPG</Text>
+          </View>
+        )}
+        {image && (
+          <View className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2.5 py-1">
+            <Text className="text-xs font-bold text-white">Change</Text>
           </View>
         )}
       </Pressable>
+      {image && (
+        <Pressable onPress={() => setImage(null)} className="self-end mb-3 px-3 py-1 rounded-full bg-red-50 border border-red-100">
+          <Text className="text-xs font-semibold text-red-600">Remove</Text>
+        </Pressable>
+      )}
 
       {/* ─── Basics ─── */}
       <Field label="Item Name" required error={errors.name}>

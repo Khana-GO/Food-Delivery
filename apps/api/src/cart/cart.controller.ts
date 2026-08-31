@@ -22,13 +22,16 @@ import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartResponseDto, CartItemDto } from './dto/cart-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Cart')
 @ApiBearerAuth()
 @Controller('cart')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Throttle({ default: { limit: 60, ttl: 60_000 } })
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 

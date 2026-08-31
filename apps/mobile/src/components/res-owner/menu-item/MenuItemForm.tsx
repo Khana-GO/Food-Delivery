@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   ScrollView,
   Switch,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -80,9 +80,10 @@ export const MenuItemForm = ({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false, // keep original full image — no forced crop
+      quality: 0.9,
+      exif: false,
+      selectionLimit: 1,
     });
 
     if (!result.canceled) {
@@ -162,22 +163,36 @@ export const MenuItemForm = ({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-      {/* Image Upload */}
+      {/* Image Upload — show full original with contain, not cropped */}
       <TouchableOpacity
-        className="items-center justify-center w-full h-48 mb-4 bg-white border-2 border-gray-300 border-dashed rounded-xl"
+        className="w-full h-56 mb-4 overflow-hidden bg-white border-2 border-gray-200 border-dashed rounded-2xl active:border-primary"
         onPress={pickImage}
+        activeOpacity={0.9}
       >
         {image ? (
-          <Image source={{ uri: image.uri }} className="w-full h-full rounded-xl" />
+          <Image source={{ uri: image.uri }} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
         ) : existingImage ? (
-          <Image source={{ uri: existingImage }} className="w-full h-full rounded-xl" />
+          <Image source={{ uri: existingImage }} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
         ) : (
-          <View className="items-center">
-            <Feather name="camera" size={48} color="#94A3B8" />
-            <Text className="mt-2 text-sm text-gray-500">Tap to upload image</Text>
+          <View className="items-center justify-center flex-1 px-6">
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-gray-50 border border-gray-100">
+              <Feather name="camera" size={24} color="#94A3B8" />
+            </View>
+            <Text className="mt-3 text-sm font-semibold text-gray-700">Tap to upload dish photo</Text>
+            <Text className="mt-1 text-xs text-center text-gray-400">Full image kept • Choose any ratio • High quality</Text>
+          </View>
+        )}
+        {(image || existingImage) && (
+          <View className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2.5 py-1">
+            <Text className="text-xs font-bold text-white">Change</Text>
           </View>
         )}
       </TouchableOpacity>
+      {(image || existingImage) && (
+        <TouchableOpacity onPress={() => { setImage(null); setExistingImage(null); }} className="self-end mb-3 px-3 py-1 rounded-full bg-red-50 border border-red-100">
+          <Text className="text-xs font-semibold text-red-600">Remove image</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Name */}
       <View className="mb-4">

@@ -8,8 +8,8 @@ import EmptyState from '@/components/ui/EmptyState';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 const METHODS = [
-  { id: '1', label: 'Cash on Delivery', desc: 'Pay when your order arrives', icon: 'dollar-sign' as const, selected: true },
-  { id: '2', label: 'eSewa', desc: 'Digital wallet • Coming soon', icon: 'smartphone' as const, disabled: true },
+  { id: '1', label: 'Cash on Delivery', desc: 'Pay when your order arrives', icon: 'dollar-sign' as const },
+  { id: '2', label: 'eSewa', desc: 'Digital wallet • Secure', icon: 'smartphone' as const },
   { id: '3', label: 'Khalti', desc: 'Digital wallet • Coming soon', icon: 'credit-card' as const, disabled: true },
 ];
 

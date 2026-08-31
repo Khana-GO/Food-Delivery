@@ -40,11 +40,10 @@ export class CartService {
     });
 
     if (existing) {
-      // If restaurantId provided and differs, clear cart or throw?
       if (restaurantId && existing.restaurantId !== restaurantId) {
-        // Option: clear cart and create new one
-        await this.clearCart(userId);
-        return this.createNewCart(userId, restaurantId);
+        throw new ConflictException(
+          'Cart contains items from a different restaurant. Clear your cart before adding items from a new restaurant.',
+        );
       }
       return existing.id;
     }
@@ -119,7 +118,12 @@ export class CartService {
         }) as any,
     );
 
-    // Purge unavailable items automatically and refresh cart
+    const deliveryFee = parseFloat((restaurant as any).deliveryFee || '0');
+    const minimumOrder = parseFloat(
+      (restaurant as any).minimumOrderAmount || '0',
+    );
+
+    // Purge unavailable items automatically and refresh cart (bounded, non-recursive)
     const unavailable = cartItems.filter((i) => !i.isAvailable);
     if (unavailable.length > 0) {
       for (const u of unavailable) {
@@ -132,17 +136,31 @@ export class CartService {
             ),
           );
       }
-      // Re-fetch after purge
-      return this.getCart(userId);
+      // Rebuild cart without recursion – filter out purged items locally
+      const purgedItems = cartItems.filter((i) => i.isAvailable);
+      const subtotalPurged = purgedItems.reduce(
+        (sum, i) => sum + i.totalPrice,
+        0,
+      );
+      const totalItemsPurged = purgedItems.reduce(
+        (sum, i) => sum + i.quantity,
+        0,
+      );
+      return {
+        cartId: cart.id,
+        restaurantId: cart.restaurantId,
+        items: purgedItems,
+        subtotal: Math.round(subtotalPurged * 100) / 100,
+        totalItems: totalItemsPurged,
+        deliveryFee,
+        minimumOrderAmount: minimumOrder,
+        restaurantName: (restaurant as any).name,
+        restaurantIsOpen: (restaurant as any).isOpen,
+      };
     }
 
     const subtotal = cartItems.reduce((sum, i) => sum + i.totalPrice, 0);
     const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
-
-    const deliveryFee = parseFloat((restaurant as any).deliveryFee || '0');
-    const minimumOrder = parseFloat(
-      (restaurant as any).minimumOrderAmount || '0',
-    );
 
     return {
       cartId: cart.id,
@@ -237,6 +255,14 @@ export class CartService {
     userId: string,
     dto: UpdateCartItemDto,
   ): Promise<CartResponseDto | null> {
+    if (dto.quantity < 0 || dto.quantity > 10) {
+      throw new BadRequestException('Quantity must be between 0 and 10');
+    }
+    if (dto.quantity > 0 && dto.quantity < 1) {
+      throw new BadRequestException(
+        'Quantity must be at least 1 or 0 to remove',
+      );
+    }
     const cart = await this.db.query.cartsTable.findFirst({
       where: eq(cartsTable.userId, userId),
     });
@@ -332,18 +358,33 @@ export class CartService {
     guestItems: CartItemDto[],
     restaurantId: string,
   ): Promise<CartResponseDto | null> {
+    // Validate restaurant exists & is orderable
+    const restaurant = await this.db.query.restaurantsTable.findFirst({
+      where: eq(restaurantsTable.id, restaurantId),
+    });
+    if (
+      !restaurant ||
+      !restaurant.isVerified ||
+      !restaurant.isActive ||
+      restaurant.deletedAt
+    ) {
+      throw new BadRequestException('Restaurant is not available for ordering');
+    }
+
     // Clear existing cart if any
     await this.clearCart(userId);
 
     // Create new cart
     const cartId = await this.getOrCreateCart(userId, restaurantId);
 
-    // Insert each item
+    // Insert each item with validation
     for (const item of guestItems) {
+      if (!item.quantity || item.quantity < 1 || item.quantity > 10) continue;
       const menuItem = await this.db.query.menuItemsTable.findFirst({
         where: eq(menuItemsTable.id, item.menuItemId),
       });
-      if (!menuItem) continue;
+      if (!menuItem || !menuItem.isAvailable) continue;
+      if (menuItem.restaurantId !== restaurantId) continue;
 
       const newItem: NewCartItem = {
         cartId,

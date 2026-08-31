@@ -1,12 +1,12 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, StyleSheet, Animated, Image, useWindowDimensions } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, StyleSheet, Animated, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { RestaurantCard } from '@/components/customer/RestaurantCard';
 import { CategoryChip } from '@/components/customer/CategoryChip';
-import { LoadingSkeleton } from '@/components/customer/LoadingSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { PageSkeleton } from '@/components/ui/Skeleton';
@@ -55,7 +55,95 @@ export default function HomeScreen() {
     return 'Good Evening';
   }, []);
 
-  const filteredPopular = popularRestaurants.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  // ─── Global filtering helpers ───
+  const selectedCategoryName = useMemo(() => {
+    if (!selectedCategory) return null;
+    return categories.find((c) => c.id === selectedCategory)?.name.toLowerCase().trim() || null;
+  }, [selectedCategory, categories]);
+
+  const q = searchQuery.trim().toLowerCase();
+  const matchesSearch = useCallback(
+    (r: any) => {
+      if (!q) return true;
+      return (
+        r.name?.toLowerCase().includes(q) ||
+        r.cuisineType?.toLowerCase().includes(q) ||
+        r.address?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q)
+      );
+    },
+    [q]
+  );
+
+  const menuItemMatchesCat = useCallback(
+    (item: any) => {
+      if (!selectedCategory) return true;
+      // direct id match
+      if (item.categoryId === selectedCategory) return true;
+      // fallback by name
+      const catName = categories.find((c) => c.id === item.categoryId)?.name.toLowerCase().trim();
+      return catName === selectedCategoryName;
+    },
+    [selectedCategory, selectedCategoryName, categories]
+  );
+
+  const menuItemMatchesSearch = useCallback(
+    (item: any) => {
+      if (!q) return true;
+      return (
+        item.name?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q) ||
+        item.restaurantName?.toLowerCase().includes(q)
+      );
+    },
+    [q]
+  );
+
+  // Build set of restaurantIds that have at least one menu item in selected category (for restaurant filtering)
+  const restaurantIdsWithSelectedCategory = useMemo(() => {
+    if (!selectedCategoryName) return null;
+    const set = new Set<string>();
+    for (const item of featuredMenuItems || []) {
+      if (menuItemMatchesCat(item)) set.add(item.restaurantId);
+    }
+    return set;
+  }, [selectedCategoryName, featuredMenuItems, menuItemMatchesCat]);
+
+  const restaurantMatchesCategory = useCallback(
+    (restaurant: any) => {
+      if (!selectedCategory) return true;
+      if (!restaurantIdsWithSelectedCategory) return true;
+      // If featured list has no restaurant for this category, don't hide all – show all but indicate filter active
+      if (restaurantIdsWithSelectedCategory.size === 0) return true;
+      return restaurantIdsWithSelectedCategory.has(restaurant.id);
+    },
+    [selectedCategory, restaurantIdsWithSelectedCategory]
+  );
+
+  const filteredPopular = useMemo(() => {
+    return popularRestaurants.filter((r: any) => matchesSearch(r) && restaurantMatchesCategory(r));
+  }, [popularRestaurants, matchesSearch, restaurantMatchesCategory]);
+
+  const filteredRecommendations = useMemo(() => {
+    return recommendations.filter((r: any) => matchesSearch(r) && restaurantMatchesCategory(r));
+  }, [recommendations, matchesSearch, restaurantMatchesCategory]);
+
+  const filteredRecently = useMemo(() => {
+    return recentlyOrdered.filter((r: any) => matchesSearch(r) && restaurantMatchesCategory(r));
+  }, [recentlyOrdered, matchesSearch, restaurantMatchesCategory]);
+
+  const filteredMenus = useMemo(() => {
+    return (featuredMenuItems || []).filter((m: any) => menuItemMatchesCat(m) && menuItemMatchesSearch(m));
+  }, [featuredMenuItems, menuItemMatchesCat, menuItemMatchesSearch]);
+
+  const activeFilterLabel = selectedCategoryName
+    ? categories.find((c) => c.id === selectedCategory)?.name
+    : null;
+
+  const clearFilters = () => {
+    setSelectedCategory(null);
+    setSearchQuery('');
+  };
 
   if (isLoading && !popularRestaurants.length) {
     return (
@@ -91,15 +179,19 @@ export default function HomeScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                 <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/profile' as any)} activeOpacity={0.85} style={styles.avatarWrap}>
                   {user?.imageUrl ? (
-                    <Image source={{ uri: user.imageUrl }} style={styles.avatarImg} />
+                    <Image source={{ uri: user.imageUrl }} style={styles.avatarImg} contentFit="cover" transition={200} cachePolicy="memory-disk" />
                   ) : (
                     <Text style={styles.avatarText}>{(user?.firstName?.charAt(0) || 'C').toUpperCase()}</Text>
                   )}
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.greeting}>{getGreeting()},</Text>
-                  <Text style={styles.userName} numberOfLines={1}>{user?.firstName || 'Customer'} 👋</Text>
-                  <Text style={styles.subtle} numberOfLines={1}>What are you craving today?</Text>
+                  <Text style={styles.userName} numberOfLines={1}>
+                    {user?.firstName || 'Customer'} 👋
+                  </Text>
+                  <Text style={styles.subtle} numberOfLines={1}>
+                    What are you craving today?
+                  </Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', gap: 10, marginLeft: 8 }}>
@@ -107,24 +199,35 @@ export default function HomeScreen() {
                   <Feather name="bell" size={18} color={Colors.textDark} />
                   <View style={styles.dot} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push('/(customer)/chatbot' as any)} activeOpacity={0.8} style={[styles.headerIcon, { backgroundColor: '#FEF2F2' }]}>
+                <TouchableOpacity
+                  onPress={() => router.push('/(customer)/chatbot' as any)}
+                  activeOpacity={0.8}
+                  style={[styles.headerIcon, { backgroundColor: '#FEF2F2' }]}
+                >
                   <Feather name="message-circle" size={18} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Search — responsive: prevents cut on 320px */}
-            <Animated.View style={[styles.searchWrap, isVeryCompact && { height: 44, paddingHorizontal: 12 } as any, { borderColor: searchFocus.interpolate({ inputRange: [0, 1], outputRange: ['#E2E8F0', Colors.primary] }) } as any]}>
+            {/* Search — responsive */}
+            <Animated.View
+              style={[
+                styles.searchWrap,
+                isVeryCompact && ({ height: 44, paddingHorizontal: 12 } as any),
+                { borderColor: searchFocus.interpolate({ inputRange: [0, 1], outputRange: ['#E2E8F0', Colors.primary] }) } as any,
+              ]}
+            >
               <Feather name="search" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
               <TextInput
-                style={[styles.searchInput, isVeryCompact && { fontSize: 13 } as any]}
-                placeholder={isVeryCompact ? 'Search...' : 'Search restaurants, food...'}
+                style={[styles.searchInput, isVeryCompact && ({ fontSize: 13 } as any)]}
+                placeholder={isVeryCompact ? 'Search...' : 'Search restaurants, dishes…'}
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 onFocus={() => Animated.timing(searchFocus, { toValue: 1, duration: 160, useNativeDriver: false }).start()}
                 onBlur={() => Animated.timing(searchFocus, { toValue: 0, duration: 160, useNativeDriver: false }).start()}
                 allowFontScaling={false}
+                returnKeyType="search"
               />
               {searchQuery.length > 0 ? (
                 <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -132,11 +235,62 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               ) : null}
             </Animated.View>
+
+            {/* Active filter pill */}
+            {activeFilterLabel || q ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                {activeFilterLabel ? (
+                  <View style={styles.activeFilterPill}>
+                    <Feather name="filter" size={12} color="#FFF" />
+                    <Text style={styles.activeFilterText}>{activeFilterLabel}</Text>
+                    <TouchableOpacity onPress={() => setSelectedCategory(null)} hitSlop={6} style={styles.activeFilterX}>
+                      <Feather name="x" size={12} color="#FFF" />
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+                {q ? (
+                  <View style={styles.activeFilterPillLight}>
+                    <Feather name="search" size={12} color={Colors.textDark} />
+                    <Text style={styles.activeFilterTextLight}>"{q}"</Text>
+                    <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={6}>
+                      <Feather name="x" size={12} color={Colors.textDark} />
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+                <TouchableOpacity onPress={clearFilters} style={styles.clearFilterBtn}>
+                  <Text style={styles.clearFilterText}>Clear all</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </SafeAreaView>
         </View>
 
         <AnimatedPage delay={40} slide>
-          {/* Categories – only from approved restaurants */}
+          {/* ─── Trust strip ─── */}
+          <View style={styles.trustStrip}>
+            <View style={styles.trustItem}>
+              <View style={styles.trustIcon}>
+                <Feather name="clock" size={14} color={Colors.primary} />
+              </View>
+              <Text style={styles.trustText}>30 min delivery</Text>
+            </View>
+            <View style={styles.trustDivider} />
+            <View style={styles.trustItem}>
+              <View style={styles.trustIcon}>
+                <Feather name="shield" size={14} color="#16A34A" />
+              </View>
+              <Text style={styles.trustText}>Verified kitchens</Text>
+            </View>
+            <View style={styles.trustDivider} />
+            <View style={styles.trustItem}>
+              <View style={styles.trustIcon}>
+                <Feather name="truck" size={14} color="#F59E0B" />
+              </View>
+              <Text style={styles.trustText}>Live tracking</Text>
+            </View>
+          </View>
+
+          {/* ─── Categories – sticky filter ─── */}
           {categories.length > 0 ? (
             <View style={{ paddingVertical: 14 }}>
               <View style={{ paddingHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -144,6 +298,11 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 11, color: Colors.textTertiary }}>{categories.length} categories</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }} bounces={false}>
+                <CategoryChip
+                  label="All"
+                  isSelected={selectedCategory === null}
+                  onPress={() => setSelectedCategory(null)}
+                />
                 {categories.map((category) => (
                   <CategoryChip
                     key={category.id}
@@ -156,24 +315,156 @@ export default function HomeScreen() {
             </View>
           ) : null}
 
-          {/* Featured Dishes – only from approved restaurants */}
+          {/* ─── Promo banner ─── */}
+          <View style={{ paddingHorizontal: 16, marginTop: 2, marginBottom: 6 }}>
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} snapToInterval={width - 32 + 12} decelerationRate="fast">
+              <View style={[styles.promoCard, { width: width - 32, backgroundColor: '#0F172A' }]}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FDE68A', letterSpacing: 0.6 }}>LIMITED TIME</Text>
+                  </View>
+                  <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 }}>Free delivery on Rs.500+</Text>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '500' }}>Hot meals from verified kitchens — no extra fee</Text>
+                  <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={{ marginTop: 10, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Order now →</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                  <Text style={{ fontSize: 34 }}>🍱</Text>
+                </View>
+              </View>
+
+              <View style={[styles.promoCard, { width: width - 32, backgroundColor: '#B91C1C' }]}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 0.6 }}>POPULAR NOW</Text>
+                  </View>
+                  <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF' }}>Momo & Chowmein specials</Text>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>Crispy, juicy & freshly steamed daily</Text>
+                  <TouchableOpacity onPress={() => setSelectedCategory(categories.find((c) => c.name.toLowerCase().includes('momo'))?.id || null)} style={{ marginTop: 10, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#B91C1C' }}>Browse Momo →</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 34 }}>🥟</Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* ─── 1️⃣ Popular Restaurants FIRST ─── */}
+          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECACA' }}>
+                  <Feather name="star" size={14} color={Colors.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Popular Restaurants</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.sectionAction}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            {filteredPopular.length === 0 ? (
+              <View style={styles.emptyInline}>
+                <Feather name="search" size={20} color="#CBD5E1" />
+                <Text style={styles.emptyInlineTitle}>No restaurants match</Text>
+                <Text style={styles.emptyInlineSub}>{activeFilterLabel ? `No restaurants for “${activeFilterLabel}”` : q ? `No match for “${q}”` : 'Try a different filter'}</Text>
+                <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
+                  <Text style={styles.emptyInlineBtnText}>Clear filters</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
+                {filteredPopular.slice(0, 8).map((restaurant) => (
+                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* ─── 2️⃣ Recommended for you SECOND ─── */}
+          <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
+                  <Feather name="heart" size={14} color="#2563EB" />
+                </View>
+                <Text style={styles.sectionTitle}>Recommended for you</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
+                <Text style={styles.sectionAction}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            {filteredRecommendations.length === 0 ? (
+              <View style={styles.emptyInline}>
+                <Feather name="heart" size={20} color="#CBD5E1" />
+                <Text style={styles.emptyInlineTitle}>No recommendations yet</Text>
+                <Text style={styles.emptyInlineSub}>{activeFilterLabel ? `Nothing matched “${activeFilterLabel}”` : 'Order more to get personalized picks'}</Text>
+                {!activeFilterLabel && !q ? (
+                  <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={styles.emptyInlineBtn}>
+                    <Text style={styles.emptyInlineBtnText}>Explore</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
+                    <Text style={styles.emptyInlineBtnText}>Clear filters</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
+                {filteredRecommendations.slice(0, 8).map((restaurant) => (
+                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* ─── 3️⃣ Menu Items THIRD ─── */}
           {(() => {
-            const filteredMenus = (featuredMenuItems || []).filter((m: any) => {
-              if (selectedCategory && m.categoryId !== selectedCategory) return false;
-              if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-              return true;
-            });
-            if (filteredMenus.length === 0) return null;
+            if (filteredMenus.length === 0) {
+              if (selectedCategory || q) {
+                return (
+                  <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+                    <View style={styles.sectionHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDBA74' }}>
+                          <Feather name="grid" size={14} color="#EA580C" />
+                        </View>
+                        <Text style={styles.sectionTitle}>Popular Dishes</Text>
+                      </View>
+                    </View>
+                    <View style={styles.emptyInline}>
+                      <Text style={{ fontSize: 28 }}>🍽️</Text>
+                      <Text style={styles.emptyInlineTitle}>No dishes found</Text>
+                      <Text style={styles.emptyInlineSub}>{activeFilterLabel ? `Nothing in “${activeFilterLabel}”` : `No match for “${q}”`}</Text>
+                      <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
+                        <Text style={styles.emptyInlineBtnText}>Clear filters</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }
+              return null;
+            }
             return (
-              <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+              <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Popular Dishes</Text>
-                  <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDBA74' }}>
+                      <Feather name="grid" size={14} color="#EA580C" />
+                    </View>
+                    <Text style={styles.sectionTitle}>Trending Dishes</Text>
+                    <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary }}>{filteredMenus.length} items</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
                     <Text style={styles.sectionAction}>See all</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }} bounces={false}>
-                  {filteredMenus.slice(0, 8).map((item: any) => (
+                  {filteredMenus.slice(0, 10).map((item: any) => (
                     <TouchableOpacity
                       key={item.id}
                       activeOpacity={0.88}
@@ -188,18 +479,18 @@ export default function HomeScreen() {
                         ...Shadow.sm,
                       }}
                     >
-                      <View style={{ height: 118, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ height: 128, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                         {item.imageUrl ? (
-                          <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                          <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
                         ) : (
                           <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDE68A' }}>
                             <Text style={{ fontSize: 28 }}>🍽️</Text>
                           </View>
                         )}
-                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.textDark, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full }}>
+                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.textDark, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
                           <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
                         </View>
-                        <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
+                        <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.96)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
                           <Feather name="star" size={10} color={Colors.accent} />
                           <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textDark }}>4.6</Text>
                         </View>
@@ -222,58 +513,34 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* Popular */}
-          {(filteredPopular.length > 0 || popularRestaurants.length > 0) && (
-            <View style={{ paddingHorizontal: 16, marginTop: 4 }}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Popular near you</Text>
-                <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.sectionAction}>See all</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
-                {(searchQuery ? filteredPopular : popularRestaurants).slice(0, 6).map((restaurant) => (
-                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Recommendations */}
-          {recommendations.length > 0 ? (
+          {/* ─── Recently ordered / Order again ─── */}
+          {filteredRecently.length > 0 ? (
             <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recommended for you</Text>
-                <TouchableOpacity onPress={() => router.push('/(customer)/explore' as any)}>
-                  <Text style={styles.sectionAction}>See all</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BBF7D0' }}>
+                    <Feather name="repeat" size={14} color="#15803D" />
+                  </View>
+                  <Text style={styles.sectionTitle}>Order again</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/orders' as any)}>
+                  <Text style={styles.sectionAction}>History</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
-                {recommendations.slice(0, 6).map((restaurant) => (
-                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
-                ))}
-              </ScrollView>
-            </View>
-          ) : null}
-
-          {/* Recently ordered */}
-          {recentlyOrdered.length > 0 ? (
-            <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
-              <Text style={[styles.sectionTitle, { marginBottom: 10 }]}>Recently ordered</Text>
-              {recentlyOrdered.slice(0, 3).map((restaurant) => (
+              {filteredRecently.slice(0, 3).map((restaurant) => (
                 <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} variant="list" />
               ))}
             </View>
           ) : null}
 
-          {/* Empty */}
-          {!popularRestaurants.length && !recommendations.length && !recentlyOrdered.length ? (
+          {/* ─── Empty global ─── */}
+          {!filteredPopular.length && !filteredRecommendations.length && !filteredMenus.length && !filteredRecently.length ? (
             <EmptyState
               icon="search"
-              title="Welcome to KhanaGo!"
-              description="Start exploring restaurants and discover delicious food near you."
-              actionLabel="Explore Restaurants"
-              onAction={() => router.push('/(customer)/explore' as any)}
+              title={activeFilterLabel || q ? 'No matches' : 'Welcome to KhanaGo!'}
+              description={activeFilterLabel || q ? `Try clearing filters or search differently.` : 'Start exploring restaurants and discover delicious food near you.'}
+              actionLabel={activeFilterLabel || q ? 'Clear filters' : 'Explore Restaurants'}
+              onAction={() => (activeFilterLabel || q ? clearFilters() : router.push('/(customer)/(tabs)/explore' as any))}
             />
           ) : null}
         </AnimatedPage>
@@ -341,8 +608,72 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   searchInput: { flex: 1, minWidth: 0 as any, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
+  activeFilterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.textDark,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  activeFilterText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  activeFilterX: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 999, padding: 2 },
+  activeFilterPillLight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  activeFilterTextLight: { fontSize: 12, fontWeight: '600', color: Colors.textDark },
+  clearFilterBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  clearFilterText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  trustStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E2E8F0',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    ...Shadow.xs,
+  },
+  trustItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  trustIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  trustText: { fontSize: 11, fontWeight: '600', color: Colors.textDark, letterSpacing: 0.1 },
+  trustDivider: { width: 1, height: 18, backgroundColor: '#E2E8F0', marginHorizontal: 4 },
+  promoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    ...Shadow.sm,
+  },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.3 },
   sectionAction: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   iconSkeleton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2E8F0' },
+  emptyInline: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E2E8F0',
+    padding: 20,
+    alignItems: 'center',
+    ...Shadow.xs,
+  },
+  emptyInlineTitle: { marginTop: 8, fontSize: 13, fontWeight: '700', color: Colors.textDark },
+  emptyInlineSub: { marginTop: 4, fontSize: 12, color: Colors.textSecondary, textAlign: 'center', lineHeight: 16 },
+  emptyInlineBtn: { marginTop: 12, backgroundColor: Colors.textDark, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
+  emptyInlineBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
 });

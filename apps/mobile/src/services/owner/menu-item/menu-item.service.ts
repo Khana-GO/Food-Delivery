@@ -1,5 +1,5 @@
 import { CreateMenuItemPayload, MenuItem, MenuItemFilters, MenuItemsResponse, UpdateMenuItemPayload } from '@food_delivery/types';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 import { Platform } from 'react-native';
 
 export const menuItemService = {

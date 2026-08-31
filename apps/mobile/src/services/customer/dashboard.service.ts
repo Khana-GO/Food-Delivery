@@ -1,5 +1,5 @@
 import { DashboardData } from "@food_delivery/types";
-import { api } from "lib/axios";
+import { api } from "@/lib/axios";
 
 
 export const dashboardService = {

@@ -12,6 +12,7 @@ import {
   ValidateNested,
   IsPositive,
   ArrayMinSize,
+  IsInt,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -28,7 +29,7 @@ export class OrderItemDto {
   menuItemId!: string;
 
   @ApiProperty({ example: 2 })
-  @IsNumber()
+  @IsInt()
   @IsPositive()
   @Min(1)
   @Max(100)

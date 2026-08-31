@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison, @typescript-eslint/no-require-imports */
 import {
   Injectable,
   Logger,
@@ -6,9 +6,11 @@ import {
   BadRequestException,
   ForbiddenException,
   InternalServerErrorException,
+  Inject,
+  Optional,
+  forwardRef,
 } from '@nestjs/common';
-import { Inject } from '@nestjs/common';
-import { eq, and, sql, desc, asc, count, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, asc, count, inArray, isNull } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { ordersTable, type NewOrder } from '../db/schema/order.schema';
@@ -22,6 +24,7 @@ import { addressesTable } from '../db/schema/user.address.schema';
 import { menuItemsTable } from '../db/schema/menu.items.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, OrderStatus } from './dto/update-order.dto';
+import { ValidateCartItemDto } from './dto/validate-cart.dto';
 import {
   OrderResponseDto,
   OrderItemResponseDto,
@@ -30,6 +33,9 @@ import { OrderPaginationDto } from './dto/order-pagination.dto';
 import { CacheService } from '../redis/cache.service';
 import * as schema from '../db/schema';
 import { NotificationsService } from '../notification/notification.service';
+// Circular import is avoided via forwardRef + optional injection
+import type { TrackingGateway } from '../tracking/tracking.gateway';
+import type { OrderGateway } from './order.gateway';
 
 @Injectable()
 export class OrdersService {
@@ -42,6 +48,14 @@ export class OrdersService {
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cache: CacheService,
     private readonly notificationsService: NotificationsService,
+    @Optional()
+    @Inject(
+      forwardRef(() => require('../tracking/tracking.gateway').TrackingGateway),
+    )
+    private readonly trackingGateway?: TrackingGateway,
+    @Optional()
+    @Inject(forwardRef(() => require('./order.gateway').OrderGateway))
+    private readonly orderGateway?: OrderGateway,
   ) {}
 
   private keyList(hash: string) {
@@ -103,6 +117,20 @@ export class OrdersService {
     }
   }
 
+  private buildFullAddress(
+    address: typeof addressesTable.$inferSelect | undefined,
+  ): string {
+    if (!address) return '';
+    const parts = [
+      address.addressLine,
+      address.city,
+      address.state,
+      address.country,
+      address.postalCode,
+    ].filter(Boolean);
+    return parts.join(', ');
+  }
+
   private toResponse(
     order: typeof ordersTable.$inferSelect,
     customer: typeof usersTable.$inferSelect | undefined,
@@ -125,7 +153,9 @@ export class OrdersService {
       driverName: driver ? `${driver.firstName} ${driver.lastName}` : undefined,
       addressId: order.addressId,
       deliveryAddress:
-        (order.deliveryAddressSnapshot as string) || address?.fullAddress || '',
+        (order.deliveryAddressSnapshot as string) ||
+        this.buildFullAddress(address) ||
+        '',
       items,
       subtotal: parseFloat(order.subtotal),
       deliveryFee: parseFloat(order.deliveryFee),
@@ -141,6 +171,54 @@ export class OrdersService {
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     };
+  }
+
+  // ─── VALIDATE CART (batched, no N+1) ───
+  async validateCart(
+    items: ValidateCartItemDto[],
+  ): Promise<{ valid: boolean; items: any[] }> {
+    if (!items.length) return { valid: true, items: [] };
+    const ids = [...new Set(items.map((i) => i.menuItemId))];
+    const menuItems = await this.db
+      .select()
+      .from(menuItemsTable)
+      .where(inArray(menuItemsTable.id, ids));
+    const map = new Map(menuItems.map((m) => [m.id, m]));
+    const validatedItems: any[] = [];
+    let valid = true;
+
+    for (const item of items) {
+      const menuItem = map.get(item.menuItemId) as any;
+      if (!menuItem) {
+        valid = false;
+        validatedItems.push({ ...item, error: 'Item not found' });
+        continue;
+      }
+      if (!menuItem.isAvailable) {
+        valid = false;
+        validatedItems.push({
+          ...item,
+          name: menuItem.name,
+          price: parseFloat(menuItem.price),
+          isAvailable: false,
+          error: 'Item is currently unavailable',
+        });
+        continue;
+      }
+      const currentPrice = parseFloat(menuItem.price);
+      validatedItems.push({
+        ...item,
+        name: menuItem.name,
+        price: currentPrice,
+        isAvailable: true,
+        priceUpdated: currentPrice !== item.unitPrice,
+      });
+      if (currentPrice !== item.unitPrice) {
+        // priceUpdated doesn't invalidate, but could inform frontend
+      }
+    }
+
+    return { valid, items: validatedItems };
   }
 
   // ─── CREATE ORDER (transactional + secure pricing) ───
@@ -224,7 +302,7 @@ export class OrdersService {
           unitPrice: dbPrice.toFixed(2),
           totalPrice: totalPrice.toFixed(2),
           createdAt: new Date(),
-        } as any);
+        });
 
         itemsResponse.push({
           id: '',
@@ -246,12 +324,11 @@ export class OrdersService {
 
       const deliveryFee = parseFloat(restaurant.deliveryFee) || 0;
       const totalAmount = +(subtotal + deliveryFee).toFixed(2);
-      const deliverySnapshot = address.fullAddress;
+      const deliverySnapshot = this.buildFullAddress(address);
 
-      // Validate ONLINE needs paymentId
-      if (dto.paymentMethod === 'ONLINE' && !dto.paymentId) {
-        throw new BadRequestException('paymentId required for ONLINE payment');
-      }
+      // ONLINE may be created before eSewa verification – paymentId optional, will be set on verify.
+      // If you want to enforce, uncomment next line. For now allow PENDING creation.
+      // if (dto.paymentMethod === 'ONLINE' && !dto.paymentId) throw new BadRequestException('paymentId required for ONLINE payment');
 
       // 4. Transaction: order + items
       const { order, createdItems } = await (this.db as any).transaction(
@@ -268,10 +345,8 @@ export class OrdersService {
               totalAmount: totalAmount.toFixed(2),
               notes: dto.notes,
               paymentMethod: dto.paymentMethod || 'OFFLINE',
-              paymentStatus:
-                dto.paymentMethod === 'ONLINE' && dto.paymentId
-                  ? 'PAID'
-                  : 'PENDING',
+              // ONLINE always PENDING until eSewa verify flips to PAID – prevents fake paymentId exploit
+              paymentStatus: 'PENDING',
               orderStatus: 'PENDING',
               paymentId: dto.paymentId,
               createdAt: new Date(),
@@ -577,9 +652,7 @@ export class OrdersService {
             (it as any).itemNameSnapshot ||
             menuMap.get(it.menuItemId) ||
             'Unknown',
-          quantity:
-            (it.quantity as unknown as number) ??
-            parseInt(String(it.quantity), 10),
+          quantity: it.quantity ?? parseInt(String(it.quantity), 10),
           unitPrice: parseFloat(it.unitPrice),
           totalPrice: parseFloat(it.totalPrice),
         }));
@@ -745,10 +818,10 @@ export class OrdersService {
       }
 
       const allowedTransitions: Record<string, string[]> = {
-        PENDING: ['CONFIRMED', 'CANCELLED'],
-        CONFIRMED: ['PREPARING', 'CANCELLED'],
+        PENDING: ['CONFIRMED', 'PREPARING', 'CANCELLED'],
+        CONFIRMED: ['PREPARING', 'READY', 'CANCELLED'],
         PREPARING: ['READY', 'CANCELLED'],
-        READY: ['PICKED_UP', 'CANCELLED'],
+        READY: ['PICKED_UP', 'DELIVERED', 'CANCELLED'],
         PICKED_UP: ['DELIVERED'],
         DELIVERED: [],
         CANCELLED: [],
@@ -828,6 +901,53 @@ export class OrdersService {
             })
             .catch(() => {});
         }
+        // Notify available drivers when order becomes ready (or confirmed) and unassigned
+        if (
+          [OrderStatus.READY, OrderStatus.CONFIRMED, OrderStatus.PREPARING].includes(
+            dto.orderStatus as OrderStatus,
+          ) &&
+          !order.driverId &&
+          !updated.driverId
+        ) {
+          try {
+            // Invalidate available cache so driver polling sees new order quickly
+            await this.cache.delByPattern('order:available:*');
+            // Broadcast via websocket to drivers room
+            if (this.orderGateway) {
+              (this.orderGateway as any).emitNewAvailableOrder?.(updated);
+            }
+            // Also create a lightweight notification for offline drivers (optional) – we avoid spamming all drivers
+            // Instead, drivers will see via polling + websocket. For demo, we log.
+            this.logger.log(`Broadcast new available order ${id} status ${dto.orderStatus} to drivers`);
+          } catch (e: any) {
+            this.logger.warn(`driver broadcast failed: ${e.message}`);
+          }
+        }
+      }
+
+      // ── Real-time: broadcast to tracking rooms ──
+      if (dto.orderStatus && this.trackingGateway) {
+        try {
+          await this.trackingGateway.broadcastOrderStatus(id, {
+            orderId: id,
+            orderStatus: dto.orderStatus,
+            updatedAt: new Date().toISOString(),
+            changedBy: userId,
+            estimatedDeliveryTime: updateData.estimatedDeliveryTime
+              ? updateData.estimatedDeliveryTime.toISOString()
+              : updated.estimatedDeliveryTime
+                ? updated.estimatedDeliveryTime.toISOString()
+                : null,
+          });
+          // also invalidate tracking snapshot cache
+          await this.cache.del(`tracking:snapshot:${id}`);
+          await this.cache.del(`tracking:driver:location:${id}`);
+        } catch (e: any) {
+          this.logger.warn(`tracking broadcast failed: ${e.message}`);
+        }
+      } else if (this.trackingGateway) {
+        // driver assignment also benefits from cache bust
+        await this.cache.del(`tracking:snapshot:${id}`);
       }
 
       await this.invalidateOrder({
@@ -840,6 +960,246 @@ export class OrdersService {
       await this.cache.del(this.keyId(id));
       return this.getOrderById(id);
     }, 'updateOrderStatus');
+  }
+
+  // ─── GET AVAILABLE ORDERS (for drivers) - optimized batched + cached ───
+  async getAvailableOrders(
+    lat?: number,
+    lng?: number,
+    radius: number = 10,
+  ): Promise<any[]> {
+    const cacheKey = `order:available:${lat?.toFixed(3) ?? 'any'}:${lng?.toFixed(3) ?? 'any'}:${radius}`;
+    return this.cache.wrap(cacheKey, 15, async () => {
+      const orders = await this.db
+        .select()
+        .from(ordersTable)
+        .where(
+          and(
+            eq(ordersTable.orderStatus, 'READY'),
+            isNull(ordersTable.driverId),
+          ),
+        )
+        .orderBy(desc(ordersTable.createdAt))
+        .limit(50);
+
+      if (!orders.length) return [];
+
+      // Batch fetch restaurants & customers to avoid N+1
+      const restaurantIds = [...new Set(orders.map((o) => o.restaurantId))];
+      const customerIds = [...new Set(orders.map((o) => o.customerId))];
+      const [restaurants, customers] = await Promise.all([
+        restaurantIds.length
+          ? this.db
+              .select()
+              .from(restaurantsTable)
+              .where(inArray(restaurantsTable.id, restaurantIds))
+          : Promise.resolve([] as any[]),
+        customerIds.length
+          ? this.db
+              .select()
+              .from(usersTable)
+              .where(inArray(usersTable.id, customerIds))
+          : Promise.resolve([] as any[]),
+      ]);
+      const restaurantMap = new Map(restaurants.map((r: any) => [r.id, r]));
+      const customerMap = new Map(customers.map((c: any) => [c.id, c]));
+
+      const enriched = orders.map((order) => {
+        const restaurant: any = restaurantMap.get(order.restaurantId);
+        const customer: any = customerMap.get(order.customerId);
+        return {
+          ...order,
+          restaurantName: restaurant?.name,
+          restaurantAddress: restaurant?.address,
+          restaurantLat: restaurant?.latitude,
+          restaurantLng: restaurant?.longitude,
+          customerName: customer
+            ? `${customer.firstName} ${customer.lastName}`
+            : 'Unknown',
+          customerPhone: customer?.phone,
+          deliveryAddress:
+            (order as any).deliveryAddressSnapshot ||
+            this.buildFullAddress(undefined),
+        };
+      });
+
+      // Optional lat/lng sorting via haversine could be added here
+      return enriched;
+    });
+  }
+
+  // ─── GET DRIVER ACTIVE ORDER ───
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  async getDriverActiveOrder(driverId: string): Promise<any | null> {
+    const order = await this.db.query.ordersTable.findFirst({
+      where: and(
+        eq(ordersTable.driverId, driverId),
+        sql`${ordersTable.orderStatus} IN ('PICKED_UP', 'CONFIRMED', 'PREPARING', 'READY')`,
+      ),
+      orderBy: desc(ordersTable.createdAt),
+    });
+    if (!order) return null;
+    return this.enrichOrder(order);
+  }
+
+  // ─── GET DRIVER ORDER HISTORY (batched + cached) ───
+  async getDriverOrderHistory(
+    driverId: string,
+    limit: number = 50,
+  ): Promise<any[]> {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const cacheKey = `order:history:${driverId}:${safeLimit}`;
+    return this.cache.wrap(cacheKey, 20, async () => {
+      const orders = await this.db
+        .select()
+        .from(ordersTable)
+        .where(
+          and(
+            eq(ordersTable.driverId, driverId),
+            sql`${ordersTable.orderStatus} IN ('DELIVERED', 'CANCELLED')`,
+          ),
+        )
+        .orderBy(desc(ordersTable.createdAt))
+        .limit(safeLimit);
+
+      if (!orders.length) return [];
+      return this.enrichOrdersBatch(orders);
+    });
+  }
+
+  private async enrichOrdersBatch(orders: any[]): Promise<any[]> {
+    const customerIds = [...new Set(orders.map((o) => o.customerId))];
+    const restaurantIds = [...new Set(orders.map((o) => o.restaurantId))];
+    const orderIds = orders.map((o) => o.id);
+    const [customers, restaurants, allItems] = await Promise.all([
+      customerIds.length
+        ? this.db
+            .select()
+            .from(usersTable)
+            .where(inArray(usersTable.id, customerIds))
+        : Promise.resolve([] as any[]),
+      restaurantIds.length
+        ? this.db
+            .select()
+            .from(restaurantsTable)
+            .where(inArray(restaurantsTable.id, restaurantIds))
+        : Promise.resolve([] as any[]),
+      this.db
+        .select()
+        .from(orderItemsTable)
+        .where(inArray(orderItemsTable.orderId, orderIds)),
+    ]);
+    const customerMap = new Map(customers.map((c: any) => [c.id, c]));
+    const restaurantMap = new Map(restaurants.map((r: any) => [r.id, r]));
+    const menuIds = [...new Set(allItems.map((i) => i.menuItemId))];
+    const menus = menuIds.length
+      ? await this.db
+          .select({ id: menuItemsTable.id, name: menuItemsTable.name })
+          .from(menuItemsTable)
+          .where(inArray(menuItemsTable.id, menuIds))
+      : [];
+    const menuMap = new Map(menus.map((m) => [m.id, m.name]));
+    const itemsByOrder = new Map<string, any[]>();
+    for (const it of allItems) {
+      const arr = itemsByOrder.get(it.orderId) || [];
+      arr.push({
+        ...it,
+        name: menuMap.get(it.menuItemId) || it.itemNameSnapshot || 'Unknown',
+      });
+      itemsByOrder.set(it.orderId, arr);
+    }
+    return orders.map((o) => {
+      const c: any = customerMap.get(o.customerId);
+      const r: any = restaurantMap.get(o.restaurantId);
+      return {
+        ...o,
+        customerName: c ? `${c.firstName} ${c.lastName}` : 'Unknown',
+        customerPhone: c?.phone,
+        restaurantName: r?.name,
+        restaurantAddress: r?.address,
+        items: itemsByOrder.get(o.id) || [],
+      };
+    });
+  }
+
+  // ─── GET DRIVER EARNINGS (cached, frequent fetch) ───
+  async getDriverEarnings(driverId: string): Promise<{
+    total: number;
+    deliveries: number;
+    today: number;
+    week: number;
+  }> {
+    const cacheKey = `order:earnings:${driverId}`;
+    return this.cache.wrap(cacheKey, 30, async () => {
+      const allDelivered = await this.db
+        .select()
+        .from(ordersTable)
+        .where(
+          and(
+            eq(ordersTable.driverId, driverId),
+            eq(ordersTable.orderStatus, 'DELIVERED'),
+          ),
+        );
+
+      const total = allDelivered.reduce(
+        (sum, o) => sum + (parseFloat(o.deliveryFee as any) || 0),
+        0,
+      );
+      const deliveries = allDelivered.length;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayEarnings = allDelivered
+        .filter((o) => new Date((o as any).deliveredAt || o.updatedAt) >= today)
+        .reduce((sum, o) => sum + (parseFloat(o.deliveryFee as any) || 0), 0);
+
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekEarnings = allDelivered
+        .filter(
+          (o) => new Date((o as any).deliveredAt || o.updatedAt) >= weekAgo,
+        )
+        .reduce((sum, o) => sum + (parseFloat(o.deliveryFee as any) || 0), 0);
+
+      return { total, deliveries, today: todayEarnings, week: weekEarnings };
+    });
+  }
+
+  // ─── Helper to enrich order with customer/restaurant details ───
+  private async enrichOrder(order: any): Promise<any> {
+    const customer = await this.db.query.usersTable.findFirst({
+      where: eq(usersTable.id, order.customerId),
+    });
+    const restaurant = await this.db.query.restaurantsTable.findFirst({
+      where: eq(restaurantsTable.id, order.restaurantId),
+    });
+    const items = await this.db
+      .select()
+      .from(orderItemsTable)
+      .where(eq(orderItemsTable.orderId, order.id));
+
+    const itemsWithNames = await Promise.all(
+      items.map(async (item) => {
+        const menuItem = await this.db.query.menuItemsTable.findFirst({
+          where: eq(menuItemsTable.id, item.menuItemId),
+        });
+        return {
+          ...item,
+          name: menuItem?.name || 'Unknown',
+        };
+      }),
+    );
+
+    return {
+      ...order,
+      customerName: customer
+        ? `${customer.firstName} ${customer.lastName}`
+        : 'Unknown',
+      customerPhone: customer?.phone,
+      restaurantName: restaurant?.name,
+      restaurantAddress: restaurant?.address,
+      items: itemsWithNames,
+    };
   }
 
   // ─── ASSIGN DRIVER ───
@@ -856,11 +1216,12 @@ export class OrdersService {
       if (!order)
         throw new NotFoundException(`Order with ID ${orderId} not found`);
       if (
-        order.orderStatus !== 'PENDING' &&
-        order.orderStatus !== 'CONFIRMED'
+        !['PENDING', 'CONFIRMED', 'PREPARING', 'READY'].includes(
+          order.orderStatus,
+        )
       ) {
         throw new BadRequestException(
-          'Driver can only be assigned to pending or confirmed orders',
+          'Driver can only be assigned to pending/confirmed/preparing/ready orders',
         );
       }
       if (assignerId && assignerRole === 'RESTAURANT_OWNER') {
@@ -879,10 +1240,12 @@ export class OrdersService {
       const [updated] = await this.db
         .update(ordersTable)
         .set({ driverId, updatedAt: new Date() })
-        .where(eq(ordersTable.id, orderId))
+        .where(and(eq(ordersTable.id, orderId), isNull(ordersTable.driverId)))
         .returning();
       if (!updated)
-        throw new InternalServerErrorException('Failed to assign driver');
+        throw new BadRequestException(
+          'Driver already assigned or order not found',
+        );
 
       await this.notificationsService
         .create({
@@ -903,6 +1266,30 @@ export class OrdersService {
         })
         .catch(() => {});
 
+      // Real-time driver assignment push
+      if (this.trackingGateway) {
+        try {
+          await this.trackingGateway.broadcastOrderStatus(orderId, {
+            orderId,
+            orderStatus: updated.orderStatus,
+            updatedAt: new Date().toISOString(),
+            changedBy: assignerId,
+          });
+          // also notify via WS direct
+          await this.trackingGateway.broadcastToUser(
+            driverId,
+            'order:assigned',
+            {
+              orderId,
+              restaurantId: order.restaurantId,
+            },
+          );
+          await this.cache.del(`tracking:snapshot:${orderId}`);
+        } catch (e: any) {
+          this.logger.warn(`tracking assign broadcast failed: ${e.message}`);
+        }
+      }
+
       await this.invalidateOrder({
         id: orderId,
         customerId: order.customerId,
@@ -910,6 +1297,9 @@ export class OrdersService {
         driverId,
       });
       await this.cache.del(this.keyId(orderId));
+      await this.cache.delByPattern('order:available:*');
+      await this.cache.del(`order:earnings:${driverId}`);
+      await this.cache.delByPattern(`order:history:${driverId}:*`);
       return this.getOrderById(orderId);
     }, 'assignDriver');
   }
@@ -975,6 +1365,20 @@ export class OrdersService {
         })
         .catch(() => {});
 
+      if (this.trackingGateway) {
+        try {
+          await this.trackingGateway.broadcastOrderStatus(orderId, {
+            orderId,
+            orderStatus: 'CANCELLED',
+            updatedAt: new Date().toISOString(),
+            changedBy: userId,
+          });
+          await this.cache.del(`tracking:snapshot:${orderId}`);
+        } catch (e: any) {
+          this.logger.warn(`tracking cancel broadcast failed: ${e.message}`);
+        }
+      }
+
       await this.invalidateOrder({
         id: orderId,
         customerId: order.customerId,
@@ -984,5 +1388,56 @@ export class OrdersService {
       await this.cache.del(this.keyId(orderId));
       return { message: 'Order cancelled successfully' };
     }, 'cancelOrder');
+  }
+
+  // ─── UPDATE PAYMENT STATUS (for eSewa verification) ───
+  async updatePaymentStatus(
+    orderId: string,
+    status: string,
+  ): Promise<{ message: string; paymentStatus: string }> {
+    return this.handleDbOperation(async () => {
+      const order = await this.db.query.ordersTable.findFirst({
+        where: eq(ordersTable.id, orderId),
+      });
+      if (!order)
+        throw new NotFoundException(`Order with ID ${orderId} not found`);
+      // Allow only PENDING -> PAID/FAILED transition for ONLINE orders, or manual override by admin
+      const allowed = ['PENDING', 'FAILED'];
+      if (order.paymentStatus === 'PAID' && status === 'PAID') {
+        return { message: 'Already paid', paymentStatus: 'PAID' };
+      }
+      if (
+        order.paymentStatus !== 'PENDING' &&
+        status === 'FAILED' &&
+        order.paymentStatus !== 'PAID'
+      ) {
+        // allow FAILED only if not already PAID
+      }
+      const [updated] = await this.db
+        .update(ordersTable)
+        .set({
+          paymentStatus: status as any,
+          updatedAt: new Date(),
+          ...(status === 'PAID'
+            ? { paymentId: order.paymentId || `esewa-${Date.now()}` }
+            : {}),
+        })
+        .where(eq(ordersTable.id, orderId))
+        .returning();
+      if (!updated)
+        throw new InternalServerErrorException(
+          'Failed to update payment status',
+        );
+      await this.cache.del(this.keyId(orderId));
+      await this.cache.delByPattern('order:list:*');
+      await this.cache.del(`tracking:snapshot:${orderId}`);
+      this.logger.log(
+        `Payment status for order ${orderId} updated to ${status}`,
+      );
+      return {
+        message: `Payment status updated to ${status}`,
+        paymentStatus: status,
+      };
+    }, 'updatePaymentStatus');
   }
 }

@@ -8,9 +8,10 @@ import { RolesGuard } from './guards/roles.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { AuthService } from './services/auth.service';
 import { SessionsModule } from '../sessions/session.module';
+import { NotificationsModule } from '../notification/notification.module';
 
 @Module({
-  imports: [forwardRef(() => UsersModule), MailModule, SessionsModule],
+  imports: [forwardRef(() => UsersModule), MailModule, SessionsModule, NotificationsModule],
   controllers: [AuthController, RefreshController],
   providers: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
   exports: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],

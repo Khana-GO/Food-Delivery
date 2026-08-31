@@ -337,16 +337,19 @@ export class UsersService {
       }
 
       await this.invalidateUsers();
-      // Notify new user – welcome (non-blocking)
-      await this.notificationsService
-        .create({
-          userId: newUser.id,
-          type: 'profile',
-          title: 'Welcome to KhanaGo!',
-          body: `Your account has been created as ${newUser.role}.`,
-          data: { role: newUser.role },
-        })
-        .catch((err) => this.logger.warn(`Failed to create welcome notification: ${err?.message}`));
+      // Notify new user – welcome (non-blocking). Skip if inside a transaction (FK would fail before commit)
+      const isTransaction = db !== (this.db as unknown);
+      if (!isTransaction) {
+        await this.notificationsService
+          .create({
+            userId: newUser.id,
+            type: 'profile',
+            title: 'Welcome to KhanaGo!',
+            body: `Your account has been created as ${newUser.role}.`,
+            data: { role: newUser.role },
+          })
+          .catch((err) => this.logger.warn(`Failed to create welcome notification: ${err?.message}`));
+      }
 
       this.logger.log(`User created: ${newUser.email} (ID: ${newUser.id})`);
       return newUser;

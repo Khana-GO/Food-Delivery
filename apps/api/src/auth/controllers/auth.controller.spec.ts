@@ -14,7 +14,7 @@ describe('AuthController', () => {
     const controller = new AuthController(authService);
 
     const result = await controller.logout(
-      {} as any,
+      {},
       'Bearer refresh-token-from-header',
     );
 

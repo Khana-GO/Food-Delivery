@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { User } from '@food_delivery/types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
@@ -22,7 +23,7 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               {hasImage ? (
-                <Image source={{ uri: user.imageUrl! }} style={styles.avatarImg} />
+                <Image source={{ uri: user.imageUrl! }} style={styles.avatarImg} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
               ) : (
                 <Text style={styles.avatarInitials}>
                   {user.firstName?.charAt(0).toUpperCase()}

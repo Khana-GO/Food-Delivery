@@ -317,3 +317,84 @@ export interface Favorite {
   createdAt: string;
   restaurant?: Restaurant;
 }
+
+
+export interface Address {
+  id: string;
+  userId: string;
+  label?: string; // e.g., "Home", "Office"
+  addressLine: string;
+  city: string;
+  state?: string;
+  country: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAddressPayload {
+  label?: string;
+  addressLine: string;
+  city: string;
+  state?: string;
+  country: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault?: boolean;
+}
+
+export interface UpdateAddressPayload extends Partial<CreateAddressPayload> {}
+
+
+
+export interface OrderItem {
+  id: string;
+  menuItemId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface Order {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  restaurantId: string;
+  restaurantName: string;
+  restaurantAddress: string;
+  driverId?: string;
+  driverName?: string;
+  addressId: string;
+  deliveryAddress: string;
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  totalAmount: number;
+  notes?: string;
+  paymentMethod: 'ONLINE' | 'OFFLINE';
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED';
+  estimatedDeliveryTime?: string;
+  deliveredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrderPayload {
+  restaurantId: string;
+  addressId: string;
+  items: {
+    menuItemId: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
+  notes?: string;
+  paymentMethod: 'ONLINE' | 'OFFLINE';
+  paymentId?: string;
+}

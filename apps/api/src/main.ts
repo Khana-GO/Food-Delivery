@@ -60,7 +60,9 @@ async function bootstrap() {
     if (err?.code === 'EADDRINUSE') {
       const logger = new Logger('Bootstrap');
       logger.error(`Port ${port} already in use (EADDRINUSE).`);
-      logger.error(`Run: lsof -ti:${port} | xargs kill -9  OR  fuser -k ${port}/tcp`);
+      logger.error(
+        `Run: lsof -ti:${port} | xargs kill -9  OR  fuser -k ${port}/tcp`,
+      );
       logger.error(`Then: pnpm --filter api start:dev`);
       process.exit(1);
     }
@@ -73,7 +75,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error('Bootstrap failed:', err);
   process.exit(1);
 });

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import {
@@ -12,44 +12,8 @@ import {
   rs,
   type OrderStatus,
 } from '@/components/res-owner/owner/kit';
-
-interface OrderItem {
-  name: string;
-  quantity: number;
-  price: number;
-}
-
-interface Order {
-  id: string;
-  customer: string;
-  restaurant: string;
-  items: OrderItem[];
-  subtotal: number;
-  deliveryFee: number;
-  total: number;
-  status: OrderStatus;
-  placedAt: string;
-  deliveryAddress: string;
-  phone: string;
-}
-
-// Mock fetch — swap for real order query hook when API lands
-const MOCK_ORDER = (id: string): Order => ({
-  id,
-  customer: 'Anish Sharma',
-  restaurant: 'Spice Garden',
-  items: [
-    { name: 'Chicken Momo', quantity: 2, price: 299 },
-    { name: 'Garlic Naan', quantity: 1, price: 99 },
-  ],
-  subtotal: 697,
-  deliveryFee: 60,
-  total: 757,
-  status: 'pending',
-  placedAt: 'Today · 9:30 AM',
-  deliveryAddress: 'Bhagwati Marg, Ward 3, Kathmandu',
-  phone: '9812345678',
-});
+import { useOrder } from '@/hooks/customer/useOrder';
+import { useUpdateOrderStatus } from '@/hooks/owner/orders/useUpdateOrderStatus';
 
 const FLOW: Array<{ key: OrderStatus; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'pending', label: 'Order Placed', icon: 'inbox' },
@@ -61,7 +25,30 @@ const FLOW: Array<{ key: OrderStatus; label: string; icon: React.ComponentProps<
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isTablet } = useResponsive();
-  const [order, setOrder] = useState<Order>(() => MOCK_ORDER(id || ''));
+  const { data: apiOrder, isLoading } = useOrder(id!);
+  const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
+
+  if (isLoading || !apiOrder) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#E23744" />
+      </View>
+    );
+  }
+  // Map API order to kit Order shape
+  const order = {
+    id: apiOrder.id,
+    customer: (apiOrder as any).customerName || 'Customer',
+    restaurant: (apiOrder as any).restaurantName || '',
+    items: (apiOrder.items || []).map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.unitPrice })),
+    subtotal: (apiOrder as any).subtotal ?? 0,
+    deliveryFee: (apiOrder as any).deliveryFee ?? 0,
+    total: (apiOrder as any).totalAmount ?? 0,
+    status: ((apiOrder.orderStatus || 'pending').toLowerCase() as OrderStatus),
+    placedAt: new Date(apiOrder.createdAt).toLocaleString(),
+    deliveryAddress: (apiOrder as any).deliveryAddress || '',
+    phone: (apiOrder as any).customerPhone || '',
+  };
 
   const currentStep = FLOW.findIndex((s) => s.key === order.status);
   const isCancelled = order.status === 'cancelled';
@@ -82,14 +69,14 @@ export default function OrderDetailsScreen() {
   const advance = (to: OrderStatus) => {
     Alert.alert('Update Status', `Move this order to “${to}”?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => setOrder((p) => (p ? { ...p, status: to } : p)) },
+      { text: 'Confirm', onPress: () => updateStatus({ id: id!, status: to.toUpperCase() }) },
     ]);
   };
 
   const reject = () => {
     Alert.alert('Reject Order', 'Are you sure you want to reject this order?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Reject', style: 'destructive', onPress: () => setOrder((p) => (p ? { ...p, status: 'cancelled' } : p)) },
+      { text: 'Reject', style: 'destructive', onPress: () => updateStatus({ id: id!, status: 'CANCELLED' }) },
     ]);
   };
 

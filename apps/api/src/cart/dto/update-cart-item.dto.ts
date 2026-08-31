@@ -1,4 +1,4 @@
-import { IsUUID, IsInt, Min, IsNotEmpty } from 'class-validator';
+import { IsUUID, IsInt, Min, Max, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateCartItemDto {
@@ -7,8 +7,9 @@ export class UpdateCartItemDto {
   @IsNotEmpty()
   menuItemId!: string;
 
-  @ApiProperty({ example: 2 })
+  @ApiProperty({ example: 2, minimum: 0, maximum: 10 })
   @IsInt()
   @Min(0)
+  @Max(10)
   quantity!: number;
 }

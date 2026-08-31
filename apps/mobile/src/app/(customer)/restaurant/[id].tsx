@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useRestaurantDetail } from '@/hooks/customer/useRestaurantDetail';
@@ -93,10 +94,10 @@ export default function RestaurantDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      {/* Hero */}
-      <View style={{ height: 260, backgroundColor: '#1F2937' }}>
+      {/* Hero — cover shows full width, no stretch, crisp */}
+      <View style={{ height: 280, backgroundColor: '#0F172A', overflow: 'hidden' }}>
         {restaurant.coverImageUrl ? (
-          <Image source={{ uri: restaurant.coverImageUrl }} style={StyleSheet.absoluteFill as any} resizeMode="cover" />
+          <Image source={{ uri: restaurant.coverImageUrl }} style={StyleSheet.absoluteFill as any} contentFit="cover" transition={300} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
         ) : (
           <View style={{ flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 56 }}>🏔️</Text>
@@ -123,9 +124,9 @@ export default function RestaurantDetailScreen() {
           {/* Info Card – premium */}
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <View style={styles.logoWrap}>
+              <View style={[styles.logoWrap, { backgroundColor: '#FFFFFF' }]}>
                 {restaurant.logoUrl ? (
-                  <Image source={{ uri: restaurant.logoUrl }} style={{ width: '100%', height: '100%' }} />
+                  <Image source={{ uri: restaurant.logoUrl }} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
                 ) : (
                   <Text style={{ fontSize: 22, fontWeight: '800', color: Colors.primary }}>{restaurant.name.charAt(0).toUpperCase()}</Text>
                 )}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { MenuItem } from '@food_delivery/types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
@@ -17,7 +18,7 @@ export const MenuItemCard = ({ item, quantity = 0, onAdd, onRemove }: Props) => 
     <View style={styles.card}>
       <View style={styles.imageWrap}>
         {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.image} />
+          <Image source={{ uri: item.imageUrl }} style={styles.image} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'LHB7%L%MRjj[~q%MofRj00ayD%WB' }} />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={{ fontSize: 28 }}>🍽️</Text>

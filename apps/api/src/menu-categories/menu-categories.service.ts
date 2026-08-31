@@ -42,7 +42,11 @@ export class CategoriesService {
   private keyId(id: string) {
     return `category:id:${id}`;
   }
-  private async invalidateCategory(restaurantId: string, ownerId?: string, categoryId?: string) {
+  private async invalidateCategory(
+    restaurantId: string,
+    ownerId?: string,
+    categoryId?: string,
+  ) {
     const ops: Promise<void>[] = [
       this.cache.del(this.keyByRestaurant(restaurantId, true)),
       this.cache.del(this.keyByRestaurant(restaurantId, false)),
@@ -207,9 +211,17 @@ export class CategoriesService {
             type: 'restaurant',
             title: 'Category created',
             body: `Category "${category.name}" has been created.`,
-            data: { categoryId: category.id, restaurantId, categoryName: category.name },
+            data: {
+              categoryId: category.id,
+              restaurantId,
+              categoryName: category.name,
+            },
           })
-          .catch((err) => this.logger.warn(`Failed to create notification for category create: ${err?.message}`));
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to create notification for category create: ${err?.message}`,
+            ),
+          );
       }
 
       await this.invalidateCategory(restaurantId, ownerUserId);
@@ -226,49 +238,58 @@ export class CategoriesService {
     includeItemCount: boolean = false,
   ): Promise<CategoryResponseDto[]> {
     return this.handleDbOperation(async () => {
-      return this.cache.wrap(this.keyByOwner(ownerId, includeItemCount), this.OWNER_TTL, async () => {
-        const owned = await this.db
-          .select({ id: schema.restaurantsTable.id })
-          .from(schema.restaurantsTable)
-          .where(
-            and(
-              eq(schema.restaurantsTable.ownerId, ownerId),
-              isNull(schema.restaurantsTable.deletedAt),
-            ),
-          );
-        if (owned.length === 0) return [];
-        const restaurantIds = owned.map((r) => r.id);
-        const categories = await this.db.query.menuCategoriesTable.findMany({
-          where: inArray(schema.menuCategoriesTable.restaurantId, restaurantIds),
-          orderBy: [desc(schema.menuCategoriesTable.createdAt)],
-        });
-        if (categories.length === 0) return [];
-        if (!includeItemCount) {
-          return categories.map((cat) => new CategoryResponseDto(cat));
-        }
-        const itemCounts = await this.db
-          .select({
-            categoryId: schema.menuItemsTable.categoryId,
-            total: count(),
-          })
-          .from(schema.menuItemsTable)
-          .where(
-            and(
-              inArray(
-                schema.menuItemsTable.categoryId,
-                categories.map((c) => c.id),
+      return this.cache.wrap(
+        this.keyByOwner(ownerId, includeItemCount),
+        this.OWNER_TTL,
+        async () => {
+          const owned = await this.db
+            .select({ id: schema.restaurantsTable.id })
+            .from(schema.restaurantsTable)
+            .where(
+              and(
+                eq(schema.restaurantsTable.ownerId, ownerId),
+                isNull(schema.restaurantsTable.deletedAt),
               ),
-              eq(schema.menuItemsTable.isAvailable, true),
+            );
+          if (owned.length === 0) return [];
+          const restaurantIds = owned.map((r) => r.id);
+          const categories = await this.db.query.menuCategoriesTable.findMany({
+            where: inArray(
+              schema.menuCategoriesTable.restaurantId,
+              restaurantIds,
             ),
-          )
-          .groupBy(schema.menuItemsTable.categoryId);
-        const countMap = new Map(itemCounts.map((r) => [r.categoryId, r.total]));
-        return categories.map((cat) => {
-          const dto = new CategoryResponseDto(cat);
-          dto.itemCount = countMap.get(cat.id) ?? 0;
-          return dto;
-        });
-      });
+            orderBy: [desc(schema.menuCategoriesTable.createdAt)],
+          });
+          if (categories.length === 0) return [];
+          if (!includeItemCount) {
+            return categories.map((cat) => new CategoryResponseDto(cat));
+          }
+          const itemCounts = await this.db
+            .select({
+              categoryId: schema.menuItemsTable.categoryId,
+              total: count(),
+            })
+            .from(schema.menuItemsTable)
+            .where(
+              and(
+                inArray(
+                  schema.menuItemsTable.categoryId,
+                  categories.map((c) => c.id),
+                ),
+                eq(schema.menuItemsTable.isAvailable, true),
+              ),
+            )
+            .groupBy(schema.menuItemsTable.categoryId);
+          const countMap = new Map(
+            itemCounts.map((r) => [r.categoryId, r.total]),
+          );
+          return categories.map((cat) => {
+            const dto = new CategoryResponseDto(cat);
+            dto.itemCount = countMap.get(cat.id) ?? 0;
+            return dto;
+          });
+        },
+      );
     }, 'findAllForOwner');
   }
 
@@ -278,46 +299,52 @@ export class CategoriesService {
     includeItemCount: boolean = false,
   ): Promise<CategoryResponseDto[]> {
     return this.handleDbOperation(async () => {
-      return this.cache.wrap(this.keyByRestaurant(restaurantId, includeItemCount), this.LIST_TTL, async () => {
-        const categories = await this.db.query.menuCategoriesTable.findMany({
-          where: eq(schema.menuCategoriesTable.restaurantId, restaurantId),
-          orderBy: [desc(schema.menuCategoriesTable.createdAt)],
-        });
+      return this.cache.wrap(
+        this.keyByRestaurant(restaurantId, includeItemCount),
+        this.LIST_TTL,
+        async () => {
+          const categories = await this.db.query.menuCategoriesTable.findMany({
+            where: eq(schema.menuCategoriesTable.restaurantId, restaurantId),
+            orderBy: [desc(schema.menuCategoriesTable.createdAt)],
+          });
 
-        if (categories.length === 0) {
-          return [];
-        }
+          if (categories.length === 0) {
+            return [];
+          }
 
-        if (!includeItemCount) {
-          return categories.map((cat) => new CategoryResponseDto(cat));
-        }
+          if (!includeItemCount) {
+            return categories.map((cat) => new CategoryResponseDto(cat));
+          }
 
-        // Single grouped query for item counts across all categories
-        const itemCounts = await this.db
-          .select({
-            categoryId: schema.menuItemsTable.categoryId,
-            total: count(),
-          })
-          .from(schema.menuItemsTable)
-          .where(
-            and(
-              inArray(
-                schema.menuItemsTable.categoryId,
-                categories.map((c) => c.id),
+          // Single grouped query for item counts across all categories
+          const itemCounts = await this.db
+            .select({
+              categoryId: schema.menuItemsTable.categoryId,
+              total: count(),
+            })
+            .from(schema.menuItemsTable)
+            .where(
+              and(
+                inArray(
+                  schema.menuItemsTable.categoryId,
+                  categories.map((c) => c.id),
+                ),
+                eq(schema.menuItemsTable.isAvailable, true),
               ),
-              eq(schema.menuItemsTable.isAvailable, true),
-            ),
-          )
-          .groupBy(schema.menuItemsTable.categoryId);
+            )
+            .groupBy(schema.menuItemsTable.categoryId);
 
-        const countMap = new Map(itemCounts.map((r) => [r.categoryId, r.total]));
+          const countMap = new Map(
+            itemCounts.map((r) => [r.categoryId, r.total]),
+          );
 
-        return categories.map((cat) => {
-          const dto = new CategoryResponseDto(cat);
-          dto.itemCount = countMap.get(cat.id) ?? 0;
-          return dto;
-        });
-      });
+          return categories.map((cat) => {
+            const dto = new CategoryResponseDto(cat);
+            dto.itemCount = countMap.get(cat.id) ?? 0;
+            return dto;
+          });
+        },
+      );
     }, 'findByRestaurant');
   }
 
@@ -410,9 +437,17 @@ export class CategoriesService {
             type: 'restaurant',
             title: 'Category updated',
             body: `Category "${updated.name}" has been updated.`,
-            data: { categoryId: updated.id, restaurantId: updated.restaurantId, categoryName: updated.name },
+            data: {
+              categoryId: updated.id,
+              restaurantId: updated.restaurantId,
+              categoryName: updated.name,
+            },
           })
-          .catch((err) => this.logger.warn(`Failed to create notification for category update: ${err?.message}`));
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to create notification for category update: ${err?.message}`,
+            ),
+          );
       }
 
       await this.invalidateCategory(updated.restaurantId, ownerUserId, id);
@@ -422,10 +457,7 @@ export class CategoriesService {
   }
 
   // ─── DELETE ───
-  async delete(
-    id: string,
-    ownerUserId?: string,
-  ): Promise<{ message: string }> {
+  async delete(id: string, ownerUserId?: string): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const category = await this.findByIdFresh(id);
       await this.assertOwnershipByUser(category.restaurantId, ownerUserId);
@@ -453,9 +485,17 @@ export class CategoriesService {
             type: 'restaurant',
             title: 'Category deleted',
             body: `Category "${category.name}" has been deleted.`,
-            data: { categoryId: category.id, restaurantId: category.restaurantId, categoryName: category.name },
+            data: {
+              categoryId: category.id,
+              restaurantId: category.restaurantId,
+              categoryName: category.name,
+            },
           })
-          .catch((err) => this.logger.warn(`Failed to create notification for category delete: ${err?.message}`));
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to create notification for category delete: ${err?.message}`,
+            ),
+          );
       }
 
       await this.invalidateCategory(category.restaurantId, ownerUserId, id);

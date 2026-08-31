@@ -37,7 +37,18 @@
       ],
       "expo-secure-store",
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Food Delivery to use your location to track deliveries in real-time.",
+          "locationAlwaysPermission": "Allow Food Delivery to use your location for live order tracking.",
+          "locationWhenInUsePermission": "Allow Food Delivery to use your location for delivery tracking.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,

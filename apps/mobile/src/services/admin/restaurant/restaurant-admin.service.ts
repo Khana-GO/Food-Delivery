@@ -1,5 +1,5 @@
 import { Restaurant, RestaurantFilters, RestaurantListResponse, RestaurantStats } from '@food_delivery/types';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 
 export const restaurantAdminService = {
   getAll: async (filters?: RestaurantFilters): Promise<RestaurantListResponse> => {

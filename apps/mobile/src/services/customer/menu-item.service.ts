@@ -1,5 +1,5 @@
 import { MenuItem } from '@food_delivery/types';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 
 export interface GroupedMenuItem {
   categoryId: string;

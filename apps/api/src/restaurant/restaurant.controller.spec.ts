@@ -15,8 +15,19 @@ describe('RestaurantsController', () => {
       providers: [
         RestaurantsService,
         { provide: DATABASE, useValue: {} },
-        { provide: CloudinaryService, useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() } },
-        { provide: CacheService, useValue: { wrap: jest.fn((k, ttl, fn) => fn()), del: jest.fn(), delByPattern: jest.fn(), hashOptions: jest.fn(() => 'hash') } },
+        {
+          provide: CloudinaryService,
+          useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            wrap: jest.fn((k, ttl, fn) => fn()),
+            del: jest.fn(),
+            delByPattern: jest.fn(),
+            hashOptions: jest.fn(() => 'hash'),
+          },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)

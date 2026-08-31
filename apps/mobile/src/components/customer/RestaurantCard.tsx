@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, Dimensions, Animated, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Animated, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Restaurant } from '@food_delivery/types';
@@ -38,7 +39,7 @@ export const RestaurantCard = ({ restaurant, isFavorite = false, onToggleFavorit
         >
           <View style={styles.listImgWrap}>
             {restaurant.logoUrl ? (
-              <Image source={{ uri: restaurant.logoUrl }} style={styles.listImg} />
+              <Image source={{ uri: restaurant.logoUrl }} style={styles.listImg} contentFit="contain" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
             ) : (
               <Text style={styles.listInitial}>{restaurant.name?.charAt(0).toUpperCase()}</Text>
             )}
@@ -80,7 +81,7 @@ export const RestaurantCard = ({ restaurant, isFavorite = false, onToggleFavorit
       <TouchableOpacity onPress={handlePress} onPressIn={onPressIn} onPressOut={onPressOut} activeOpacity={0.92} style={styles.gridCard}>
         <View style={styles.gridImgWrap}>
           {restaurant.coverImageUrl ? (
-            <Image source={{ uri: restaurant.coverImageUrl }} style={styles.gridImg} />
+            <Image source={{ uri: restaurant.coverImageUrl }} style={styles.gridImg} contentFit="cover" transition={250} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
           ) : (
             <View style={styles.gridPlaceholder}>
               <Text style={styles.gridInitial}>{restaurant.name?.charAt(0).toUpperCase()}</Text>
