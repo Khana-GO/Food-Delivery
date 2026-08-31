@@ -10,7 +10,40 @@ import { ProfileMenuItem } from '@/components/customer/ProfileMenuItem';
 import PremiumCard from '@/components/ui/PremiumCard';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { useCartStore } from '@/stores/customer/cartStore';
+import { useOrders } from '@/hooks/customer/useOrders';
+import { useFavorites } from '@/hooks/customer/useFavorites';
+import { useOrderStore } from '@/stores/customer/orderStore';
+import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import * as ImagePicker from 'expo-image-picker';
+
+function RealStatsRow() {
+  const { orders } = useOrderStore();
+  const { favoriteIds } = useFavoritesStore();
+  // trigger fetches (cached)
+  useOrders();
+  useFavorites();
+  const ordersCount = orders.length;
+  const favCount = favoriteIds.size;
+  // rating could be derived from orders or keep 4.8 if no data; use 4.8 as placeholder when no reviews API
+  const rating = '4.8';
+  return (
+    <View style={styles.statsRow}>
+      <PremiumCard style={styles.statCard as any}>
+        <Text style={styles.statValue}>{ordersCount}</Text>
+        <Text style={styles.statLabel}>Orders</Text>
+      </PremiumCard>
+      <PremiumCard style={styles.statCard as any}>
+        <Text style={[styles.statValue, { color: Colors.primary }]}>{rating}</Text>
+        <Text style={styles.statLabel}>Rating</Text>
+      </PremiumCard>
+      <PremiumCard style={styles.statCard as any}>
+        <Text style={[styles.statValue, { color: '#15803D' }]}>{favCount}</Text>
+        <Text style={styles.statLabel}>Favorites</Text>
+      </PremiumCard>
+    </View>
+  );
+}
 
 export default function CustomerProfile() {
   const { user, logout, isAuthenticating } = useAuth();
@@ -54,7 +87,9 @@ export default function CustomerProfile() {
     }
   }, [logout]);
 
+  const { totalItems: profileCartCount } = useCartStore();
   const menuItems = [
+    { icon: 'shopping-cart' as const, label: 'My Cart', badge: profileCartCount || undefined, onPress: () => router.push('/(customer)/cart' as any) },
     { icon: 'shopping-bag' as const, label: 'My Orders', onPress: () => router.push('/(customer)/(tabs)/orders' as any) },
     { icon: 'heart' as const, label: 'Favorites', onPress: () => router.push('/(customer)/(tabs)/favorites' as any) },
     { icon: 'map-pin' as const, label: 'Saved Addresses', onPress: () => router.push('/(customer)/addresses' as any) },
@@ -86,21 +121,8 @@ export default function CustomerProfile() {
         </SafeAreaView>
 
         <AnimatedPage delay={30} slide>
-          {/* Stats — premium 3 cards */}
-          <View style={styles.statsRow}>
-            <PremiumCard style={styles.statCard as any}>
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Orders</Text>
-            </PremiumCard>
-            <PremiumCard style={styles.statCard as any}>
-              <Text style={[styles.statValue, { color: Colors.primary }]}>4.8</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </PremiumCard>
-            <PremiumCard style={styles.statCard as any}>
-              <Text style={[styles.statValue, { color: '#15803D' }]}>8</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
-            </PremiumCard>
-          </View>
+          {/* Stats — real data */}
+          <RealStatsRow />
 
           {/* Menu */}
           <View style={{ paddingHorizontal: 16, marginTop: 16 }}>

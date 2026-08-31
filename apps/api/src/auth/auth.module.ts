@@ -11,7 +11,12 @@ import { SessionsModule } from '../sessions/session.module';
 import { NotificationsModule } from '../notification/notification.module';
 
 @Module({
-  imports: [forwardRef(() => UsersModule), MailModule, SessionsModule, NotificationsModule],
+  imports: [
+    forwardRef(() => UsersModule),
+    MailModule,
+    SessionsModule,
+    NotificationsModule,
+  ],
   controllers: [AuthController, RefreshController],
   providers: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
   exports: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],

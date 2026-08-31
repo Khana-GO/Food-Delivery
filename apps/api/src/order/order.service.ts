@@ -25,6 +25,7 @@ import { menuItemsTable } from '../db/schema/menu.items.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, OrderStatus } from './dto/update-order.dto';
 import { ValidateCartItemDto } from './dto/validate-cart.dto';
+import { AdminOrderStatsDto } from './dto/admin-order-stats.dto';
 import {
   OrderResponseDto,
   OrderItemResponseDto,
@@ -36,6 +37,7 @@ import { NotificationsService } from '../notification/notification.service';
 // Circular import is avoided via forwardRef + optional injection
 import type { TrackingGateway } from '../tracking/tracking.gateway';
 import type { OrderGateway } from './order.gateway';
+import { AdminOrderPaginationDto } from './dto/admin-order-pagination.dto';
 
 @Injectable()
 export class OrdersService {
@@ -86,6 +88,8 @@ export class OrdersService {
     const ops: Promise<void>[] = [
       this.cache.delByPattern('order:list:*'),
       this.cache.del(this.keyStats()),
+      this.cache.delByPattern('admin:orders:*'),
+      this.cache.del('admin:order-stats'),
     ];
     if (opts.id) ops.push(this.cache.del(this.keyId(opts.id)));
     if (opts.customerId)
@@ -964,6 +968,262 @@ export class OrdersService {
       await this.cache.del(this.keyId(id));
       return this.getOrderById(id);
     }, 'updateOrderStatus');
+  }
+
+  // ─── ADMIN: GET ALL ORDERS (cached + batched) ───
+  async adminGetAllOrders(pagination: AdminOrderPaginationDto): Promise<{
+    data: OrderResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const hash = CacheService.hashOptions(
+      pagination as unknown as Record<string, unknown>,
+    );
+    const cacheKey = `admin:orders:${hash}`;
+    return this.cache.wrap(cacheKey, 20, async () => {
+      const {
+        page = 1,
+        limit = 20,
+        status,
+        restaurantId,
+        driverId,
+        customerId,
+        startDate,
+        endDate,
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
+      } = pagination;
+
+      const conditions: any[] = [];
+
+      if (status) {
+        conditions.push(eq(ordersTable.orderStatus, status));
+      }
+      if (restaurantId) {
+        conditions.push(eq(ordersTable.restaurantId, restaurantId));
+      }
+      if (driverId) {
+        conditions.push(eq(ordersTable.driverId, driverId));
+      }
+      if (customerId) {
+        conditions.push(eq(ordersTable.customerId, customerId));
+      }
+      if (startDate) {
+        conditions.push(sql`${ordersTable.createdAt} >= ${startDate}`);
+      }
+      if (endDate) {
+        conditions.push(sql`${ordersTable.createdAt} <= ${endDate}`);
+      }
+
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [countResult] = await this.db
+        .select({ total: count() })
+        .from(ordersTable)
+        .where(whereClause);
+
+      const total = countResult?.total || 0;
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+
+      const orders = await this.db
+        .select()
+        .from(ordersTable)
+        .where(whereClause)
+        .orderBy(
+          sql`${ordersTable[sortBy as keyof typeof ordersTable]} ${sql.raw(sortOrder)}`,
+        )
+        .limit(limit)
+        .offset(offset);
+
+      if (!orders.length) {
+        return { data: [], total, page, limit, totalPages };
+      }
+
+      const enrichedOrders = (await this.enrichOrdersBatch(
+        orders,
+      )) as OrderResponseDto[];
+
+      return {
+        data: enrichedOrders,
+        total,
+        page,
+        limit,
+        totalPages,
+      };
+    });
+  }
+
+  // ─── ADMIN: GET ORDER STATS (cached) ───
+  async adminGetOrderStats(): Promise<AdminOrderStatsDto> {
+    return this.cache.wrap('admin:order-stats', 30, async () => {
+      const allOrders = await this.db.select().from(ordersTable);
+
+      const totalOrders = allOrders.length;
+      const totalRevenue = allOrders.reduce(
+        (sum, o) => sum + parseFloat(o.totalAmount),
+        0,
+      );
+
+      const stats = {
+        totalOrders,
+        totalRevenue,
+        pendingOrders: allOrders.filter((o) => o.orderStatus === 'PENDING')
+          .length,
+        confirmedOrders: allOrders.filter((o) => o.orderStatus === 'CONFIRMED')
+          .length,
+        preparingOrders: allOrders.filter((o) => o.orderStatus === 'PREPARING')
+          .length,
+        readyOrders: allOrders.filter((o) => o.orderStatus === 'READY').length,
+        pickedUpOrders: allOrders.filter((o) => o.orderStatus === 'PICKED_UP')
+          .length,
+        deliveredOrders: allOrders.filter((o) => o.orderStatus === 'DELIVERED')
+          .length,
+        cancelledOrders: allOrders.filter((o) => o.orderStatus === 'CANCELLED')
+          .length,
+      };
+
+      // Today's stats
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayOrders = allOrders.filter(
+        (o) => new Date(o.createdAt) >= today,
+      );
+      const todayRevenue = todayOrders.reduce(
+        (sum, o) => sum + parseFloat(o.totalAmount),
+        0,
+      );
+
+      // This week
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekOrders = allOrders.filter(
+        (o) => new Date(o.createdAt) >= weekAgo,
+      );
+      const weekRevenue = weekOrders.reduce(
+        (sum, o) => sum + parseFloat(o.totalAmount),
+        0,
+      );
+
+      // This month
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      const monthOrders = allOrders.filter(
+        (o) => new Date(o.createdAt) >= monthAgo,
+      );
+      const monthRevenue = monthOrders.reduce(
+        (sum, o) => sum + parseFloat(o.totalAmount),
+        0,
+      );
+
+      // Daily trend (last 7 days)
+      const dailyTrend: any[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        const dayOrders = allOrders.filter(
+          (o) =>
+            new Date(o.createdAt) >= date && new Date(o.createdAt) < nextDate,
+        );
+        dailyTrend.push({
+          date: date.toISOString().split('T')[0],
+          orders: dayOrders.length,
+          revenue: dayOrders.reduce(
+            (sum, o) => sum + parseFloat(o.totalAmount),
+            0,
+          ),
+        });
+      }
+
+      return {
+        ...stats,
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        thisWeekOrders: weekOrders.length,
+        thisWeekRevenue: weekRevenue,
+        thisMonthOrders: monthOrders.length,
+        thisMonthRevenue: monthRevenue,
+        dailyTrend,
+        revenueTrend: dailyTrend,
+      };
+    });
+  }
+
+  // ─── ADMIN: UPDATE ORDER STATUS ───
+  async adminUpdateOrderStatus(
+    id: string,
+    newStatus: OrderStatus,
+  ): Promise<OrderResponseDto> {
+    return this.handleDbOperation(async () => {
+      const order = await this.db.query.ordersTable.findFirst({
+        where: eq(ordersTable.id, id),
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Order with ID ${id} not found`);
+      }
+
+      // Admin can bypass normal transition rules
+      // But we still validate that it's a valid status
+      if (!Object.values(OrderStatus).includes(newStatus)) {
+        throw new BadRequestException('Invalid order status');
+      }
+
+      const updateData: any = {
+        orderStatus: newStatus,
+        updatedAt: new Date(),
+      };
+
+      if (newStatus === 'DELIVERED') {
+        updateData.deliveredAt = new Date();
+      }
+
+      const [updated] = await this.db
+        .update(ordersTable)
+        .set(updateData)
+        .where(eq(ordersTable.id, id))
+        .returning();
+
+      if (!updated) {
+        throw new InternalServerErrorException('Failed to update order');
+      }
+
+      // Notify customer and restaurant
+      await this.notificationsService.create({
+        userId: order.customerId,
+        type: 'order',
+        title: `Order ${newStatus}`,
+        body: `Your order #${id.slice(0, 8)} is now ${newStatus.toLowerCase()}`,
+        data: { orderId: id },
+      });
+
+      const restaurant = await this.db.query.restaurantsTable.findFirst({
+        where: eq(restaurantsTable.id, order.restaurantId),
+      });
+
+      if (restaurant) {
+        await this.notificationsService.create({
+          userId: restaurant.ownerId,
+          type: 'order',
+          title: `Order ${newStatus}`,
+          body: `Order #${id.slice(0, 8)} is now ${newStatus.toLowerCase()}`,
+          data: { orderId: id },
+        });
+      }
+
+      // Broadcast via WebSocket
+      const enrichedOrder = await this.enrichOrder(updated);
+      this.orderGateway?.emitOrderStatusUpdate(id, newStatus, enrichedOrder);
+
+      return enrichedOrder;
+    }, 'adminUpdateOrderStatus');
   }
 
   // ─── GET AVAILABLE ORDERS (for drivers) - optimized batched + cached ───

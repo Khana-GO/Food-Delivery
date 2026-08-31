@@ -27,7 +27,7 @@ export default function DriverLayout() {
         tabBarStyle,
         tabBarItemStyle,
         tabBarHideOnKeyboard: true,
-        sceneStyle: { backgroundColor: '#FAFAFB' },
+        sceneStyle: { backgroundColor: Colors.background },
         animation: 'fade',
       }}
     >

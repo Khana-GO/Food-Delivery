@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View, useWindowDimensions, StyleProp, ViewStyle, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '@/constants/theme';
+import { Colors, Shadow } from '@/constants/theme';
 
 export type TabIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -43,16 +43,11 @@ export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps)
   const resolvedName = resolveIconName(name);
   return (
     <View style={styles.iconWrap}>
-      <View
-        style={[
-          styles.iconCircle,
-          focused && styles.iconCircleFocused,
-        ]}
-      >
+      <View style={[styles.iconCircle, focused && styles.iconCircleFocused]}>
         <Feather
           name={resolvedName}
           size={size}
-          color={focused ? Colors.primary : '#94A3B8'}
+          color={focused ? '#FFFFFF' : '#94A3B8'}
           strokeWidth={focused ? 2.4 : 2}
         />
       </View>
@@ -62,7 +57,7 @@ export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps)
           {
             fontSize: labelSize,
             color: focused ? Colors.primary : '#94A3B8',
-            fontWeight: focused ? '700' : '500',
+            fontWeight: focused ? '800' : '500',
           },
         ]}
         numberOfLines={1}
@@ -83,29 +78,28 @@ export function useTabBarConstants() {
   const isCompact = width < 375;
   const isLandscape = width > height && !isTablet;
 
-  // Increased sizes & height so labels are never clipped on 320-360px
   const iconSize = isTablet ? 24 : isVeryCompact ? 20 : isCompact ? 21 : 22;
   const labelSize = isTablet ? 11 : isVeryCompact ? 9 : isCompact ? 9.5 : 10;
 
   const baseBarHeight = isTablet ? 78 : isLandscape ? 56 : isVeryCompact ? 66 : isCompact ? 68 : 70;
 
   const tabBarStyle: StyleProp<ViewStyle> = {
-    backgroundColor: 'rgba(255,255,255,0.98)',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(226,232,240,0.9)',
+    borderTopColor: '#E2E8F0',
     height: Platform.OS === 'ios' ? baseBarHeight + insets.bottom : baseBarHeight + Math.max(insets.bottom, 0),
     minHeight: baseBarHeight + Math.max(insets.bottom, 0),
-    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 6 : 8),
-    paddingTop: isTablet ? 10 : isVeryCompact ? 8 : 10,
-    paddingHorizontal: isTablet ? 12 : isVeryCompact ? 4 : 6,
+    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 8 : 10),
+    paddingTop: isTablet ? 12 : isVeryCompact ? 10 : 12,
+    paddingHorizontal: isTablet ? 16 : isVeryCompact ? 8 : 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    elevation: 14,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
+    borderRadius: 28,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    marginTop: 0,
+    ...Shadow.floating,
   };
 
   const tabBarItemStyle: StyleProp<ViewStyle> = {
@@ -113,8 +107,8 @@ export function useTabBarConstants() {
     minWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: isVeryCompact ? 2 : isCompact ? 3 : 6,
-    paddingVertical: 4,
+    paddingHorizontal: isVeryCompact ? 4 : isCompact ? 6 : 8,
+    paddingVertical: 6,
   };
 
   return { iconSize, labelSize, tabBarStyle, tabBarItemStyle, isTablet, isVeryCompact, isCompact, insets };
@@ -131,17 +125,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   iconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
   iconCircleFocused: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#FECACA',
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.30,
+    shadowRadius: 10,
+    elevation: 6,
   },
   label: {
     textAlign: 'center',

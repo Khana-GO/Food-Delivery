@@ -1,16 +1,11 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAvailableOrders } from '@/hooks/driver/useAvailableOrders';
 import { useAcceptDelivery } from '@/hooks/driver/useAcceptDelivery';
 import { DeliveryCard } from '@/components/driver/DeliveryCard';
 import { useDriverStore } from '@/stores/driver/driverStore';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function AvailableOrdersScreen() {
   const { data: orders, isLoading, refetch } = useAvailableOrders();
@@ -20,11 +15,10 @@ export default function AvailableOrdersScreen() {
   const displayOrders = orders || availableOrders;
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <Text className="text-xl font-bold text-black">Available Orders</Text>
-        <Text className="text-sm text-gray-500">
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View style={{ paddingTop: 52, paddingBottom: 16, paddingHorizontal: 20, backgroundColor: Colors.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border }}>
+        <Text style={{ fontSize: 24, fontWeight: '800', color: Colors.textDark }}>Available Orders</Text>
+        <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 4 }}>
           {displayOrders?.length || 0} orders ready for pickup
         </Text>
       </View>
@@ -32,7 +26,7 @@ export default function AvailableOrdersScreen() {
       <FlatList
         data={displayOrders}
         keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.primary} colors={[Colors.primary]} />}
         renderItem={({ item }) => (
           <DeliveryCard
             order={item}
@@ -41,10 +35,10 @@ export default function AvailableOrdersScreen() {
           />
         )}
         ListEmptyComponent={
-          <View className="items-center justify-center py-20">
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 60 }}>
             <Feather name="truck" size={64} color="#D1D5DB" />
-            <Text className="mt-4 text-lg font-medium text-gray-400">No Available Orders</Text>
-            <Text className="mt-1 text-sm text-gray-400">Check back later for deliveries</Text>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: Colors.textTertiary, marginTop: 16 }}>No Available Orders</Text>
+            <Text style={{ fontSize: 14, color: Colors.textMuted, marginTop: 6 }}>Check back later for deliveries</Text>
           </View>
         }
         contentContainerStyle={{ padding: 16, paddingBottom: 20 }}

@@ -52,7 +52,9 @@ export class DashboardService {
           featuredMenuItems,
         };
       } catch (error) {
-        this.logger.error(`Failed to get dashboard: ${(error as Error).message}`);
+        this.logger.error(
+          `Failed to get dashboard: ${(error as Error).message}`,
+        );
         throw error;
       }
     });
@@ -72,33 +74,35 @@ export class DashboardService {
             ),
           );
 
-      const ids = approvedRestaurantIds.map((r) => r.id);
-      if (ids.length === 0) return [];
+        const ids = approvedRestaurantIds.map((r) => r.id);
+        if (ids.length === 0) return [];
 
-      // Fetch categories belonging to approved restaurants, newest first
-      const rows = await this.db.query.menuCategoriesTable.findMany({
-        where: (cat, { inArray }) => inArray(cat.restaurantId, ids),
-        orderBy: [desc(schema.menuCategoriesTable.createdAt)],
-        limit: 24,
-      });
+        // Fetch categories belonging to approved restaurants, newest first
+        const rows = await this.db.query.menuCategoriesTable.findMany({
+          where: (cat, { inArray }) => inArray(cat.restaurantId, ids),
+          orderBy: [desc(schema.menuCategoriesTable.createdAt)],
+          limit: 24,
+        });
 
-      if (rows.length === 0) return [];
+        if (rows.length === 0) return [];
 
-      // Deduplicate by name (different approved restaurants may share name)
-      const seen = new Set<string>();
-      const deduped: typeof rows = [];
-      for (const r of rows) {
-        const key = r.name.toLowerCase().trim();
-        if (!seen.has(key)) {
-          seen.add(key);
-          deduped.push(r);
+        // Deduplicate by name (different approved restaurants may share name)
+        const seen = new Set<string>();
+        const deduped: typeof rows = [];
+        for (const r of rows) {
+          const key = r.name.toLowerCase().trim();
+          if (!seen.has(key)) {
+            seen.add(key);
+            deduped.push(r);
+          }
+          if (deduped.length >= 8) break;
         }
-        if (deduped.length >= 8) break;
-      }
 
         return deduped.map((cat) => new CategoryResponseDto(cat as any));
       } catch (error) {
-        this.logger.warn(`Failed to get categories: ${(error as Error).message}`);
+        this.logger.warn(
+          `Failed to get categories: ${(error as Error).message}`,
+        );
         return [];
       }
     });
@@ -109,29 +113,29 @@ export class DashboardService {
       try {
         const items = await this.db
           .select({
-          menuItem: schema.menuItemsTable,
-          restaurantName: schema.restaurantsTable.name,
-        })
-        .from(schema.menuItemsTable)
-        .innerJoin(
-          schema.restaurantsTable,
-          eq(schema.menuItemsTable.restaurantId, schema.restaurantsTable.id),
-        )
-        .where(
-          and(
-            eq(schema.menuItemsTable.isAvailable, true),
-            eq(schema.restaurantsTable.isVerified, true),
-            eq(schema.restaurantsTable.isActive, true),
-            isNull(schema.restaurantsTable.deletedAt),
-          ),
-        )
-        .orderBy(desc(schema.menuItemsTable.createdAt))
-        .limit(limit);
+            menuItem: schema.menuItemsTable,
+            restaurantName: schema.restaurantsTable.name,
+          })
+          .from(schema.menuItemsTable)
+          .innerJoin(
+            schema.restaurantsTable,
+            eq(schema.menuItemsTable.restaurantId, schema.restaurantsTable.id),
+          )
+          .where(
+            and(
+              eq(schema.menuItemsTable.isAvailable, true),
+              eq(schema.restaurantsTable.isVerified, true),
+              eq(schema.restaurantsTable.isActive, true),
+              isNull(schema.restaurantsTable.deletedAt),
+            ),
+          )
+          .orderBy(desc(schema.menuItemsTable.createdAt))
+          .limit(limit);
 
-      // Map to expected shape (MenuItem plus restaurantName for UI)
-      return items.map((row) => ({
-        id: row.menuItem.id,
-        restaurantId: row.menuItem.restaurantId,
+        // Map to expected shape (MenuItem plus restaurantName for UI)
+        return items.map((row) => ({
+          id: row.menuItem.id,
+          restaurantId: row.menuItem.restaurantId,
           categoryId: row.menuItem.categoryId,
           name: row.menuItem.name,
           description: row.menuItem.description,
@@ -143,7 +147,9 @@ export class DashboardService {
           restaurantName: row.restaurantName,
         }));
       } catch (error) {
-        this.logger.warn(`Failed to get featured menus: ${(error as Error).message}`);
+        this.logger.warn(
+          `Failed to get featured menus: ${(error as Error).message}`,
+        );
         return [];
       }
     });

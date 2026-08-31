@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   FlatList,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { useMarkAsRead } from '@/hooks/owner/notification/useMarkAsRead';
 import { useMarkAllAsRead } from '@/hooks/owner/notification/useMarkAllAsRead';
 import { DriverNotificationItem } from '@/components/driver/DriverNotificationItem';
 import { useDriverNotificationStore } from '@/stores/driver/driverNotificationStore';
+import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 
 export default function DriverNotificationsScreen() {
   const { isLoading, refetch } = useDriverNotifications();
@@ -21,31 +23,45 @@ export default function DriverNotificationsScreen() {
   const { notifications, unreadCount } = useDriverNotificationStore();
 
   const handlePress = (notification: any) => {
-    // Navigate based on notification data
     if (notification.data?.orderId) {
       router.push(`/(driver)/delivery/${notification.data.orderId}` as any);
     }
   };
 
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+      <View style={{ backgroundColor: Colors.white, paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, borderRadius: Radius.full, backgroundColor: Colors.backgroundAlt }}>
+              <Feather name="arrow-left" size={22} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-black">Notifications</Text>
+            <Text style={{ ...Typography.titleLarge, color: Colors.textDark }}>Notifications</Text>
           </View>
           {unreadCount > 0 && (
-            <TouchableOpacity onPress={() => markAllAsRead()} className="flex-row items-center gap-1">
-              <Feather name="check-circle" size={16} color="#E23744" />
-              <Text className="text-sm font-semibold text-primary">Mark all read</Text>
+            <TouchableOpacity onPress={() => markAllAsRead()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: Colors.primaryLight }}>
+              <Feather name="check-circle" size={16} color={Colors.primary} />
+              <Text style={{ ...Typography.labelMedium, color: Colors.primary }}>Mark all read</Text>
             </TouchableOpacity>
           )}
         </View>
-        <Text className="mt-1 text-sm text-gray-500">{unreadCount} unread</Text>
+        <Text style={{ ...Typography.bodySmall, color: Colors.textTertiary, marginTop: 8 }}>{unreadCount} unread of {notifications.length} total</Text>
       </View>
 
       <FlatList
@@ -55,18 +71,21 @@ export default function DriverNotificationsScreen() {
             notification={item}
             onPress={handlePress}
             onMarkAsRead={markAsRead}
+            getTimeAgo={getTimeAgo}
           />
         )}
         keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.primary} />}
         ListEmptyComponent={
-          <View className="items-center justify-center py-20">
-            <Feather name="bell-off" size={64} color="#D1D5DB" />
-            <Text className="mt-4 text-lg font-medium text-gray-400">No Notifications</Text>
-            <Text className="mt-1 text-sm text-gray-400">You're all caught up!</Text>
+          <View style={{ paddingVertical: 60, alignItems: 'center', paddingHorizontal: 20 }}>
+            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Feather name="bell-off" size={32} color={Colors.primary} />
+            </View>
+            <Text style={{ ...Typography.titleMedium, color: Colors.textTertiary }}>No Notifications</Text>
+            <Text style={{ ...Typography.bodyMedium, color: Colors.textMuted, marginTop: 4, textAlign: 'center' }}>You're all caught up! New notifications will appear here.</Text>
           </View>
         }
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 }}
       />
     </View>
   );

@@ -20,7 +20,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import { OrderStatus, UpdateOrderDto } from './dto/update-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { OrderPaginationDto } from './dto/order-pagination.dto';
 import { ValidateCartDto } from './dto/validate-cart.dto';
@@ -32,6 +32,8 @@ import { UserRole } from '@food_delivery/types';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { OrdersService } from './order.service';
 import { IsUUID, IsOptional } from 'class-validator';
+import { AdminOrderPaginationDto } from './dto/admin-order-pagination.dto';
+import { AdminOrderStatsDto } from './dto/admin-order-stats.dto';
 
 export class AssignDriverDto {
   @IsUUID('4')
@@ -94,6 +96,33 @@ export class OrdersController {
   @ApiOperation({ summary: 'Get driver earnings' })
   async getDriverEarnings(@CurrentUser() user: JwtPayload) {
     return this.ordersService.getDriverEarnings(user.sub);
+  }
+
+  // ─── ADMIN: GET ALL ORDERS ───
+  @Get('admin/all')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: Get all orders with filters' })
+  async adminGetAllOrders(@Query() pagination: AdminOrderPaginationDto) {
+    return this.ordersService.adminGetAllOrders(pagination);
+  }
+
+  // ─── ADMIN: GET ORDER STATS ───
+  @Get('admin/stats')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: Get order statistics' })
+  async adminGetOrderStats(): Promise<AdminOrderStatsDto> {
+    return this.ordersService.adminGetOrderStats();
+  }
+
+  // ─── ADMIN: UPDATE ORDER STATUS ───
+  @Patch('admin/:id/status')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: Update order status (override)' })
+  async adminUpdateOrderStatus(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body('status') status: string,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.adminUpdateOrderStatus(id, status as OrderStatus);
   }
 
   // ─── CREATE ───

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { Order } from '@food_delivery/types';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 interface DeliveryCardProps {
   order: Order;
@@ -23,53 +24,64 @@ export const DeliveryCard = ({
   };
 
   return (
-    <View className="p-4 mb-3 bg-white border border-gray-100 shadow-sm rounded-xl">
-      {/* Header */}
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          <Feather name="shopping-bag" size={16} color="#E23744" />
-          <Text className="text-sm font-bold text-black">Order #{order.id.slice(0, 8)}</Text>
+    <View
+      style={{
+        backgroundColor: Colors.white,
+        borderRadius: Radius['2xl'],
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: Colors.borderLight,
+        ...Shadow.sm,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Feather name="shopping-bag" size={16} color={Colors.primary} />
+          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark }}>Order #{order.id.slice(0, 8).toUpperCase()}</Text>
         </View>
         <OrderStatusBadge status={order.orderStatus} />
       </View>
 
-      {/* Restaurant */}
-      <View className="flex-row items-center gap-2 mt-2">
-        <Feather name="home" size={14} color="#94A3B8" />
-        <Text className="text-sm text-gray-600">{order.restaurantName}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        <Feather name="home" size={13} color={Colors.textTertiary} />
+        <Text style={{ fontSize: 13, color: Colors.textSecondary }} numberOfLines={1}>{order.restaurantName}</Text>
       </View>
 
-      {/* Location */}
-      <View className="flex-row items-center gap-2 mt-1">
-        <Feather name="map-pin" size={14} color="#94A3B8" />
-        <Text className="text-sm text-gray-500" numberOfLines={1}>
-          {order.restaurantAddress}
-        </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        <Feather name="map-pin" size={13} color={Colors.textTertiary} />
+        <Text style={{ fontSize: 13, color: Colors.textTertiary }} numberOfLines={1}>{order.restaurantAddress}</Text>
       </View>
 
-      {/* Customer & Distance */}
-      <View className="flex-row items-center justify-between pt-3 mt-3 border-t border-gray-50">
-        <View className="flex-row items-center gap-2">
-          <Feather name="user" size={14} color="#94A3B8" />
-          <Text className="text-sm text-gray-600">{order.customerName}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, marginTop: 12, borderTopColor: Colors.borderLight, borderTopWidth: StyleSheet.hairlineWidth }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Feather name="user" size={13} color={Colors.textTertiary} />
+          <Text style={{ fontSize: 13, color: Colors.textSecondary }}>{order.customerName}</Text>
         </View>
-        <View className="flex-row items-center gap-1">
-          <Feather name="map-pin" size={12} color="#94A3B8" />
-          <Text className="text-xs text-gray-400">{formatDistance((order as any).distance)}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Feather name="map-pin" size={11} color={Colors.textTertiary} />
+          <Text style={{ fontSize: 11, color: Colors.textTertiary }}>{formatDistance((order as any).distance)}</Text>
         </View>
       </View>
 
-      {/* Earnings */}
-      <View className="flex-row items-center justify-between mt-2">
-        <Text className="text-sm font-bold text-primary">Rs. {order.deliveryFee || 50}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.primary }}>Rs. {order.deliveryFee || 50}</Text>
 
         {showAccept && onAccept && (
           <TouchableOpacity
-            className={`bg-primary px-6 py-2 rounded-lg ${isAccepting ? 'opacity-50' : ''}`}
-            onPress={onAccept}
             disabled={isAccepting}
+            style={{
+              backgroundColor: isAccepting ? Colors.textTertiary : Colors.primary,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: Radius.full,
+              opacity: isAccepting ? 0.6 : 1,
+              ...Shadow.primary,
+            }}
+            onPress={onAccept}
+            activeOpacity={0.7}
           >
-            <Text className="text-sm font-semibold text-white">
+            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.white }}>
               {isAccepting ? 'Accepting...' : 'Accept'}
             </Text>
           </TouchableOpacity>

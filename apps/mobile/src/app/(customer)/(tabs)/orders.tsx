@@ -1,65 +1,74 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import EmptyState from '@/components/ui/EmptyState';
 import PremiumCard from '@/components/ui/PremiumCard';
 import { Colors, Radius, Shadow } from '@/constants/theme';
-
-const MOCK = [
-  { id: '1', name: 'Himali Kitchen', status: 'Delivered', time: 'Today, 1:24 PM', total: 520, items: 'Chicken Momo x2, Chai x1' },
-  { id: '2', name: 'Thali House', status: 'On the way', time: 'Today, 12:10 PM', total: 350, items: 'Dal Bhat Thali x1' },
-];
+import { useOrders } from '@/hooks/customer/useOrders';
+import { useOrderStore } from '@/stores/customer/orderStore';
+import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
 
 export default function Orders() {
-  const [refreshing, setRefreshing] = React.useState(false);
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 700);
-  };
+  const { refetch, isRefetching } = useOrders();
+  const { orders, isLoading } = useOrderStore();
+
+  const onRefresh = () => refetch();
+
+  if (isLoading && orders.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
         <View style={styles.header}>
           <Text style={styles.title}>Orders</Text>
-          <Text style={styles.subtitle}>Track and reorder your meals</Text>
+          <Text style={styles.subtitle}>{orders.length} {orders.length === 1 ? 'order' : 'orders'} • Track and reorder</Text>
         </View>
       </SafeAreaView>
 
-      {MOCK.length === 0 ? (
+      {orders.length === 0 ? (
         <EmptyState icon="shopping-bag" title="No orders yet" description="Your orders will appear here. Start exploring!" actionLabel="Explore" onAction={() => router.push('/(customer)/(tabs)/explore' as any)} />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}>
-          {MOCK.map((o) => (
-            <PremiumCard key={o.id} style={{ padding: 0, overflow: 'hidden' } as any}>
-              <View style={{ padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textDark }}>{o.name}</Text>
-                  <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>{o.items}</Text>
-                  <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 6 }}>{o.time} • Rs. {o.total}</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={Colors.primary} />}>
+          {orders.map((o: any) => {
+            const itemsText = Array.isArray(o.items) ? o.items.map((i: any) => `${i.name} x${i.quantity}`).join(', ') : '';
+            const time = o.createdAt ? new Date(o.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            const isDelivered = o.orderStatus === 'DELIVERED';
+            return (
+              <PremiumCard key={o.id} style={{ padding: 0, overflow: 'hidden' } as any}>
+                <View style={{ padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textDark }}>{o.restaurantName || 'Restaurant'}</Text>
+                    <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }} numberOfLines={1}>{itemsText || `${o.totalAmount ? `Rs. ${o.totalAmount}` : ''}`}</Text>
+                    <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 6 }}>{time} • Rs. {o.totalAmount}</Text>
+                  </View>
+                  <OrderStatusBadge status={o.orderStatus} />
                 </View>
-                <View style={[styles.badge, o.status === 'Delivered' ? styles.badgeSuccess : styles.badgeWarn]}>
-                  <Text style={[styles.badgeText, o.status === 'Delivered' ? { color: '#15803D' } : { color: '#B45309' }]}>{o.status}</Text>
+                <View style={{ flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F1F5F9' }}>
+                  <TouchableOpacity style={styles.action} onPress={() => router.push(`/(customer)/order/${o.id}` as any)}>
+                    <Text style={styles.actionText}>View Details</Text>
+                  </TouchableOpacity>
+                  <View style={{ width: StyleSheet.hairlineWidth, backgroundColor: '#F1F5F9' }} />
+                  <TouchableOpacity style={styles.action} onPress={() => router.push(`/(customer)/restaurant/${o.restaurantId}` as any)}>
+                    <Text style={[styles.actionText, { color: Colors.primary }]}>Reorder</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-              <View style={{ flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F1F5F9' }}>
-                <TouchableOpacity style={styles.action} onPress={() => router.push(`/(customer)/order/${o.id}` as any)}>
-                  <Text style={styles.actionText}>View Details</Text>
-                </TouchableOpacity>
-                <View style={{ width: StyleSheet.hairlineWidth, backgroundColor: '#F1F5F9' }} />
-                <TouchableOpacity style={styles.action}>
-                  <Text style={[styles.actionText, { color: Colors.primary }]}>Reorder</Text>
-                </TouchableOpacity>
-              </View>
-            </PremiumCard>
-          ))}
-
-          <TouchableOpacity onPress={() => router.push('/(customer)/order-tracking/1' as any)} style={styles.trackBtn}>
-            <Feather name="map-pin" size={16} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Track Live Order</Text>
-          </TouchableOpacity>
+              </PremiumCard>
+            );
+          })}
+          {orders.some((o: any) => ['CONFIRMED', 'PREPARING', 'READY', 'PICKED_UP'].includes(o.orderStatus)) && (
+            <TouchableOpacity onPress={() => { const active = orders.find((o: any) => ['CONFIRMED', 'PREPARING', 'READY', 'PICKED_UP'].includes(o.orderStatus)); if (active) router.push(`/(customer)/order-tracking/${active.id}` as any); }} style={styles.trackBtn}>
+              <Feather name="map-pin" size={16} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Track Live Order</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
     </View>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 interface DriverStatsCardProps {
   totalDeliveries: number;
@@ -23,21 +24,32 @@ export const DriverStatsCard = ({
   ];
 
   return (
-    <View className="flex-row flex-wrap gap-3 px-4 -mt-4">
-      {stats.map((stat, index) => (
-        <View
-          key={index}
-          className="flex-1 min-w-[45%] bg-white rounded-xl p-4 border border-gray-100 shadow-sm"
-        >
-          <View className="flex-row items-center gap-2">
-            <View className="items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-              <Feather name={stat.icon as any} size={16} color="#E23744" />
+    <View style={{ paddingHorizontal: 16, marginTop: -16 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        {stats.map((stat, index) => (
+          <View
+            key={index}
+            style={{
+              flex: 1,
+              minWidth: '45%',
+              backgroundColor: Colors.white,
+              borderRadius: Radius.xl,
+              padding: 16,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: Colors.borderLight,
+              ...Shadow.sm,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name={stat.icon as any} size={15} color={Colors.primary} />
+              </View>
+              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>{stat.label}</Text>
             </View>
-            <Text className="text-xs text-gray-500">{stat.label}</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textDark, marginTop: 8 }}>{stat.value}</Text>
           </View>
-          <Text className="mt-1 text-lg font-bold text-black">{stat.value}</Text>
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 };

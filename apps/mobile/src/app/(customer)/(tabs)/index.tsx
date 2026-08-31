@@ -16,6 +16,7 @@ import { useAddFavorite } from '@/hooks/customer/useAddFavorite';
 import { useRemoveFavorite } from '@/hooks/customer/useRemoveFavorite';
 import { useDashboardStore } from '@/stores/customer/dashboardStore';
 import { useFavoritesStore } from '@/stores/customer/favoritesStore';
+import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function HomeScreen() {
@@ -32,6 +33,7 @@ export default function HomeScreen() {
   const { mutate: removeFavorite, isPending: isRemovingFavorite } = useRemoveFavorite();
   const { popularRestaurants, recommendations, recentlyOrdered, categories, featuredMenuItems, isLoading } = useDashboardStore();
   const { favoriteIds } = useFavoritesStore();
+  const { totalItems: cartCount } = useCartStore();
   const isRefreshing = isDashboardRefetching || isFavoritesRefetching;
 
   const handleRefresh = useCallback(() => {
@@ -187,17 +189,25 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.greeting}>{getGreeting()},</Text>
                   <Text style={styles.userName} numberOfLines={1}>
-                    {user?.firstName || 'Customer'} 👋
+                    {user?.firstName || 'Customer'}
                   </Text>
                   <Text style={styles.subtle} numberOfLines={1}>
                     What are you craving today?
                   </Text>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 10, marginLeft: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
                 <TouchableOpacity onPress={() => router.push('/(customer)/notifications' as any)} activeOpacity={0.8} style={styles.headerIcon}>
                   <Feather name="bell" size={18} color={Colors.textDark} />
                   <View style={styles.dot} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/(customer)/cart' as any)} activeOpacity={0.8} style={styles.headerIcon}>
+                  <Feather name="shopping-cart" size={18} color={Colors.textDark} />
+                  {cartCount > 0 ? (
+                    <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: Colors.primary, minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>{cartCount}</Text>
+                    </View>
+                  ) : null}
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => router.push('/(customer)/chatbot' as any)}
@@ -266,30 +276,6 @@ export default function HomeScreen() {
         </View>
 
         <AnimatedPage delay={40} slide>
-          {/* ─── Trust strip ─── */}
-          <View style={styles.trustStrip}>
-            <View style={styles.trustItem}>
-              <View style={styles.trustIcon}>
-                <Feather name="clock" size={14} color={Colors.primary} />
-              </View>
-              <Text style={styles.trustText}>30 min delivery</Text>
-            </View>
-            <View style={styles.trustDivider} />
-            <View style={styles.trustItem}>
-              <View style={styles.trustIcon}>
-                <Feather name="shield" size={14} color="#16A34A" />
-              </View>
-              <Text style={styles.trustText}>Verified kitchens</Text>
-            </View>
-            <View style={styles.trustDivider} />
-            <View style={styles.trustItem}>
-              <View style={styles.trustIcon}>
-                <Feather name="truck" size={14} color="#F59E0B" />
-              </View>
-              <Text style={styles.trustText}>Live tracking</Text>
-            </View>
-          </View>
-
           {/* ─── Categories – sticky filter ─── */}
           {categories.length > 0 ? (
             <View style={{ paddingVertical: 14 }}>

@@ -216,7 +216,14 @@ export default function RestaurantDetailScreen() {
                 </View>
               ) : (
                 filteredItems.map((item) => (
-                  <MenuItemCard key={item.id} item={item} quantity={getItemQuantity(item.id)} onAdd={handleAddItem} onRemove={handleRemoveItem} />
+                  <MenuItemCard
+                    key={item.id}
+                    item={item}
+                    quantity={getItemQuantity(item.id)}
+                    onAdd={handleAddItem}
+                    onRemove={handleRemoveItem}
+                    onPress={(it) => router.push(`/(customer)/menu/${it.id}` as any)}
+                  />
                 ))
               )}
             </View>

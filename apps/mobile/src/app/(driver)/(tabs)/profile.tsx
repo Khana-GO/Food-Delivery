@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { DriverProfileHeader } from '@/components/driver/DriverProfileHeader';
 import { DriverStatsCard } from '@/components/driver/DriverStatsCard';
 import { ProfileMenuItem } from '@/components/customer/ProfileMenuItem';
 import * as ImagePicker from 'expo-image-picker';
+import { useDriverNotificationStore } from '@/stores/driver/driverNotificationStore';
 
 export default function DriverProfile() {
   const { user, logout, isAuthenticating } = useAuth();
@@ -31,6 +32,8 @@ export default function DriverProfile() {
   const { data: history } = useDriverOrdersHistory();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const { notifications, unreadCount } = useDriverNotificationStore();
 
   const handleEditProfile = useCallback(() => {
     router.push('/(driver)/profile/edit' as any);
@@ -73,7 +76,7 @@ export default function DriverProfile() {
   const menuItems = [
     { icon: 'truck' as const, label: 'My Deliveries', onPress: () => router.push('/(driver)/delivery-history' as any) },
     { icon: 'dollar-sign' as const, label: 'Earnings', onPress: () => router.push('/(driver)/(tabs)/earnings' as any) },
-    { icon: 'bell' as const, label: 'Notifications', onPress: () => router.push('/(driver)/(tabs)/notifications' as any), badge: 3 },
+    { icon: 'bell' as const, label: 'Notifications', onPress: () => router.push('/(driver)/(tabs)/notifications' as any), badge: unreadCount > 0 ? unreadCount : undefined },
     { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(driver)/settings' as any) },
   ];
 

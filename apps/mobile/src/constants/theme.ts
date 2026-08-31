@@ -1,86 +1,85 @@
 import { Platform } from 'react-native';
 
-// KhanaGo Premium Design System — Clean, Minimal, Slightly 3D, Apple-inspired
+// Premium Crimson Food Delivery App — Deep Crimson + Black + White Design System
 export const Colors = {
-  // Primary — deeper premium red
-  primary: '#B91C1C',
-  primaryDark: '#7F1D1D',
-  primaryLight: '#FEE2E2',
-  primaryBg: '#FEF2F2',
-  primaryMuted: '#FEF2F2',
-  primaryHover: '#991B1B',
+  // Primary — Deep Crimson
+  primary: '#B5122A',
+  primaryDark: '#7F0D1D',
+  primaryLight: '#D7193F',
+  primaryMuted: '#FDECEE',
+  primaryBg: '#FDECEE',
 
-  // Accent — warm amber for highlights
-  accent: '#F59E0B',
-  accentLight: '#FEF3C7',
+  // Secondary — Pure Black / Soft Black
+  secondary: '#0A0A0A',
+  secondarySoft: '#151515',
 
-  // Semantic
-  success: '#15803D',
-  successLight: '#DCFCE7',
-  successBg: '#F0FDF4',
-  error: '#B91C1C',
-  errorLight: '#FEE2E2',
+  // Rating Gold
+  ratingGold: '#F4B740',
+  ratingGoldLight: '#FEF9E7',
+
+  // Success
+  success: '#16834B',
+  successLight: '#D5F5E3',
+  successBg: '#E8F8F0',
+
+  // Error
+  error: '#DC2626',
+  errorLight: '#FEF2F2',
   errorBg: '#FEF2F2',
+
+  // Warning
   warning: '#D97706',
   warningLight: '#FEF3C7',
-  info: '#2563EB',
-  infoLight: '#EFF6FF',
 
-  // Surfaces — layered system
+  // Surfaces — Layered System (Level 1, 2, 3)
   white: '#FFFFFF',
-  background: '#FAFAFB',
-  backgroundAlt: '#F3F4F6',
-  backgroundElevated: '#FFFFFF',
+  background: '#F7F7F5',        // Level 1: Background
+  backgroundAlt: '#EEEEEB',     // Slightly darker background
+  backgroundElevated: '#FFFFFF', // Level 2: Cards
   surface: '#FFFFFF',
-  surfaceHover: '#F9FAFB',
-  surfacePressed: '#F3F4F6',
-  border: '#E5E7EB',
-  borderLight: '#F3F4F6',
-  borderMedium: '#D1D5DB',
-  overlay: 'rgba(15,23,42,0.4)',
+  surfaceHover: '#F7F7F5',
+  surfacePressed: '#EEEEEB',
+  border: '#E8E8E8',
+  borderLight: '#F0F0ED',
+  borderMedium: '#E8E8E8',
+  overlay: 'rgba(10,10,10,0.5)',
 
   // Text
-  textDark: '#0F172A',
-  textPrimary: '#111827',
-  textMedium: '#334155',
-  textSecondary: '#64748B',
-  textTertiary: '#94A3B8',
-  textLight: '#94A3B8',
-  textMuted: '#CBD5E1',
+  textDark: '#0A0A0A',          // Pure Black
+  textPrimary: '#151515',       // Soft Black
+  textMedium: '#333333',
+  textSecondary: '#666666',
+  textTertiary: '#999999',
+  textLight: '#CCCCCC',
+  textMuted: '#BBBBBB',
   textInverse: '#FFFFFF',
+  textOnPrimary: '#FFFFFF',
 
-  // Gradients metadata (for StyleSheet usage)
-  gradientPrimary: ['#B91C1C', '#991B1B'] as const,
-  gradientSurface: ['#FFFFFF', '#FAFAFB'] as const,
-  gradientHero: ['#FEF2F2', '#FFFFFF'] as const,
+  // Gradients
+  gradientPrimary: ['#B5122A', '#7F0D1D'] as const,
+  gradientPrimaryLight: ['#D7193F', '#B5122A'] as const,
+  gradientSurface: ['#FFFFFF', '#F7F7F5'] as const,
+  gradientHero: ['#7F0D1D', '#B5122A'] as const,
+  gradientDark: ['#0A0A0A', '#151515'] as const,
 
   // Glass
-  glass: 'rgba(255,255,255,0.7)',
-  glassBorder: 'rgba(255,255,255,0.5)',
-  glassDark: 'rgba(15,23,42,0.6)',
+  glass: 'rgba(255,255,255,0.9)',
+  glassBorder: 'rgba(255,255,255,0.3)',
+  glassDark: 'rgba(10,10,10,0.6)',
 
-  // Light/Dark compatibility
+  // Light/Dark compatibility (using light theme only for this premium app)
   light: {
-    text: '#0F172A',
-    background: '#FAFAFB',
-    backgroundElement: '#F3F4F6',
-    backgroundSelected: '#E5E7EB',
-    textSecondary: '#64748B',
+    text: '#0A0A0A',
+    background: '#F7F7F5',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#FDECEE',
+    textSecondary: '#666666',
     card: '#FFFFFF',
-    border: '#E5E7EB',
-  },
-  dark: {
-    text: '#F8FAFC',
-    background: '#0F172A',
-    backgroundElement: '#1E293B',
-    backgroundSelected: '#334155',
-    textSecondary: '#94A3B8',
-    card: '#1E293B',
-    border: '#334155',
+    border: '#E8E8E8',
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ThemeColor = keyof typeof Colors.light;
 
 export const Fonts = Platform.select({
   ios: {
@@ -104,17 +103,17 @@ export const Fonts = Platform.select({
 });
 
 export const Typography = {
-  displayLarge: { fontSize: 32, lineHeight: 38, fontWeight: '800' as const, letterSpacing: -0.8 },
-  displayMedium: { fontSize: 28, lineHeight: 34, fontWeight: '800' as const, letterSpacing: -0.6 },
-  titleLarge: { fontSize: 22, lineHeight: 28, fontWeight: '700' as const, letterSpacing: -0.4 },
-  titleMedium: { fontSize: 18, lineHeight: 24, fontWeight: '700' as const, letterSpacing: -0.2 },
-  titleSmall: { fontSize: 16, lineHeight: 22, fontWeight: '600' as const },
+  displayLarge: { fontSize: 34, lineHeight: 42, fontWeight: '800' as const, letterSpacing: -1.0 },
+  displayMedium: { fontSize: 28, lineHeight: 36, fontWeight: '800' as const, letterSpacing: -0.6 },
+  titleLarge: { fontSize: 22, lineHeight: 30, fontWeight: '700' as const, letterSpacing: -0.4 },
+  titleMedium: { fontSize: 18, lineHeight: 26, fontWeight: '700' as const, letterSpacing: -0.2 },
+  titleSmall: { fontSize: 16, lineHeight: 24, fontWeight: '600' as const },
   bodyLarge: { fontSize: 16, lineHeight: 24, fontWeight: '400' as const },
-  bodyMedium: { fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
-  bodySmall: { fontSize: 13, lineHeight: 18, fontWeight: '400' as const },
-  labelLarge: { fontSize: 14, lineHeight: 20, fontWeight: '600' as const, letterSpacing: 0.1 },
-  labelMedium: { fontSize: 12, lineHeight: 16, fontWeight: '600' as const, letterSpacing: 0.3 },
-  caption: { fontSize: 11, lineHeight: 14, fontWeight: '500' as const, letterSpacing: 0.4 },
+  bodyMedium: { fontSize: 14, lineHeight: 22, fontWeight: '400' as const },
+  bodySmall: { fontSize: 13, lineHeight: 20, fontWeight: '400' as const },
+  labelLarge: { fontSize: 14, lineHeight: 22, fontWeight: '600' as const, letterSpacing: 0.1 },
+  labelMedium: { fontSize: 12, lineHeight: 18, fontWeight: '600' as const, letterSpacing: 0.3 },
+  caption: { fontSize: 11, lineHeight: 16, fontWeight: '500' as const, letterSpacing: 0.4 },
 } as const;
 
 export const Spacing = {
@@ -137,17 +136,20 @@ export const Spacing = {
 } as const;
 
 export const Radius = {
-  xs: 6,
-  sm: 8,
-  md: 10,
-  lg: 14,
-  xl: 18,
-  '2xl': 22,
-  '3xl': 28,
+  xs: 8,
+  sm: 12,
+  md: 14,
+  lg: 18,
+  xl: 22,
+  '2xl': 24,
+  '3xl': 32,
   full: 9999,
 } as const;
 
-// Premium elevation — subtle 3D with layered shadows
+// Premium elevation — subtle 3D with layered soft shadows
+// Level 1: Background (no shadow)
+// Level 2: Cards — very soft shadow
+// Level 3: Floating controls — stronger shadow
 export const Shadow = {
   none: {
     shadowColor: 'transparent',
@@ -156,52 +158,62 @@ export const Shadow = {
     shadowRadius: 0,
     elevation: 0,
   },
+  // Level 2: Cards
   xs: {
-    shadowColor: '#0F172A',
+    shadowColor: '#0A0A0A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 1,
   },
   sm: {
-    shadowColor: '#0F172A',
+    shadowColor: '#0A0A0A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   md: {
-    shadowColor: '#0F172A',
+    shadowColor: '#0A0A0A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 4,
   },
+  // Level 3: Floating components
   lg: {
-    shadowColor: '#0F172A',
+    shadowColor: '#0A0A0A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 8,
   },
   xl: {
-    shadowColor: '#0F172A',
+    shadowColor: '#0A0A0A',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.10,
     shadowRadius: 28,
     elevation: 12,
   },
+  floating: {
+    shadowColor: '#0A0A0A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  // Primary accent shadows
   primary: {
-    shadowColor: '#B91C1C',
+    shadowColor: '#B5122A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.20,
     shadowRadius: 12,
     elevation: 6,
   },
   primaryLg: {
-    shadowColor: '#B91C1C',
+    shadowColor: '#B5122A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.24,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -218,7 +230,7 @@ export const Animation = {
 export const Layout = {
   maxWidth: 640,
   maxWidthWide: 800,
-  tabBarHeight: 62,
+  tabBarHeight: 72,
   headerHeight: 56,
   cardPadding: 16,
   screenPadding: 16,

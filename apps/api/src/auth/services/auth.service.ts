@@ -72,7 +72,7 @@ export class AuthService {
           verificationTokenExpiry: this.expiryInMinutes(10),
           isVerified: false,
         },
-        tx as any,
+        tx,
       );
 
       await this.mailService.sendVerificationCode(createdUser.email, otp);
@@ -88,7 +88,11 @@ export class AuthService {
         body: `Your account has been created as ${user.role}.`,
         data: { role: user.role },
       })
-      .catch((err) => this.logger.warn(`Failed to create welcome notification: ${err?.message}`));
+      .catch((err) =>
+        this.logger.warn(
+          `Failed to create welcome notification: ${err?.message}`,
+        ),
+      );
 
     return {
       message: 'Check your email for a verification code',

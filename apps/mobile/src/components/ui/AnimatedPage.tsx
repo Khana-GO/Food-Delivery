@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, ViewStyle } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInUp } from 'react-native-reanimated';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 
 interface Props {
   children: React.ReactNode;
@@ -10,13 +9,8 @@ interface Props {
   slide?: boolean;
 }
 
-export default function AnimatedPage({ children, style, delay = 0, duration = 180, slide = false }: Props) {
-  const entering = slide ? SlideInUp.duration(duration).delay(delay).springify().damping(18) : FadeIn.duration(duration).delay(delay);
-  return (
-    <Animated.View entering={entering} exiting={FadeOut.duration(140)} style={[styles.base, style]}>
-      {children}
-    </Animated.View>
-  );
+export default function AnimatedPage({ children, style }: Props) {
+  return <View style={[styles.base, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

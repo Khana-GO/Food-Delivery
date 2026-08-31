@@ -10,13 +10,20 @@ interface Props {
   quantity?: number;
   onAdd: (item: MenuItem) => void;
   onRemove?: (itemId: string) => void;
+  onPress?: (item: MenuItem) => void;
 }
 
-export const MenuItemCard = ({ item, quantity = 0, onAdd, onRemove }: Props) => {
+export const MenuItemCard = ({ item, quantity = 0, onAdd, onRemove, onPress }: Props) => {
   const isAvailable = item.isAvailable !== false;
   return (
     <View style={styles.card}>
-      <View style={styles.imageWrap}>
+      <TouchableOpacity
+        activeOpacity={0.88}
+        onPress={() => onPress?.(item)}
+        disabled={!onPress}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+      >
+        <View style={styles.imageWrap}>
         {item.imageUrl ? (
           <Image source={{ uri: item.imageUrl }} style={styles.image} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'LHB7%L%MRjj[~q%MofRj00ayD%WB' }} />
         ) : (
@@ -47,6 +54,7 @@ export const MenuItemCard = ({ item, quantity = 0, onAdd, onRemove }: Props) => 
           </View>
         </View>
       </View>
+      </TouchableOpacity>
 
       <View style={{ marginLeft: 8, alignItems: 'center' }}>
         {isAvailable ? (

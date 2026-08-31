@@ -398,3 +398,37 @@ export interface CreateOrderPayload {
   paymentMethod: 'ONLINE' | 'OFFLINE';
   paymentId?: string;
 }
+
+
+export interface AdminOrderStats {
+  totalOrders: number;
+  totalRevenue: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  preparingOrders: number;
+  readyOrders: number;
+  pickedUpOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  todayOrders: number;
+  todayRevenue: number;
+  thisWeekOrders: number;
+  thisWeekRevenue: number;
+  thisMonthOrders: number;
+  thisMonthRevenue: number;
+  dailyTrend: { date: string; orders: number; revenue: number }[];
+  revenueTrend: { date: string; orders: number; revenue: number }[];
+}
+
+export interface AdminOrderFilters {
+  page?: number;
+  limit?: number;
+  status?: string;
+  restaurantId?: string;
+  driverId?: string;
+  customerId?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}

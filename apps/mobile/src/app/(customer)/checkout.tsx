@@ -13,7 +13,6 @@ import { OrderSummary } from '@/components/payment/OrderSummary';
 import { orderService } from '@/services/customer/order.service';
 import { cartService } from '@/stores/customer/cart.service';
 import { getApiErrorMessage } from '@/lib/api-error';
-import AnimatedPage from '@/components/ui/AnimatedPage';
 
 export default function CheckoutScreen() {
   const { items, totalPrice, restaurantId } = useCartStore();
@@ -159,9 +158,8 @@ export default function CheckoutScreen() {
   }
 
   return (
-    <AnimatedPage slide duration={200} style={{ flex: 1, backgroundColor: '#FAFAFB' }}>
-      <View className="flex-1 bg-gray-50">
-        <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100" style={{ shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
+    <View className="flex-1 bg-gray-50">
+      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100" style={{ shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
           <View className="flex-row items-center gap-3">
             <TouchableOpacity onPress={() => router.back()} className="p-1">
               <Feather name="arrow-left" size={24} color="#1A1A1A" />
@@ -267,6 +265,5 @@ export default function CheckoutScreen() {
         {belowMinimum && <Text className="mt-2 text-xs text-center text-red-500">Add more items to meet minimum</Text>}
       </View>
     </View>
-    </AnimatedPage>
   );
 }
