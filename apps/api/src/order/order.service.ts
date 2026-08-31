@@ -903,9 +903,11 @@ export class OrdersService {
         }
         // Notify available drivers when order becomes ready (or confirmed) and unassigned
         if (
-          [OrderStatus.READY, OrderStatus.CONFIRMED, OrderStatus.PREPARING].includes(
-            dto.orderStatus as OrderStatus,
-          ) &&
+          [
+            OrderStatus.READY,
+            OrderStatus.CONFIRMED,
+            OrderStatus.PREPARING,
+          ].includes(dto.orderStatus) &&
           !order.driverId &&
           !updated.driverId
         ) {
@@ -918,7 +920,9 @@ export class OrdersService {
             }
             // Also create a lightweight notification for offline drivers (optional) – we avoid spamming all drivers
             // Instead, drivers will see via polling + websocket. For demo, we log.
-            this.logger.log(`Broadcast new available order ${id} status ${dto.orderStatus} to drivers`);
+            this.logger.log(
+              `Broadcast new available order ${id} status ${dto.orderStatus} to drivers`,
+            );
           } catch (e: any) {
             this.logger.warn(`driver broadcast failed: ${e.message}`);
           }

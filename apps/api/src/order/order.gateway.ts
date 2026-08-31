@@ -185,6 +185,8 @@ export class OrderGateway
   emitNewAvailableOrder(order: any) {
     this.server.to('drivers:available').emit('new-available-order', order);
     this.server.to('drivers:available').emit('order-available', order);
-    this.logger.log(`Broadcast new available order ${order.id} to drivers:available`);
+    this.logger.log(
+      `Broadcast new available order ${order.id} to drivers:available`,
+    );
   }
 }
