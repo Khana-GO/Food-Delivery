@@ -8,12 +8,14 @@ export const useAdminOrder = (id: string) => {
   return useQuery({
     queryKey: ['admin-order', id],
     queryFn: async () => {
-      const data = await adminOrderService.getOrder(id);
-      setCurrentOrder(data);
-      return data;
-    },
-    onError: (error: any) => {
-      setError(error?.response?.data?.message || 'Failed to load order');
+      try {
+        const data = await adminOrderService.getOrder(id);
+        setCurrentOrder(data);
+        return data;
+      } catch (error: any) {
+        setError(error?.response?.data?.message || 'Failed to load order');
+        throw error;
+      }
     },
     enabled: !!id,
     staleTime: 30 * 1000,

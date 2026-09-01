@@ -26,6 +26,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@food_delivery/types';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { TrackingGateway } from './tracking.gateway';
+import type { TrackingSnapshot } from './tracking.service';
 
 @ApiTags('Tracking')
 @ApiBearerAuth()
@@ -37,14 +38,12 @@ export class TrackingController {
     private readonly trackingGateway: TrackingGateway,
   ) {}
 
-  // ─── UPDATE DRIVER LOCATION (REST fallback, WS preferred) ───
+  // ─── UPDATE DRIVER LOCATION ───
   @Post('location')
-  @Roles(UserRole.DRIVER, UserRole.ADMIN)
-  @Throttle({ default: { limit: 30, ttl: 60_000 } }) // 30 req/min per driver
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Update driver location (throttled 30/min, prefer WS)',
-  })
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Update driver location for an order' })
+  @Roles(UserRole.DRIVER, UserRole.ADMIN)
   async updateLocation(
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateLocationDto,
@@ -76,23 +75,6 @@ export class TrackingController {
     return result;
   }
 
-  // ─── GET DRIVER LOCATION ───
-  @Get('location/:orderId')
-  @ApiOperation({
-    summary: 'Get current driver location for an order (authz enforced)',
-  })
-  async getDriverLocation(
-    @CurrentUser() user: JwtPayload,
-    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
-  ) {
-    await this.trackingService.assertCanAccessOrder(
-      orderId,
-      user.sub,
-      user.role!,
-    );
-    return this.trackingService.getDriverLocation(orderId);
-  }
-
   // ─── GET LOCATION HISTORY ───
   @Get('location/:orderId/history')
   @ApiOperation({ summary: 'Get driver location history for an order' })
@@ -120,7 +102,7 @@ export class TrackingController {
   async getOrderTrackingData(
     @CurrentUser() user: JwtPayload,
     @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
-  ): Promise<any> {
+  ): Promise<TrackingSnapshot> {
     // Permission enforced inside service
     return this.trackingService.getOrderTrackingData(
       orderId,

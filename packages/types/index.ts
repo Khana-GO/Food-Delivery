@@ -432,3 +432,89 @@ export interface AdminOrderFilters {
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
 }
+
+
+export interface PlatformMetrics {
+  totalUsers: number;
+  totalRestaurants: number;
+  totalDrivers: number;
+  totalOrders: number;
+  totalRevenue: number;
+  ordersToday: number;
+  revenueToday: number;
+  ordersThisWeek: number;
+  revenueThisWeek: number;
+  ordersThisMonth: number;
+  revenueThisMonth: number;
+  orderTrend: { date: string; orders: number; revenue: number }[];
+  growth: {
+    orders: number;
+    revenue: number;
+    users: number;
+    restaurants: number;
+  };
+}
+
+export interface RestaurantAnalytics {
+  restaurantId: string;
+  name: string;
+  totalOrders: number;
+  totalRevenue: number;
+  averageRating: number;
+  totalReviews: number;
+  growth: number;
+  dailyTrend: { date: string; orders: number }[];
+}
+
+export interface DriverAnalytics {
+  driverId: string;
+  name: string;
+  totalDeliveries: number;
+  totalEarnings: number;
+  averageRating: number;
+  completedDeliveries: number;
+  cancelledDeliveries: number;
+  acceptanceRate: number;
+  onTimeRate: number;
+  growth: number;
+}
+
+
+
+export interface DriverLocation {
+  latitude: number;
+  longitude: number;
+  lastUpdatedAt: string;
+  isOnline: boolean;
+  speed?: number;
+}
+
+export interface RouteData {
+  distance: number; // in meters
+  duration: number; // in seconds
+  geometry: number[][]; // [[lat, lng], [lat, lng], ...]
+}
+
+export interface OrderTrackingData {
+  orderId: string;
+  driver: DriverLocation | null;
+  route: RouteData | null;
+  restaurant: { lat: number; lng: number };
+  delivery: { lat: number; lng: number; address?: string };
+  orderStatus: string;
+  estimatedDeliveryTime?: string;
+  estimatedDuration?: number;
+  estimatedDistance?: number;
+  totalAmount: number;
+  deliveryAddress: string;
+  createdAt: string;
+  history?: Array<{ lat: number; lng: number; recordedAt: string }>;
+}
+
+export interface ETAInfo {
+  eta: string; // estimated time of arrival as string
+  minutes: number;
+  distance: string;
+  traffic: 'light' | 'moderate' | 'heavy';
+  updatedAt: Date;
+}

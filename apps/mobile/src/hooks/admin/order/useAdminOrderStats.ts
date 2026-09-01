@@ -8,12 +8,14 @@ export const useAdminOrderStats = () => {
   return useQuery({
     queryKey: ['admin-order-stats'],
     queryFn: async () => {
-      const data = await adminOrderService.getStats();
-      setStats(data);
-      return data;
-    },
-    onError: (error: any) => {
-      setError(error?.response?.data?.message || 'Failed to load stats');
+      try {
+        const data = await adminOrderService.getStats();
+        setStats(data);
+        return data;
+      } catch (error: any) {
+        setError(error?.response?.data?.message || 'Failed to load stats');
+        throw error;
+      }
     },
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,

@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   error: { backgroundColor: Colors.errorLight, borderColor: '#FECACA' },
   warning: { backgroundColor: Colors.warningLight, borderColor: '#FDE68A' },
   primary: { backgroundColor: Colors.primaryLight, borderColor: '#FECACA' },
-  info: { backgroundColor: Colors.infoLight, borderColor: '#DBEAFE' },
+  info: { backgroundColor: "#6366F1", borderColor: "#DBEAFE" },
   neutral: { backgroundColor: '#F8FAFC', borderColor: Colors.border },
   outline: {
     backgroundColor: 'transparent',

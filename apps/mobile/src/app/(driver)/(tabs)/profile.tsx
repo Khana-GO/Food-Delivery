@@ -118,7 +118,7 @@ export default function DriverProfile() {
         >
           <View className="flex-row items-center justify-center gap-2">
             <Feather name="log-out" size={20} color="#EF4444" />
-            <Text className="text-base font-semibold text-red-500">
+            <Text className="text-base font-semibold text-white">
               {isAuthenticating ? 'Logging out...' : 'Logout'}
             </Text>
           </View>
@@ -145,7 +145,7 @@ export default function DriverProfile() {
                 <TouchableOpacity className="flex-1 py-3 bg-gray-100 rounded-xl" onPress={() => setShowLogoutModal(false)}>
                   <Text className="font-semibold text-center text-black">Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity className="flex-1 py-3 bg-red-500 rounded-xl" onPress={handleLogout} disabled={isAuthenticating}>
+                <TouchableOpacity className="flex-1 py-3 bg-primary rounded-xl" onPress={handleLogout} disabled={isAuthenticating}>
                   {isAuthenticating ? <ActivityIndicator size="small" color="#FFF" /> : <Text className="font-semibold text-center text-white">Logout</Text>}
                 </TouchableOpacity>
               </View>

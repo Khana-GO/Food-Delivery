@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAvailableOrders } from '@/hooks/driver/useAvailableOrders';
 import { useAcceptDelivery } from '@/hooks/driver/useAcceptDelivery';

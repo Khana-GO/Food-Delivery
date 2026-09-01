@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, StyleSheet, Animated, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Animated, useWindowDimensions, ActivityIndicator, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -477,7 +477,7 @@ export default function HomeScreen() {
                           <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
                         </View>
                         <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.96)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
-                          <Feather name="star" size={10} color={Colors.accent} />
+                          <Feather name="star" size={10} color="#FBBFBC" />
                           <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textDark }}>4.6</Text>
                         </View>
                       </View>

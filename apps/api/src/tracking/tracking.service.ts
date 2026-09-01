@@ -27,7 +27,7 @@ import * as schema from '../db/schema';
 import { CacheService } from '../redis/cache.service';
 import axios from 'axios';
 
-interface TrackingSnapshot {
+export interface TrackingSnapshot {
   orderId: string;
   driver: DriverLocationResponseDto | null;
   route: RouteResponseDto | null;

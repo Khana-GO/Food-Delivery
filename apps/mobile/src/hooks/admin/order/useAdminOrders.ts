@@ -9,12 +9,14 @@ export const useAdminOrders = (filters?: AdminOrderFilters) => {
   return useQuery({
     queryKey: ['admin-orders', filters],
     queryFn: async () => {
-      const data = await adminOrderService.getAllOrders(filters);
-      setOrders(data);
-      return data;
-    },
-    onError: (error: any) => {
-      setError(error?.response?.data?.message || 'Failed to load orders');
+      try {
+        const data = await adminOrderService.getAllOrders(filters);
+        setOrders(data);
+        return data;
+      } catch (error: any) {
+        setError(error?.response?.data?.message || 'Failed to load orders');
+        throw error;
+      }
     },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: false,

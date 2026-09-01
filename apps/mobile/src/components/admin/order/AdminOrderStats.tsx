@@ -7,8 +7,17 @@ import { Colors } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
+interface AdminOrderStats {
+  totalOrders: number;
+  totalRevenue: number;
+  todayOrders: number;
+  pendingOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+}
+
 export const AdminOrderStats = () => {
-  const { data: stats, isLoading } = useAdminOrderStats();
+  const { data: stats, isLoading } = useAdminOrderStats() as { data: AdminOrderStats; isLoading: boolean };
 
   if (isLoading) {
     return <ActivityIndicator size="large" color="#E23744" className="py-8" />;
@@ -16,7 +25,7 @@ export const AdminOrderStats = () => {
 
   if (!stats) return null;
 
-  const statCards = [
+const statCards = [
     { label: 'Total Orders', value: stats.totalOrders, icon: 'shopping-bag', color: '#E23744' },
     { label: 'Revenue', value: `Rs. ${stats.totalRevenue.toLocaleString()}`, icon: 'dollar-sign', color: '#16A34A' },
     { label: 'Today', value: stats.todayOrders, icon: 'clock', color: '#2563EB' },

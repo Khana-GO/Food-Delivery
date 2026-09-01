@@ -24,6 +24,7 @@ import { DashboardModule } from './dasboard/dasboard.module';
 import { CartModule } from './cart/cart.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { PaymentModule } from './payment/payment.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { PaymentModule } from './payment/payment.module';
     CartModule,
     AddressesModule,
     PaymentModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

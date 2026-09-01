@@ -42,6 +42,9 @@ export const trackingService = {
       estimatedDeliveryTime: d.estimatedDeliveryTime ?? null,
       estimatedDistance: d.estimatedDistance ?? d.route?.distance ?? null,
       estimatedDuration: d.estimatedDuration ?? d.route?.duration ?? null,
+      totalAmount: d.totalAmount ?? 0,
+      deliveryAddress: d.deliveryAddress ?? d.delivery?.address ?? '',
+      createdAt: d.createdAt ?? new Date().toISOString(),
       history: d.history ?? [],
     };
   },

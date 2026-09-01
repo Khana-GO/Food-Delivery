@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,17 +55,17 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoEmoji}>🍜</Text>
-            </View>
-            <Text style={styles.appName}>
-              <Text style={styles.appNameBlack}>Khana</Text>
-              <Text style={styles.appNameOrange}>Go</Text>
-            </Text>
-            <Text style={styles.appTagline}>Delicious Food, Delivered Fast.</Text>
-          </View>
+<View style={styles.logoSection}>
+                <Image
+                  source={require('@/assets/images/logo/logo.png')}
+                  style={styles.logoImage}
+                />
+                <Text style={styles.appName}>
+                  <Text style={styles.appNameBlack}>Khana</Text>
+                  <Text style={styles.appNameOrange}>Go</Text>
+                </Text>
+                <Text style={styles.appTagline}>Delicious Food, Delivered Fast.</Text>
+              </View>
 
           {/* Form */}
           <View style={styles.form}>
@@ -158,6 +159,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   logoEmoji: { fontSize: 30 },
+  logoImage: { width: 64, height: 64, resizeMode: 'contain' },
   appName: { fontSize: 26, marginBottom: 4 },
   appNameBlack: { color: Colors.textDark, fontWeight: '800' },
   appNameOrange: { color: Colors.primary, fontWeight: '800' },

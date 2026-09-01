@@ -25,6 +25,9 @@ export interface OrderTrackingData {
   estimatedDeliveryTime: string | null;
   estimatedDistance: number | null;
   estimatedDuration: number | null;
+  totalAmount: number;
+  deliveryAddress: string;
+  createdAt: string;
   history?: Array<{ lat: number; lng: number; recordedAt: string }>;
 }
 

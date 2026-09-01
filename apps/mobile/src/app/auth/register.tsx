@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,17 +54,17 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoEmoji}>🍜</Text>
-            </View>
-            <Text style={styles.appName}>
-              <Text style={styles.appNameBlack}>Khana</Text>
-              <Text style={styles.appNameOrange}>Go</Text>
-            </Text>
-            <Text style={styles.appTagline}>Delicious Food, Delivered Fast.</Text>
-          </View>
+<View style={styles.logoSection}>
+                <Image
+                  source={require('@/assets/images/logo/logo.png')}
+                  style={styles.logoImage}
+                />
+                <Text style={styles.appName}>
+                  <Text style={styles.appNameBlack}>Khana</Text>
+                  <Text style={styles.appNameOrange}>Go</Text>
+                </Text>
+                <Text style={styles.appTagline}>Delicious Food, Delivered Fast.</Text>
+              </View>
 
           {/* Form */}
           <Text style={styles.title}>Create Account</Text>
@@ -180,6 +181,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   logoEmoji: { fontSize: 26 },
+  logoImage: { width: 56, height: 56, resizeMode: 'contain' },
   appName: { fontSize: 22, marginBottom: 3 },
   appNameBlack: { color: Colors.textDark, fontWeight: '800' },
   appNameOrange: { color: Colors.primary, fontWeight: '800' },

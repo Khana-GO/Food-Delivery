@@ -71,7 +71,6 @@ export default function DriverNotificationsScreen() {
             notification={item}
             onPress={handlePress}
             onMarkAsRead={markAsRead}
-            getTimeAgo={getTimeAgo}
           />
         )}
         keyExtractor={(item) => item.id}

@@ -78,26 +78,26 @@ export function useTabBarConstants() {
   const isCompact = width < 375;
   const isLandscape = width > height && !isTablet;
 
-  const iconSize = isTablet ? 24 : isVeryCompact ? 20 : isCompact ? 21 : 22;
-  const labelSize = isTablet ? 11 : isVeryCompact ? 9 : isCompact ? 9.5 : 10;
+  const iconSize = isTablet ? 28 : isVeryCompact ? 22 : isCompact ? 23 : 24;
+  const labelSize = isTablet ? 12 : isVeryCompact ? 9.5 : isCompact ? 10 : 11;
 
-  const baseBarHeight = isTablet ? 78 : isLandscape ? 56 : isVeryCompact ? 66 : isCompact ? 68 : 70;
+  const baseBarHeight = isTablet ? 88 : isLandscape ? 64 : isVeryCompact ? 72 : isCompact ? 70 : 74;
 
   const tabBarStyle: StyleProp<ViewStyle> = {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: Colors.border,
     height: Platform.OS === 'ios' ? baseBarHeight + insets.bottom : baseBarHeight + Math.max(insets.bottom, 0),
     minHeight: baseBarHeight + Math.max(insets.bottom, 0),
-    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 8 : 10),
-    paddingTop: isTablet ? 12 : isVeryCompact ? 10 : 12,
-    paddingHorizontal: isTablet ? 16 : isVeryCompact ? 8 : 12,
+    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 6 : isCompact ? 8 : 10),
+    paddingTop: isTablet ? 14 : isVeryCompact ? 10 : isCompact ? 12 : 14,
+    paddingHorizontal: isTablet ? 20 : isVeryCompact ? 10 : isCompact ? 12 : 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: 28,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    borderRadius: 32,
+    marginHorizontal: isTablet ? 24 : isVeryCompact ? 8 : isCompact ? 12 : 16,
+    marginBottom: isVeryCompact ? 6 : isCompact ? 8 : 10,
     marginTop: 0,
     ...Shadow.floating,
   };
