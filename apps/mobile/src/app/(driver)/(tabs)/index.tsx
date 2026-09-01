@@ -11,6 +11,8 @@ import PremiumCard from '@/components/ui/PremiumCard';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDriverNotifications } from '@/hooks/driver/useDriverNotifications';
+import { useDriverNotificationStore } from '@/stores/driver/driverNotificationStore';
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -18,6 +20,8 @@ export default function DriverDashboard() {
   const { data: activeOrder, isLoading: loadingActive } = useDriverActiveOrder();
   const { data: earnings } = useDriverEarnings();
   const { mutate: acceptDelivery, isPending } = useAcceptDelivery();
+  useDriverNotifications();
+  const { unreadCount } = useDriverNotificationStore();
 
   const onRefresh = useCallback(() => {
     refetchAvailable();
@@ -66,7 +70,12 @@ export default function DriverDashboard() {
               </View>
               <View>
                 <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '700', letterSpacing: 0.8 }}>WELCOME BACK</Text>
-                <Text style={{ color: Colors.white, fontSize: 22, fontWeight: '800', marginTop: 4 }}>{user?.firstName || 'Driver'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <Text style={{ color: Colors.white, fontSize: 22, fontWeight: '800' }}>{user?.firstName || 'Driver'}</Text>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
+                    <Text style={{ color: Colors.white, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>DRIVER</Text>
+                  </View>
+                </View>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 }}>{activeOrder ? `Delivering #${activeOrder.id.slice(0, 6)}` : 'Ready to deliver?'}</Text>
               </View>
             </View>
@@ -76,12 +85,27 @@ export default function DriverDashboard() {
               activeOpacity={0.7}
             >
               <Feather name="bell" size={20} color={Colors.white} />
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 5,
+                    right: 5,
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: Colors.white,
+                    borderWidth: 1.5,
+                    borderColor: Colors.primary,
+                  }}
+                />
+              )}
             </TouchableOpacity>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
             <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
-              <Feather name="dollar-sign" size={18} color={Colors.white} />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.white }}>₹</Text>
               <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800', marginTop: 8 }}>Rs. {earnings?.today ?? 0}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 }}>Today</Text>
             </View>
@@ -90,10 +114,10 @@ export default function DriverDashboard() {
               <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800', marginTop: 8 }}>{earnings?.deliveries ?? 0}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 }}>Deliveries</Text>
             </View>
-            <View style={{ flex: 1, backgroundColor: Colors.white, borderRadius: Radius.xl, padding: 16, ...Shadow.sm }}>
-              <Feather name="truck" size={18} color={Colors.secondary} />
-              <Text style={{ color: Colors.textDark, fontSize: 20, fontWeight: '800', marginTop: 8 }}>{orders?.length ?? 0}</Text>
-              <Text style={{ color: Colors.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 2 }}>Available</Text>
+            <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+              <Feather name="truck" size={18} color={Colors.white} />
+              <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800', marginTop: 8 }}>{orders?.length ?? 0}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 }}>Available</Text>
             </View>
           </View>
         </View>
@@ -122,16 +146,17 @@ export default function DriverDashboard() {
               </View>
             ) : (
               <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                  <Feather name="inbox" size={28} color={Colors.primary} />
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>
+                  <Feather name="inbox" size={28} color={Colors.white} />
                 </View>
                 <Text style={{ color: Colors.textTertiary, fontSize: 14, marginTop: 10, fontWeight: '600' }}>No active delivery</Text>
                 <TouchableOpacity
                   onPress={() => router.push('/(driver)/(tabs)/available-orders' as any)}
-                  style={{ marginTop: 10, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full, backgroundColor: Colors.primaryLight, borderWidth: 1, borderColor: Colors.primaryLight }}
+                  style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full, backgroundColor: Colors.primary }}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 13 }}>Find Orders</Text>
+                  <Feather name="search" size={14} color={Colors.white} />
+                  <Text style={{ color: Colors.white, fontWeight: '700', fontSize: 13 }}>Find Orders</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -150,8 +175,8 @@ export default function DriverDashboard() {
             <View style={{ padding: 20, alignItems: 'center' }}><ActivityIndicator color={Colors.primary} /></View>
           ) : previewOrders.length === 0 ? (
             <PremiumCard elevation="sm" style={{ alignItems: 'center', paddingVertical: 28 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="truck" size={28} color={Colors.primary} />
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>
+                <Feather name="truck" size={28} color={Colors.white} />
               </View>
               <Text style={{ color: Colors.textTertiary, fontWeight: '600', marginTop: 10 }}>No orders right now</Text>
               <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 4 }}>Pull to refresh</Text>

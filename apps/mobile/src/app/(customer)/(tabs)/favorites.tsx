@@ -9,7 +9,7 @@ import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import { RestaurantCard } from '@/components/customer/RestaurantCard';
 import EmptyState from '@/components/ui/EmptyState';
 import PremiumCard from '@/components/ui/PremiumCard';
-import { Colors, Shadow } from '@/constants/theme';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function FavoritesScreen() {
   const { refetch, isRefetching } = useFavorites();
@@ -29,12 +29,12 @@ export default function FavoritesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
           <Text style={styles.title}>Favorites</Text>
           <Text style={styles.subtitle}>{favorites.length === 0 ? 'Your favorite restaurants' : `${favorites.length} ${favorites.length === 1 ? 'restaurant' : 'restaurants'} saved`}</Text>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -80,9 +80,9 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0', ...Shadow.xs },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' },
+  header: { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 32, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   errorBox: { marginHorizontal: 16, marginTop: 12, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 12, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'center' },
   errorText: { flex: 1, fontSize: 13, color: '#991B1B', fontWeight: '500' },
 });

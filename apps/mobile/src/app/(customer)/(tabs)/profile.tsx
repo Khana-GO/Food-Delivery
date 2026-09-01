@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, Alert, Modal, Pressable, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUploadProfileImage, useDeleteProfileImage } from '@/hooks/user';
 import { ProfileHeader } from '@/components/customer/ProfileHeader';
@@ -110,15 +109,13 @@ export default function CustomerProfile() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
-          <ProfileHeader
-            user={user}
-            onEditPress={handleEditProfile}
-            onImagePress={handlePickImage}
-            onDeleteImage={handleDeleteImage}
-            isUploading={isUploading || isDeleting}
-          />
-        </SafeAreaView>
+        <ProfileHeader
+          user={user}
+          onEditPress={handleEditProfile}
+          onImagePress={handlePickImage}
+          onDeleteImage={handleDeleteImage}
+          isUploading={isUploading || isDeleting}
+        />
 
         <AnimatedPage delay={30} slide>
           {/* Stats — real data */}
@@ -144,7 +141,7 @@ export default function CustomerProfile() {
               activeOpacity={0.85}
               style={styles.logoutBtn}
             >
-              <Feather name="log-out" size={16} color="#EF4444" />
+              <Feather name="log-out" size={16} color="#FFFFFF" />
               <Text style={styles.logoutText}>{isAuthenticating ? 'Logging out...' : 'Logout'}</Text>
             </TouchableOpacity>
 
@@ -179,7 +176,7 @@ export default function CustomerProfile() {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background, gap: 12 },
   loadingText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 16 },
+  statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: -16 },
   statCard: { flex: 1, alignItems: 'center', paddingVertical: 16 } as any,
   statValue: { fontSize: 20, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
   statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
@@ -189,13 +186,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginTop: 14,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#DC2626',
     paddingVertical: 14,
     borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: '#FECACA',
   },
-  logoutText: { color: '#EF4444', fontWeight: '700', fontSize: 14 },
+  logoutText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   version: { textAlign: 'center', fontSize: 11, color: Colors.textTertiary, marginTop: 14, fontWeight: '500' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   modalCard: {

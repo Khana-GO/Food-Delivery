@@ -103,7 +103,24 @@ export default function DriverEditProfile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        <View style={{ backgroundColor: Colors.primary, paddingTop: 52, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
+        <View style={{ backgroundColor: Colors.primary, paddingTop: 48, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.25)',
+              marginBottom: 12,
+            }}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={20} color={Colors.white} />
+          </TouchableOpacity>
           <View style={{ alignItems: 'center' }}>
             <View style={{ position: 'relative', marginBottom: 16 }}>
               <View style={{
@@ -164,10 +181,17 @@ export default function DriverEditProfile() {
               )}
             </View>
 
-            <Text style={{ fontSize: 22, fontWeight: '800', color: Colors.white, marginBottom: 4 }}>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: Colors.white, marginBottom: 4, textAlign: 'center' }} numberOfLines={1}>
               {formData.firstName} {formData.lastName}
             </Text>
-            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>{formData.email}</Text>
+            <Text
+              selectable
+              style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', textAlign: 'center', paddingHorizontal: 16 }}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+            >
+              {formData.email}
+            </Text>
 
             {isRemoving && (
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, paddingHorizontal: 20 }}>
@@ -236,21 +260,62 @@ export default function DriverEditProfile() {
 
               <View>
                 <Text style={{ ...Typography.labelMedium, color: Colors.textSecondary, marginBottom: 6 }}>Email</Text>
-                <TextInput
+                <View
                   style={{
                     backgroundColor: Colors.backgroundAlt,
                     borderWidth: 1,
                     borderColor: Colors.borderLight,
                     borderRadius: Radius.lg,
-                    paddingHorizontal: 16,
+                    paddingHorizontal: 14,
                     paddingVertical: 14,
-                    fontSize: 16,
-                    color: Colors.textMuted,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
                   }}
-                  value={formData.email}
-                  editable={false}
-                  placeholder="Email"
-                />
+                >
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: Colors.white,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: Colors.borderLight,
+                    }}
+                  >
+                    <Feather name="mail" size={14} color={Colors.textSecondary} />
+                  </View>
+                  <Text
+                    selectable
+                    style={{
+                      flex: 1,
+                      fontSize: 14,
+                      color: Colors.textDark,
+                      fontWeight: '500',
+                    }}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {formData.email || 'No email'}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: Colors.white,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: Radius.full,
+                      borderWidth: 1,
+                      borderColor: Colors.borderLight,
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textTertiary, letterSpacing: 0.5 }}>LOCKED</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 6, lineHeight: 14 }}>
+                  Email cannot be changed. Contact support if needed.
+                </Text>
               </View>
 
               <View>

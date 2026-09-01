@@ -21,6 +21,7 @@ import { useDriverOrdersHistory } from '@/hooks/driver/useDriverOrdersHistory';
 import { DriverProfileHeader } from '@/components/driver/DriverProfileHeader';
 import { DriverStatsCard } from '@/components/driver/DriverStatsCard';
 import { ProfileMenuItem } from '@/components/customer/ProfileMenuItem';
+import { Colors } from '@/constants/theme';
 import * as ImagePicker from 'expo-image-picker';
 import { useDriverNotificationStore } from '@/stores/driver/driverNotificationStore';
 
@@ -74,8 +75,9 @@ export default function DriverProfile() {
   }, [logout]);
 
   const menuItems = [
+    { icon: 'edit-2' as const, label: 'Edit Profile', onPress: () => router.push('/(driver)/profile/edit' as any) },
     { icon: 'truck' as const, label: 'My Deliveries', onPress: () => router.push('/(driver)/delivery-history' as any) },
-    { icon: 'dollar-sign' as const, label: 'Earnings', onPress: () => router.push('/(driver)/(tabs)/earnings' as any) },
+    { icon: 'credit-card' as const, label: 'Earnings', onPress: () => router.push('/(driver)/(tabs)/earnings' as any), customIcon: <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.primary }}>₹</Text> },
     { icon: 'bell' as const, label: 'Notifications', onPress: () => router.push('/(driver)/(tabs)/notifications' as any), badge: unreadCount > 0 ? unreadCount : undefined },
     { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(driver)/settings' as any) },
   ];
@@ -107,24 +109,27 @@ export default function DriverProfile() {
 
         <View className="mx-4 mt-4 overflow-hidden bg-white border border-gray-100 rounded-2xl">
           {menuItems.map((item) => (
-            <ProfileMenuItem key={item.label} {...item} />
+            <ProfileMenuItem key={item.label} {...item} customIcon={(item as any).customIcon} />
           ))}
         </View>
 
         <TouchableOpacity
-          className="py-4 mx-4 mt-4 border border-red-200 bg-red-50 rounded-xl"
+          className="py-4 mx-4 mt-4 rounded-xl"
+          style={{ backgroundColor: '#DC2626' }}
           onPress={() => setShowLogoutModal(true)}
           disabled={isAuthenticating}
         >
           <View className="flex-row items-center justify-center gap-2">
-            <Feather name="log-out" size={20} color="#EF4444" />
+            <Feather name="log-out" size={20} color="#FFFFFF" />
             <Text className="text-base font-semibold text-white">
               {isAuthenticating ? 'Logging out...' : 'Logout'}
             </Text>
           </View>
         </TouchableOpacity>
 
-        <Text className="mt-4 mb-6 text-xs text-center text-gray-400">KhanaGo Driver v1.0.0</Text>
+        <View className="px-4 mt-4 mb-6">
+          <Text className="text-xs text-center text-gray-400">KhanaGo Driver v1.0.0</Text>
+        </View>
       </ScrollView>
 
       {/* Logout Modal */}

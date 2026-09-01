@@ -26,12 +26,12 @@ export default function Orders() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
           <Text style={styles.title}>Orders</Text>
           <Text style={styles.subtitle}>{orders.length} {orders.length === 1 ? 'order' : 'orders'} • Track and reorder</Text>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
 
       {orders.length === 0 ? (
         <EmptyState icon="shopping-bag" title="No orders yet" description="Your orders will appear here. Start exploring!" actionLabel="Explore" onAction={() => router.push('/(customer)/(tabs)/explore' as any)} />
@@ -76,9 +76,9 @@ export default function Orders() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0', ...Shadow.xs },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' },
+  header: { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 32, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1 },
   badgeSuccess: { backgroundColor: '#DCFCE7', borderColor: '#BBF7D0' },
   badgeWarn: { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' },

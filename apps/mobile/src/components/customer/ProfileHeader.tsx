@@ -52,12 +52,12 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
 
         <View style={styles.actions}>
           <TouchableOpacity onPress={onEditPress} activeOpacity={0.85} style={styles.editBtn}>
-            <Feather name="edit-2" size={13} color={Colors.primary} />
+            <Feather name="edit-2" size={13} color={Colors.white} />
             <Text style={styles.editText}>Edit Profile</Text>
           </TouchableOpacity>
           {hasImage && onDeleteImage ? (
             <TouchableOpacity onPress={onDeleteImage} activeOpacity={0.85} style={styles.removeBtn}>
-              <Feather name="trash-2" size={13} color="#EF4444" />
+              <Feather name="trash-2" size={13} color={Colors.primary} />
               <Text style={styles.removeText}>Remove</Text>
             </TouchableOpacity>
           ) : null}
@@ -69,15 +69,12 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: 18,
-    paddingBottom: 20,
+    backgroundColor: Colors.primary,
+    paddingTop: 52,
+    paddingBottom: 32,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E2E8F0',
-    ...Shadow.sm,
+    borderBottomLeftRadius: Radius['3xl'],
+    borderBottomRightRadius: Radius['3xl'],
   },
   inner: { alignItems: 'center' },
   avatarTouch: { position: 'relative' },
@@ -85,23 +82,21 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    ...Shadow.sm,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.3)',
+    ...Shadow.lg,
   },
   avatar: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E2E8F0',
   },
   avatarImg: { width: '100%', height: '100%' },
   avatarInitials: { fontSize: 28, fontWeight: '800', color: Colors.primary, letterSpacing: -0.5 },
@@ -123,39 +118,39 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 2,
+    borderColor: Colors.primary,
     ...Shadow.sm,
   },
-  name: { fontSize: 20, fontWeight: '800', color: Colors.textDark, marginTop: 14, letterSpacing: -0.3 },
-  email: { fontSize: 13, color: Colors.textSecondary, marginTop: 4, fontWeight: '500' },
-  phone: { fontSize: 12, color: Colors.textTertiary, marginTop: 2, fontWeight: '500' },
+  name: { fontSize: 20, fontWeight: '800', color: Colors.white, marginTop: 14, letterSpacing: -0.3 },
+  email: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4, fontWeight: '500' },
+  phone: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   editBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  editText: { fontSize: 12, fontWeight: '700', color: Colors.primary, letterSpacing: 0.2 },
+  editText: { fontSize: 12, fontWeight: '700', color: Colors.white, letterSpacing: 0.2 },
   removeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: Colors.white,
   },
-  removeText: { fontSize: 12, fontWeight: '700', color: '#EF4444' },
+  removeText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
 });

@@ -198,23 +198,23 @@ export default function HomeScreen() {
               </View>
               <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
                 <TouchableOpacity onPress={() => router.push('/(customer)/notifications' as any)} activeOpacity={0.8} style={styles.headerIcon}>
-                  <Feather name="bell" size={18} color={Colors.textDark} />
+                  <Feather name="bell" size={18} color={Colors.white} />
                   <View style={styles.dot} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.push('/(customer)/cart' as any)} activeOpacity={0.8} style={styles.headerIcon}>
-                  <Feather name="shopping-cart" size={18} color={Colors.textDark} />
+                  <Feather name="shopping-cart" size={18} color={Colors.white} />
                   {cartCount > 0 ? (
-                    <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: Colors.primary, minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>{cartCount}</Text>
+                    <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: Colors.white, minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 1, borderColor: Colors.primary }}>
+                      <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700' }}>{cartCount}</Text>
                     </View>
                   ) : null}
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => router.push('/(customer)/chatbot' as any)}
                   activeOpacity={0.8}
-                  style={[styles.headerIcon, { backgroundColor: '#FEF2F2' }]}
+                  style={styles.headerIcon}
                 >
-                  <Feather name="message-circle" size={18} color={Colors.primary} />
+                  <Feather name="message-circle" size={18} color={Colors.white} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -537,36 +537,36 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    ...Shadow.xs,
+    backgroundColor: Colors.primary,
+    paddingTop: 52,
+    paddingBottom: 32,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: Radius['3xl'],
+    borderBottomRightRadius: Radius['3xl'],
   },
   headerShimmer: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 32,
+    borderBottomLeftRadius: Radius['3xl'],
+    borderBottomRightRadius: Radius['3xl'],
   },
-  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 },
-  greeting: { fontSize: 11, color: Colors.textSecondary, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
-  userName: { fontSize: 20, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.4, marginTop: 1 },
-  subtle: { fontSize: 11, color: Colors.textTertiary, marginTop: 1, fontWeight: '500' },
+  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  greeting: { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
+  userName: { fontSize: 20, fontWeight: '800', color: Colors.white, letterSpacing: -0.4, marginTop: 1 },
+  subtle: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 1, fontWeight: '500' },
   avatarWrap: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FECACA',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
     overflow: 'hidden',
-    ...Shadow.sm,
+    ...Shadow.lg,
   },
   avatarImg: { width: '100%', height: '100%' },
   avatarText: { fontSize: 18, fontWeight: '800', color: Colors.primary },
@@ -574,24 +574,25 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E2E8F0',
-    ...Shadow.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  dot: { position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, borderWidth: 2, borderColor: '#FFFFFF' },
+  dot: { position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.primary },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
     paddingHorizontal: 14,
     marginTop: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.white,
     borderRadius: Radius.xl,
-    borderWidth: 1.4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
     gap: 10,
+    ...Shadow.sm,
   },
   searchInput: { flex: 1, minWidth: 0 as any, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
   activeFilterPill: {
@@ -618,7 +619,7 @@ const styles = StyleSheet.create({
   },
   activeFilterTextLight: { fontSize: 12, fontWeight: '600', color: Colors.textDark },
   clearFilterBtn: { paddingHorizontal: 8, paddingVertical: 4 },
-  clearFilterText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  clearFilterText: { fontSize: 12, fontWeight: '700', color: Colors.white },
   trustStrip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -648,7 +649,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.3 },
   sectionAction: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  iconSkeleton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2E8F0' },
+  iconSkeleton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   emptyInline: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,

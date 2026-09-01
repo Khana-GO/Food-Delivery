@@ -17,10 +17,10 @@ export const DriverStatsCard = ({
   todayEarnings,
 }: DriverStatsCardProps) => {
   const stats = [
-    { label: 'Deliveries', value: totalDeliveries, icon: 'truck' },
-    { label: 'Total Earnings', value: `Rs. ${totalEarnings}`, icon: 'dollar-sign' },
-    { label: 'Rating', value: rating.toFixed(1), icon: 'star' },
-    { label: "Today's Earning", value: `Rs. ${todayEarnings}`, icon: 'clock' },
+    { label: 'Deliveries', value: totalDeliveries, icon: 'truck', isRupee: false },
+    { label: 'Total Earnings', value: `Rs. ${totalEarnings}`, icon: 'credit-card', isRupee: true },
+    { label: 'Rating', value: rating.toFixed(1), icon: 'star', isRupee: false },
+    { label: "Today's Earning", value: `Rs. ${todayEarnings}`, icon: 'clock', isRupee: true },
   ];
 
   return (
@@ -40,13 +40,17 @@ export const DriverStatsCard = ({
               ...Shadow.sm,
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name={stat.icon as any} size={15} color={Colors.primary} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                {stat.isRupee ? (
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.white }}>₹</Text>
+                ) : (
+                  <Feather name={stat.icon as any} size={12} color={Colors.white} />
+                )}
               </View>
-              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>{stat.label}</Text>
+              <Text style={{ fontSize: 11, color: Colors.textSecondary, flexShrink: 1 }} numberOfLines={1}>{stat.label}</Text>
             </View>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textDark, marginTop: 8 }}>{stat.value}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textDark, marginTop: 6 }} numberOfLines={1}>{stat.value}</Text>
           </View>
         ))}
       </View>

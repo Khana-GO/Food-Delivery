@@ -14,6 +14,8 @@ import { useAdminOrder } from '@/hooks/admin/order/useAdminOrder';
 import { useAdminUpdateOrderStatus } from '@/hooks/admin/order/useAdminUpdateOrderStatus';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
 import { AdminStatusUpdateModal } from '@/components/admin/order/AdminStatusUpdateModal';
+import { Colors, Radius, Shadow } from '@/constants/theme';
+import PremiumCard from '@/components/ui/PremiumCard';
 
 export default function AdminOrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,8 +26,8 @@ export default function AdminOrderDetailsScreen() {
 
   if (isLoading || !order) {
     return (
-      <View className="items-center justify-center flex-1 bg-white">
-        <ActivityIndicator size="large" color="#E23744" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -41,106 +43,143 @@ export default function AdminOrderDetailsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View
+        style={{
+          backgroundColor: Colors.primary,
+          paddingTop: 52,
+          paddingBottom: 24,
+          paddingHorizontal: 20,
+          borderBottomLeftRadius: Radius['3xl'],
+          borderBottomRightRadius: Radius['3xl'],
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.25)',
+              }}
+              activeOpacity={0.7}
+            >
+              <Feather name="arrow-left" size={20} color={Colors.white} />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-black">Order #{order.id.slice(0, 8)}</Text>
+            <View>
+              <Text style={{ color: Colors.white, fontSize: 18, fontWeight: '800' }}>Order #{order.id.slice(0, 8)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>{formatDate(order.createdAt)}</Text>
+            </View>
           </View>
           <TouchableOpacity
-            className="flex-row items-center gap-2 px-4 py-2 rounded-lg bg-primary/10"
             onPress={() => setShowStatusModal(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.white, paddingHorizontal: 14, paddingVertical: 10, borderRadius: Radius.full, ...Shadow.sm }}
+            activeOpacity={0.7}
           >
-            <Feather name="edit-2" size={16} color="#E23744" />
-            <Text className="text-sm font-semibold text-primary">Update Status</Text>
+            <Feather name="edit-2" size={14} color={Colors.primary} />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>Update</Text>
           </TouchableOpacity>
+        </View>
+        <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <OrderStatusBadge status={order.orderStatus} />
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>Rs. {order.totalAmount}</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-4">
-        {/* Status */}
-        <View className="flex-row items-center justify-between p-4 mb-4 bg-white border border-gray-100 rounded-xl">
-          <View>
-            <Text className="text-sm text-gray-500">Order Status</Text>
-            <OrderStatusBadge status={order.orderStatus} />
-          </View>
-          <Text className="text-xs text-gray-400">{formatDate(order.createdAt)}</Text>
-        </View>
-
-        {/* Customer Info */}
-        <View className="p-4 mb-4 bg-white border border-gray-100 rounded-xl">
-          <Text className="mb-2 text-sm font-bold text-black">Customer</Text>
-          <Text className="text-sm font-medium text-black">{order.customerName}</Text>
-          <Text className="text-sm text-gray-500">{order.customerPhone}</Text>
-          <Text className="mt-1 text-sm text-gray-500">{order.deliveryAddress}</Text>
-        </View>
-
-        {/* Restaurant Info */}
-        <View className="p-4 mb-4 bg-white border border-gray-100 rounded-xl">
-          <Text className="mb-2 text-sm font-bold text-black">Restaurant</Text>
-          <Text className="text-sm font-medium text-black">{order.restaurantName}</Text>
-          <Text className="text-sm text-gray-500">{order.restaurantAddress}</Text>
-        </View>
-
-        {/* Driver Info */}
-        <View className="p-4 mb-4 bg-white border border-gray-100 rounded-xl">
-          <Text className="mb-2 text-sm font-bold text-black">Driver</Text>
-          {order.driverId ? (
-            <>
-              <Text className="text-sm font-medium text-black">{order.driverName || 'Driver Assigned'}</Text>
-              <Text className="text-sm text-gray-500">ID: {order.driverId}</Text>
-            </>
-          ) : (
-            <Text className="text-sm text-gray-500">Not assigned yet</Text>
-          )}
-        </View>
-
-        {/* Items */}
-        <View className="p-4 mb-4 bg-white border border-gray-100 rounded-xl">
-          <Text className="mb-2 text-sm font-bold text-black">Items</Text>
-          {order.items.map((item) => (
-            <View key={item.id} className="flex-row justify-between py-1.5 border-b border-gray-50">
-              <Text className="text-sm text-gray-600">{item.quantity}x {item.name}</Text>
-              <Text className="text-sm font-medium text-black">Rs. {item.totalPrice}</Text>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        <View style={{ gap: 12 }}>
+          <PremiumCard elevation="sm" padding={16}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textSecondary }}>Order Status</Text>
+                <View style={{ marginTop: 6 }}>
+                  <OrderStatusBadge status={order.orderStatus} />
+                </View>
+              </View>
+              <Text style={{ fontSize: 11, color: Colors.textTertiary }}>{formatDate(order.createdAt)}</Text>
             </View>
-          ))}
-          <View className="flex-row justify-between pt-2 border-t border-gray-200">
-            <Text className="text-sm font-bold text-black">Total</Text>
-            <Text className="text-sm font-bold text-primary">Rs. {order.totalAmount}</Text>
-          </View>
-        </View>
+          </PremiumCard>
 
-        {/* Payment */}
-        <View className="p-4 mb-4 bg-white border border-gray-100 rounded-xl">
-          <Text className="mb-2 text-sm font-bold text-black">Payment</Text>
-          <View className="flex-row justify-between">
-            <Text className="text-sm text-gray-500">Method</Text>
-            <Text className="text-sm font-medium text-black">
-              {order.paymentMethod === 'ONLINE' ? 'eSewa' : 'Cash on Delivery'}
-            </Text>
-          </View>
-          <View className="flex-row justify-between mt-1">
-            <Text className="text-sm text-gray-500">Status</Text>
-            <Text className={`text-sm font-medium ${order.paymentStatus === 'PAID' ? 'text-green-500' : 'text-orange-500'}`}>
-              {order.paymentStatus}
-            </Text>
-          </View>
-          {order.paymentId && (
-            <View className="flex-row justify-between mt-1">
-              <Text className="text-sm text-gray-500">Payment ID</Text>
-              <Text className="text-sm text-black">{order.paymentId}</Text>
+          <PremiumCard elevation="sm" padding={16}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECDD3' }}>
+                <Feather name="user" size={14} color={Colors.primary} />
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>Customer</Text>
             </View>
-          )}
-        </View>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark }}>{order.customerName}</Text>
+            <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>{order.customerPhone}</Text>
+            <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>{order.deliveryAddress}</Text>
+          </PremiumCard>
 
-        <View className="h-8" />
+          <PremiumCard elevation="sm" padding={16}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
+                <Feather name="home" size={14} color="#2563EB" />
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>Restaurant</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark }}>{order.restaurantName}</Text>
+            <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>{order.restaurantAddress}</Text>
+          </PremiumCard>
+
+          <PremiumCard elevation="sm" padding={16}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.successBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BBF7D0' }}>
+                <Feather name="truck" size={14} color={Colors.success} />
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>Driver</Text>
+            </View>
+            {order.driverId ? (
+              <>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark }}>{order.driverName || 'Driver Assigned'}</Text>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>ID: {order.driverId}</Text>
+              </>
+            ) : (
+              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Not assigned yet</Text>
+            )}
+          </PremiumCard>
+
+          <PremiumCard elevation="sm" padding={16}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, marginBottom: 12 }}>Items • Rs. {order.totalAmount}</Text>
+            {order.items.map((item) => (
+              <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
+                <Text style={{ fontSize: 13, color: Colors.textSecondary }}>{item.quantity}x {item.name}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Rs. {item.totalPrice}</Text>
+              </View>
+            ))}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 4 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textDark }}>Total</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.primary }}>Rs. {order.totalAmount}</Text>
+            </View>
+          </PremiumCard>
+
+          <PremiumCard elevation="sm" padding={16}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, marginBottom: 12 }}>Payment</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Method</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textDark }}>{order.paymentMethod === 'ONLINE' ? 'eSewa' : 'Cash on Delivery'}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Status</Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: order.paymentStatus === 'PAID' ? Colors.success : Colors.warning }}>{order.paymentStatus}</Text>
+            </View>
+            {order.paymentId && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Payment ID</Text>
+                <Text style={{ fontSize: 12, color: Colors.textDark }}>{order.paymentId}</Text>
+              </View>
+            )}
+          </PremiumCard>
+        </View>
       </ScrollView>
 
-      {/* Status Update Modal */}
       <AdminStatusUpdateModal
         visible={showStatusModal}
         currentStatus={order.orderStatus}

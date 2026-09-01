@@ -6,7 +6,7 @@ import { Colors, Radius, Shadow } from '@/constants/theme';
 
 interface DriverProfileHeaderProps {
   user: User;
-  onEditPress: () => void;
+  onEditPress?: () => void;
   onImagePress: () => void;
   isUploading?: boolean;
 }
@@ -79,24 +79,6 @@ export const DriverProfileHeader = ({
             {user.firstName} {user.lastName}
           </Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>{user.email}</Text>
-
-          <TouchableOpacity
-            onPress={onEditPress}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: Radius.full,
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              marginTop: 14,
-            }}
-            activeOpacity={0.7}
-          >
-            <Feather name="edit-2" size={14} color={Colors.white} />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.white }}>Edit Profile</Text>
-          </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' }} />

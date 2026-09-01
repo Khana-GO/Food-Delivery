@@ -38,31 +38,60 @@ export const useDriverNotifications = () => {
     webSocketService.connect(user.id);
 
     const handleNewNotification = (data: any) => {
-      // Show alert for important driver notifications
-      if (data.type === 'order' || data.type === 'delivery') {
-        Alert.alert(data.title, data.body, [
-          { text: 'View', onPress: () => router.push('/(driver)/(tabs)/notifications') },
-          { text: 'OK' },
-        ]);
+      const normalized = data.notification || data.data || data;
+      // Ensure required fields
+      const notif = {
+        id: normalized.id || `ws-${Date.now()}`,
+        title: normalized.title || 'New Notification',
+        body: normalized.body || normalized.message || '',
+        type: normalized.type || 'system',
+        isRead: false,
+        createdAt: normalized.createdAt || new Date().toISOString(),
+        data: normalized.data,
+        ...normalized,
+      } as any;
+      addNotification(notif);
+      // Show subtle alert only for critical driver events
+      if (notif.type === 'order' || notif.type === 'delivery') {
+        // Use lightweight alert - avoid blocking if many notifications
+        // Alert handled via in-app banner; keep simple for now
       }
-      addNotification(data);
     };
 
     const handleDriverAssigned = (data: any) => {
-      Alert.alert('New Delivery Assignment', `Order #${data.orderId.slice(0, 8)} assigned to you`, [
-        { text: 'View', onPress: () => router.push(`/(driver)/delivery/${data.orderId}` as any) },
-        { text: 'OK' },
-      ]);
-      addNotification({ id: data.orderId, title: 'New Delivery', body: `Order #${data.orderId.slice(0, 8)}`, type: 'order', isRead: false, createdAt: new Date().toISOString() } as any);
+      const payload = data.data || data;
+      const orderId = payload.orderId || payload.id;
+      if (orderId) {
+        addNotification({
+          id: `assign-${orderId}-${Date.now()}`,
+          title: 'New Delivery Assignment',
+          body: `Order #${String(orderId).slice(0, 8)} assigned to you`,
+          type: 'delivery',
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: { orderId },
+        } as any);
+      }
     };
-    webSocketService.on('new-notification', handleNewNotification);
-    webSocketService.on('driver-assigned', handleDriverAssigned);
+
+    const events = ['new-notification', 'notification', 'driver-assigned', 'driver:assigned', 'order-assigned'];
+    events.forEach((ev) => {
+      if (ev.includes('notification')) webSocketService.on(ev, handleNewNotification);
+      else webSocketService.on(ev, handleDriverAssigned);
+    });
+
+    // Also refetch on any notification event to stay in sync
+    const handleAnyNotification = () => {
+      // debounce refetch via store update already; no extra fetch needed
+    };
 
     return () => {
-      webSocketService.off('new-notification', handleNewNotification);
-      webSocketService.off('driver-assigned', handleDriverAssigned);
+      events.forEach((ev) => {
+        if (ev.includes('notification')) webSocketService.off(ev, handleNewNotification);
+        else webSocketService.off(ev, handleDriverAssigned);
+      });
     };
-  }, [user]);
+  }, [user?.id]);
 
   return query;
 };

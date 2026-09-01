@@ -9,13 +9,14 @@ interface Props {
   onPress: () => void;
   badge?: number;
   rightIcon?: React.ReactNode;
+  customIcon?: React.ReactNode;
 }
 
-export const ProfileMenuItem = ({ icon, label, onPress, badge, rightIcon }: Props) => {
+export const ProfileMenuItem = ({ icon, label, onPress, badge, rightIcon, customIcon }: Props) => {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.row}>
       <View style={styles.iconWrap}>
-        <Feather name={icon} size={16} color={Colors.primary} />
+        {customIcon || <Feather name={icon} size={16} color={Colors.primary} />}
       </View>
       <Text style={styles.label}>{label}</Text>
       {badge ? (

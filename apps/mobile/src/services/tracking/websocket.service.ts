@@ -121,6 +121,11 @@ class WebSocketService {
       'order:eta',
       'connected',
       'exception',
+      'new-notification',
+      'notification',
+      'driver-assigned',
+      'driver:assigned',
+      'order-assigned',
     ];
     events.forEach((ev) => {
       this.socket?.on(ev, (data) => this.notifyListeners(ev, data));

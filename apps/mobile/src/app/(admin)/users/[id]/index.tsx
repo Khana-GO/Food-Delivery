@@ -18,6 +18,7 @@ import { usePermanentDeleteUser } from '@/hooks/admin/user/usePermanentDeleteUse
 import { useChangeUserRole } from '@/hooks/admin/user/useChangeUserRole';
 import { UserDetails as UserDetailsComponent } from '@/components/admin/users/UserDetails';
 import type { UserRole } from '@food_delivery/types';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 const ROLE_OPTIONS: { role: UserRole; label: string; sub: string; icon: React.ComponentProps<typeof Feather>['name']; color: string; bg: string }[] = [
   { role: 'ADMIN', label: 'Admin', sub: 'Full platform access', icon: 'shield', color: '#7C3AED', bg: '#F5F3FF' },
@@ -68,145 +69,178 @@ export default function UserDetailsScreen() {
 
   if (isLoading) {
     return (
-      <View className="items-center justify-center flex-1 bg-white">
-        <ActivityIndicator size="large" color="#E23744" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   if (!user) {
     return (
-      <View className="items-center justify-center flex-1 px-6 bg-white">
-        <Feather name="user-x" size={64} color="#D1D5DB" />
-        <Text className="mt-4 text-lg font-medium text-gray-400">User Not Found</Text>
-        <TouchableOpacity className="px-6 py-3 mt-6 bg-primary rounded-xl" onPress={() => router.back()}>
-          <Text className="font-semibold text-white">Go Back</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: Colors.background }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECDD3' }}>
+          <Feather name="user-x" size={32} color={Colors.primary} />
+        </View>
+        <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: Colors.textDark }}>User Not Found</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full }} activeOpacity={0.7}>
+          <Text style={{ fontWeight: '700', color: Colors.white }}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity onPress={() => router.back()} className="p-1">
-            <Feather name="arrow-left" size={24} color="#1A1A1A" />
-          </TouchableOpacity>
-          <Text className="text-xl font-bold text-black">User Details</Text>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View
+        style={{
+          backgroundColor: Colors.primary,
+          paddingTop: 52,
+          paddingBottom: 20,
+          paddingHorizontal: 20,
+          borderBottomLeftRadius: Radius['3xl'],
+          borderBottomRightRadius: Radius['3xl'],
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(255,255,255,0.18)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.25)',
+          }}
+          activeOpacity={0.7}
+        >
+          <Feather name="arrow-left" size={20} color={Colors.white} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: Colors.white, fontSize: 18, fontWeight: '800' }}>User Details</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }} numberOfLines={1}>{user.firstName} {user.lastName} • {user.role}</Text>
         </View>
+        <TouchableOpacity
+          onPress={() => setShowRoleModal(true)}
+          style={{ backgroundColor: Colors.white, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, ...Shadow.sm }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>Change Role</Text>
+        </TouchableOpacity>
       </View>
 
-      <UserDetailsComponent
-        user={user}
-        onDelete={handleDelete}
-        onRestore={handleRestore}
-        onPermanentDelete={handlePermanentDelete}
-        onRoleChange={() => setShowRoleModal(true)}
-      />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+          <UserDetailsComponent
+            user={user}
+            onDelete={handleDelete}
+            onRestore={handleRestore}
+            onPermanentDelete={handlePermanentDelete}
+            onRoleChange={() => setShowRoleModal(true)}
+          />
+        </View>
+      </ScrollView>
 
-      {/* ── Role Change Modal ── */}
       <Modal
         visible={showRoleModal}
         transparent
         animationType="fade"
         onRequestClose={() => setShowRoleModal(false)}
       >
-        <Pressable onPress={() => setShowRoleModal(false)} className="flex-1 bg-black/50 justify-end">
-          <Pressable onPress={(e) => e.stopPropagation()} className="bg-white rounded-t-[28px] overflow-hidden max-h-[85%]">
-            {/* Handle bar */}
-            <View className="items-center pt-3 pb-2">
-              <View className="w-10 h-1.5 rounded-full bg-gray-200" />
+        <Pressable onPress={() => setShowRoleModal(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: Colors.white, borderTopLeftRadius: Radius['3xl'], borderTopRightRadius: Radius['3xl'], overflow: 'hidden', maxHeight: '85%' }}>
+            <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}>
+              <View style={{ width: 40, height: 6, borderRadius: 999, backgroundColor: Colors.borderLight }} />
             </View>
 
-            {/* Header */}
-            <View className="px-6 pb-4 flex-row items-start justify-between border-b border-gray-100">
-              <View className="flex-1 pr-4">
-                <Text className="text-[18px] font-black text-[#0F172A]">Change Role</Text>
-                <Text className="text-xs text-gray-500 mt-1">
-                  Select a new role for <Text className="font-bold text-[#0F172A]">{user.firstName} {user.lastName}</Text>
+            <View style={{ paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
+              <View style={{ flex: 1, paddingRight: 16 }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textDark }}>Change Role</Text>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>
+                  Select a new role for <Text style={{ fontWeight: '700', color: Colors.textDark }}>{user.firstName} {user.lastName}</Text>
                 </Text>
-                <View className="mt-2 self-start px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100 flex-row items-center gap-1.5">
-                  <View className="w-2 h-2 rounded-full bg-primary" />
-                  <Text className="text-[11px] font-bold text-gray-600">Current: {user.role.replace('_',' ')}</Text>
+                <View style={{ marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: '#FECDD3', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary }} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>Current: {user.role.replace('_',' ')}</Text>
                 </View>
               </View>
               <TouchableOpacity
                 onPress={() => setShowRoleModal(false)}
-                className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
-                accessibilityLabel="Close"
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.backgroundAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.borderLight }}
               >
-                <Feather name="x" size={18} color="#0F172A" />
+                <Feather name="x" size={18} color={Colors.textDark} />
               </TouchableOpacity>
             </View>
 
-            {/* Role list */}
-            <ScrollView className="px-4 pt-4" showsVerticalScrollIndicator={false}>
-              <View className="gap-3 pb-2">
+            <ScrollView style={{ paddingHorizontal: 16, paddingTop: 16 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 12, paddingBottom: 8 }}>
                 {ROLE_OPTIONS.map((opt) => {
                   const isCurrent = user.role === opt.role;
-                  const isSelected = isCurrent;
                   return (
                     <TouchableOpacity
                       key={opt.role}
                       onPress={() => handleRoleSelect(opt.role)}
                       disabled={isChangingRole}
                       activeOpacity={0.85}
-                      className={`flex-row items-center gap-3 p-4 rounded-2xl border-2 ${isSelected ? 'bg-gray-50 border-primary' : 'bg-white border-gray-100'}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: 16,
+                        borderRadius: Radius.xl,
+                        borderWidth: 2,
+                        borderColor: isCurrent ? Colors.primary : Colors.borderLight,
+                        backgroundColor: isCurrent ? Colors.primaryBg : Colors.white,
+                      }}
                     >
-                      <View className="w-11 h-11 rounded-xl items-center justify-center" style={{ backgroundColor: opt.bg }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: opt.bg, borderWidth: 1, borderColor: `${opt.color}20` }}>
                         <Feather name={opt.icon} size={18} color={opt.color} />
                       </View>
-                      <View className="flex-1">
-                        <View className="flex-row items-center gap-2">
-                          <Text className={`text-[14px] font-black ${isSelected ? 'text-primary' : 'text-[#0F172A]'}`}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: isCurrent ? Colors.primary : Colors.textDark }}>
                             {opt.label}
                           </Text>
                           {isCurrent && (
-                            <View className="px-2 py-0.5 rounded-full bg-primary">
-                              <Text className="text-[10px] font-black text-white">CURRENT</Text>
+                            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full, backgroundColor: Colors.primary }}>
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.white }}>CURRENT</Text>
                             </View>
                           )}
                         </View>
-                        <Text className="text-xs text-gray-500 mt-0.5">{opt.sub}</Text>
-                        <Text className="text-[10px] text-gray-400 font-mono mt-1">{opt.role}</Text>
+                        <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>{opt.sub}</Text>
+                        <Text style={{ fontSize: 10, color: Colors.textTertiary, marginTop: 4 }}>{opt.role}</Text>
                       </View>
-                      <View className={`w-7 h-7 rounded-full items-center justify-center border-2 ${isSelected ? 'bg-primary border-primary' : 'border-gray-200 bg-white'}`}>
-                        {isSelected ? <Feather name="check" size={14} color="white" /> : null}
+                      <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: isCurrent ? Colors.primary : Colors.borderLight, backgroundColor: isCurrent ? Colors.primary : Colors.white }}>
+                        {isCurrent ? <Feather name="check" size={14} color={Colors.white} /> : null}
                       </View>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <View className="flex-row gap-3 mt-6 mb-6">
-                <TouchableOpacity
-                  onPress={() => setShowRoleModal(false)}
-                  className="flex-1 py-3.5 rounded-xl bg-gray-100 items-center justify-center flex-row gap-2"
-                >
-                  <Feather name="x" size={16} color="#0F172A" />
-                  <Text className="font-bold text-[#0F172A]">Close</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, marginBottom: 24 }}>
+                <TouchableOpacity onPress={() => setShowRoleModal(false)} style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.full, backgroundColor: Colors.backgroundAlt, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: Colors.borderLight }}>
+                  <Feather name="x" size={16} color={Colors.textDark} />
+                  <Text style={{ fontWeight: '700', color: Colors.textDark }}>Close</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowRoleModal(false)}
-                  className="flex-1 py-3.5 rounded-xl bg-[#0F172A] items-center justify-center flex-row gap-2"
-                >
-                  <Feather name="slash" size={16} color="white" />
-                  <Text className="font-bold text-white">Cancel</Text>
+                <TouchableOpacity onPress={() => setShowRoleModal(false)} style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.full, backgroundColor: Colors.textDark, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}>
+                  <Feather name="slash" size={16} color={Colors.white} />
+                  <Text style={{ fontWeight: '700', color: Colors.white }}>Cancel</Text>
                 </TouchableOpacity>
               </View>
-              <View className="h-2" />
             </ScrollView>
           </Pressable>
         </Pressable>
 
-        {/* loading overlay */}
         {isChangingRole && (
-          <View className="absolute inset-0 bg-white/60 items-center justify-center">
-            <View className="bg-white px-6 py-4 rounded-2xl shadow-lg border border-gray-100 flex-row items-center gap-3">
-              <ActivityIndicator size="small" color="#E23744" />
-              <Text className="text-sm font-bold text-[#0F172A]">Updating role…</Text>
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ backgroundColor: Colors.white, paddingHorizontal: 24, paddingVertical: 16, borderRadius: Radius.xl, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: Colors.borderLight, ...Shadow.md }}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Updating role…</Text>
             </View>
           </View>
         )}

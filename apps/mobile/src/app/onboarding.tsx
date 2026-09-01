@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -66,9 +67,11 @@ const SLIDES: readonly Slide[] = [
 const Header = React.memo(({ onSkip }: { onSkip: () => void }) => (
   <View className="flex-row items-center justify-between px-6 pb-2">
     <View className="flex-row items-center gap-2.5">
-      <View className="w-11 h-11 rounded-2xl bg-primary items-center justify-center shadow-lg shadow-primary/30">
-        <MaterialCommunityIcons name="food" size={26} color="#FFFFFF" />
-      </View>
+      <Image
+        source={require("@/assets/images/logo/logo.png")}
+        style={{ width: 44, height: 44, borderRadius: 12 }}
+        resizeMode="contain"
+      />
       <View>
         <Text className="text-2xl font-extrabold tracking-tight text-black">
           Khana<Text className="text-primary">Go</Text>

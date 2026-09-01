@@ -48,8 +48,8 @@ export default function Explore() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
           <Text style={styles.title}>Explore</Text>
           <Text style={styles.subtitle}>Find your next favourite meal</Text>
           <View style={styles.search}>
@@ -68,8 +68,8 @@ export default function Explore() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
 
       {categories.length ? (
         <View style={{ paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
@@ -99,9 +99,9 @@ export default function Explore() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0', ...Shadow.xs },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' },
+  header: { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 32, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -109,14 +109,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: 12,
     borderRadius: Radius.xl,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
     gap: 10,
+    ...Shadow.sm,
   },
   input: { flex: 1, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
-  filterActive: { backgroundColor: Colors.textDark, borderColor: Colors.textDark },
-  filterText: { fontSize: 12, fontWeight: '600', color: Colors.textMedium },
-  filterTextActive: { color: '#FFFFFF' },
+  filterPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  filterActive: { backgroundColor: Colors.white, borderColor: Colors.white },
+  filterText: { fontSize: 12, fontWeight: '600', color: Colors.white },
+  filterTextActive: { color: Colors.primary },
 });

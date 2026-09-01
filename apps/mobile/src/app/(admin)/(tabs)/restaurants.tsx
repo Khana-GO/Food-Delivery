@@ -6,6 +6,7 @@ import { useAdminRestaurants } from '@/hooks/admin/restaurant/useAdminRestaurant
 import { useDeletedRestaurants } from '@/hooks/admin/restaurant/useDeletedRestaurants';
 import { useAdminRestaurantStats } from '@/hooks/admin/restaurant/useAdminRestaurantStats';
 import { RestaurantCard } from '@/components/admin/restaurants/RestaurantCard';
+import { Colors, Radius, Shadow } from '@/constants/theme';
 
 const CUISINES = ['All', 'Nepali', 'Newari', 'Thakali', 'Indian', 'Chinese', 'Tibetan', 'Italian', 'Fast Food', 'Continental', 'Street Food', 'Bakeries', 'Desserts', 'Drinks'];
 
@@ -41,13 +42,10 @@ export default function AdminRestaurantsScreen() {
   );
 
   const isDeletedTab = status === 'deleted';
-
-  //  Fix: Hooks must be called unconditionally (Rules of Hooks)
   const activeQuery = useAdminRestaurants(filters as any, { enabled: !isDeletedTab });
   const deletedQuery = useDeletedRestaurants(filters as any, { enabled: isDeletedTab });
   const query = isDeletedTab ? deletedQuery : activeQuery;
   const { data, isLoading, isFetching, refetch } = query as any;
-
   const { data: stats } = useAdminRestaurantStats();
 
   const restaurants = data?.data || [];
@@ -59,161 +57,228 @@ export default function AdminRestaurantsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#F8F9FB]">
-      {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 pr-3">
-            <Text className="text-xl font-black text-[#0F172A]">Restaurants</Text>
-            <Text className="mt-1 text-xs text-gray-500">
-              {stats ? `${stats.total} total • ${stats.active} active • ${stats.verified} verified` : `${total} restaurants`}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push('/(admin)/restaurants/create' as any)}
-            className="w-10 h-10 rounded-full bg-[#0F172A] items-center justify-center"
-          >
-            <Feather name="plus" size={18} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Stats pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4" contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
-          {[
-            { label: 'Total', value: stats?.total ?? total, color: '#0F172A', bg: '#F8FAFC' },
-            { label: 'Active', value: stats?.active ?? 0, color: '#16A34A', bg: '#ECFDF5' },
-            { label: 'Verified', value: stats?.verified ?? 0, color: '#2563EB', bg: '#EFF6FF' },
-            { label: 'Open', value: stats?.open ?? 0, color: '#0E9F6E', bg: '#ECFDF5' },
-            { label: 'Deleted', value: stats?.deleted ?? 0, color: '#DC2626', bg: '#FEF2F2' },
-          ].map((s) => (
-            <View key={s.label} className="px-4 py-2.5 rounded-2xl border border-gray-100 min-w-[84px]" style={{ backgroundColor: s.bg }}>
-              <Text className="text-[15px] font-black" style={{ color: s.color }}>{s.value}</Text>
-              <Text className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">{s.label}</Text>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Search */}
-      <View className="px-4 pt-4">
-        <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-2xl">
-          <Feather name="search" size={18} color="#94A3B8" />
-          <TextInput
-            className="flex-1 ml-3 text-sm text-[#0F172A]"
-            placeholder="Search name, address, slug…"
-            placeholderTextColor="#94A3B8"
-            value={searchInput}
-            onChangeText={setSearchInput}
-            autoCapitalize="none"
-          />
-          {searchInput.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearchInput('')}>
-              <Feather name="x-circle" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-
-      {/* Status tabs */}
-      <View className="flex-row gap-2 px-4 pt-3">
-        {(['all', 'active', 'deleted'] as const).map((v) => (
-          <TouchableOpacity
-            key={v}
-            onPress={() => setStatus(v)}
-            className={`px-4 py-2 rounded-full border ${status === v ? 'bg-[#0F172A] border-[#0F172A]' : 'bg-white border-gray-200'}`}
-          >
-            <Text className={`text-xs font-black ${status === v ? 'text-white' : 'text-gray-600'}`}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); setStatus('all'); }} className="px-3 py-2 ml-auto">
-          <Text className="text-xs font-black text-primary">Clear</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Filters */}
-      <View className="px-4 pt-3">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
-          {CUISINES.map((c) => {
-            const active = (c === 'All' && !cuisine) || cuisine === c;
-            return (
-              <TouchableOpacity
-                key={c}
-                onPress={() => setCuisine(c === 'All' ? undefined : c)}
-                className={`px-3.5 py-1.5 rounded-full border ${active ? 'bg-primary border-primary' : 'bg-white border-gray-200'}`}
-              >
-                <Text className={`text-xs font-bold ${active ? 'text-white' : 'text-gray-600'}`}>{c}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <View className="flex-row gap-2 mt-2.5">
-          {[
-            { label: 'All', value: undefined },
-            { label: 'Verified', value: true },
-            { label: 'Pending', value: false },
-          ].map((o) => (
-            <TouchableOpacity
-              key={String(o.label)}
-              onPress={() => setVerified(o.value as any)}
-              className={`px-3.5 py-1.5 rounded-full border ${verified === o.value ? 'bg-[#2563EB] border-[#2563EB]' : 'bg-white border-gray-200'}`}
-            >
-              <Text className={`text-xs font-bold ${verified === o.value ? 'text-white' : 'text-gray-600'}`}>{o.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* List – single loading only */}
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView
-        className="flex-1 px-4 mt-4"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor="#0F172A" />}
+        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={Colors.primary} colors={[Colors.primary]} />}
         onScroll={({ nativeEvent }) => {
           const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
           const close = layoutMeasurement.height + contentOffset.y >= contentSize.height - 200;
           if (close) handleLoadMore();
         }}
         scrollEventThrottle={200}
+        contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {isLoading ? (
-          <View className="items-center py-16">
-            <ActivityIndicator size="large" color="#0F172A" />
-            <Text className="mt-3 text-sm text-gray-400">Loading restaurants…</Text>
-          </View>
-        ) : restaurants.length === 0 ? (
-          <View className="items-center py-16">
-            <View className="items-center justify-center w-20 h-20 bg-gray-100 rounded-full">
-              <Feather name="search" size={28} color="#94A3B8" />
-            </View>
-            <Text className="mt-4 text-base font-black text-gray-700">No restaurants found</Text>
-            <Text className="px-8 mt-1 text-sm text-center text-gray-400">{search ? 'Try a different term or clear filters' : 'No restaurants match the current filters'}</Text>
-            {(search || cuisine || verified !== undefined) && (
-              <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); }} className="mt-4 px-5 py-2.5 bg-white border border-gray-200 rounded-full">
-                <Text className="text-sm font-black text-[#0F172A]">Clear filters</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          <>
-            {restaurants.map((r: any) => (
-              <RestaurantCard key={r.id} restaurant={r} />
-            ))}
-            {page < totalPages && (
-              <TouchableOpacity
-                onPress={handleLoadMore}
-                disabled={isFetching}
-                className="items-center py-3.5 mb-2 bg-white border border-gray-200 rounded-2xl"
+        {/* Ultra-compact header 36/12 */}
+        <View
+          style={{
+            backgroundColor: Colors.primary,
+            paddingTop: 36,
+            paddingBottom: 12,
+            paddingHorizontal: 16,
+            borderBottomLeftRadius: Radius['3xl'],
+            borderBottomRightRadius: Radius['3xl'],
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.25)',
+                }}
               >
-                {isFetching ? <ActivityIndicator size="small" color="#0F172A" /> : <Text className="text-sm font-black text-[#0F172A]">Load more • {total - restaurants.length} left</Text>}
-              </TouchableOpacity>
-            )}
-            <View className="items-center py-3">
-              <Text className="text-[11px] text-gray-400 font-medium">Page {page} of {totalPages} • {total} restaurants</Text>
+                <Feather name="home" size={14} color={Colors.white} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Colors.white, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>Restaurants</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>
+                  {stats ? `${stats.total} total • ${stats.active} active • ${stats.verified} verified` : `${total} restaurants`}
+                </Text>
+              </View>
             </View>
-          </>
-        )}
-        <View className="h-6" />
+            <TouchableOpacity
+              onPress={() => router.push('/(admin)/restaurants/create' as any)}
+              style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}
+              activeOpacity={0.7}
+            >
+              <Feather name="plus" size={16} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Search ultra-compact */}
+          <View
+            style={{
+              marginTop: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255,255,255,0.14)',
+              borderRadius: Radius.xl,
+              paddingHorizontal: 10,
+              height: 40,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.2)',
+            }}
+          >
+            <Feather name="search" size={14} color={Colors.white} />
+            <TextInput
+              style={{ flex: 1, marginLeft: 8, fontSize: 12, color: Colors.white }}
+              placeholder="Search name, address, slug…"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              value={searchInput}
+              onChangeText={setSearchInput}
+              autoCapitalize="none"
+            />
+            {searchInput.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearchInput('')}>
+                <Feather name="x-circle" size={16} color={Colors.white} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Stats pills ultra-compact padding 8 */}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+            {[
+              { label: 'Total', value: stats?.total ?? total },
+              { label: 'Active', value: stats?.active ?? 0 },
+              { label: 'Verified', value: stats?.verified ?? 0 },
+            ].map((s) => (
+              <View
+                key={s.label}
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(255,255,255,0.14)',
+                  borderRadius: Radius.xl,
+                  padding: 8,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.2)',
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.white }}>{s.value}</Text>
+                <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.5, marginTop: 2 }}>{s.label.toUpperCase()}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Status tabs ultra-compact */}
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, alignItems: 'center' }}>
+            {(['all', 'active', 'deleted'] as const).map((v) => {
+              const active = status === v;
+              return (
+                <TouchableOpacity
+                  key={v}
+                  onPress={() => setStatus(v)}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    borderRadius: Radius.full,
+                    backgroundColor: active ? Colors.white : 'rgba(255,255,255,0.18)',
+                    borderWidth: 1,
+                    borderColor: active ? Colors.white : 'rgba(255,255,255,0.25)',
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: active ? Colors.primary : Colors.white }}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); setStatus('all'); }} style={{ marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 5 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.white }}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Filters ultra-compact */}
+        <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingRight: 16 }}>
+            {CUISINES.map((c) => {
+              const active = (c === 'All' && !cuisine) || cuisine === c;
+              return (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setCuisine(c === 'All' ? undefined : c)}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    borderRadius: Radius.full,
+                    backgroundColor: active ? Colors.primary : Colors.white,
+                    borderWidth: 1,
+                    borderColor: active ? Colors.primary : Colors.borderLight,
+                    ...Shadow.sm,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: active ? Colors.white : Colors.textSecondary }}>{c}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+            {[
+              { label: 'All', value: undefined },
+              { label: 'Verified', value: true },
+              { label: 'Pending', value: false },
+            ].map((o) => (
+              <TouchableOpacity
+                key={String(o.label)}
+                onPress={() => setVerified(o.value as any)}
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 5,
+                  borderRadius: Radius.full,
+                  backgroundColor: verified === o.value ? Colors.primary : Colors.white,
+                  borderWidth: 1,
+                  borderColor: verified === o.value ? Colors.primary : Colors.borderLight,
+                  ...Shadow.sm,
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '600', color: verified === o.value ? Colors.white : Colors.textSecondary }}>{o.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+          {isLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={{ marginTop: 12, fontSize: 13, color: Colors.textTertiary }}>Loading restaurants…</Text>
+            </View>
+          ) : restaurants.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48, backgroundColor: Colors.white, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.borderLight, ...Shadow.sm, marginTop: 8 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECDD3' }}>
+                <Feather name="search" size={28} color={Colors.primary} />
+              </View>
+              <Text style={{ marginTop: 12, fontSize: 14, fontWeight: '700', color: Colors.textDark }}>No restaurants found</Text>
+              <Text style={{ marginTop: 4, fontSize: 12, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 24 }}>{search ? 'Try a different term or clear filters' : 'No restaurants match the current filters'}</Text>
+              {(search || cuisine || verified !== undefined) && (
+                <TouchableOpacity onPress={() => { setSearchInput(''); setCuisine(undefined); setVerified(undefined); }} style={{ marginTop: 14, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full, backgroundColor: Colors.primary }} activeOpacity={0.7}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.white }}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <>
+              {restaurants.map((r: any) => (
+                <RestaurantCard key={r.id} restaurant={r} />
+              ))}
+              {page < totalPages && (
+                <TouchableOpacity onPress={handleLoadMore} disabled={isFetching} style={{ alignItems: 'center', paddingVertical: 12, marginTop: 8, backgroundColor: Colors.white, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.borderLight, ...Shadow.sm }} activeOpacity={0.7}>
+                  {isFetching ? <ActivityIndicator size="small" color={Colors.primary} /> : <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>Load more • {total - restaurants.length} left</Text>}
+                </TouchableOpacity>
+              )}
+              <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                <Text style={{ fontSize: 11, color: Colors.textTertiary }}>Page {page} of {totalPages} • {total} restaurants</Text>
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   );

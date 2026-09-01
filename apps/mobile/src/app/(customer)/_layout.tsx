@@ -42,8 +42,6 @@ export default function CustomerLayout() {
       <Stack.Screen name="chatbot" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="profile" options={{ headerShown: false, animation: 'slide_from_right' }} />
-<Stack.Screen name="order-tracking/[id]" options={{ headerShown: false }} />
-<Stack.Screen name="order/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }

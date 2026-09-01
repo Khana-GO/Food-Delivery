@@ -37,32 +37,36 @@ interface TabIconProps {
   focused: boolean;
   size: number;
   labelSize: number;
+  customIcon?: React.ReactNode;
 }
 
-export function TabIcon({ name, label, focused, size, labelSize }: TabIconProps) {
+export function TabIcon({ name, label, focused, size, labelSize, customIcon }: TabIconProps) {
   const resolvedName = resolveIconName(name);
   return (
     <View style={styles.iconWrap}>
       <View style={[styles.iconCircle, focused && styles.iconCircleFocused]}>
-        <Feather
-          name={resolvedName}
-          size={size}
-          color={focused ? '#FFFFFF' : '#94A3B8'}
-          strokeWidth={focused ? 2.4 : 2}
-        />
+        {customIcon || (
+          <Feather
+            name={resolvedName}
+            size={size}
+            color={focused ? '#FFFFFF' : '#94A3B8'}
+            strokeWidth={focused ? 2.4 : 2}
+          />
+        )}
       </View>
       <Text
         style={[
           styles.label,
           {
             fontSize: labelSize,
-            color: focused ? Colors.primary : '#94A3B8',
-            fontWeight: focused ? '800' : '500',
+            color: focused ? Colors.primary : '#64748B',
+            fontWeight: focused ? '800' : '600',
           },
         ]}
         numberOfLines={1}
-        ellipsizeMode="tail"
         allowFontScaling={false}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
       >
         {label}
       </Text>
@@ -78,37 +82,36 @@ export function useTabBarConstants() {
   const isCompact = width < 375;
   const isLandscape = width > height && !isTablet;
 
-  const iconSize = isTablet ? 28 : isVeryCompact ? 22 : isCompact ? 23 : 24;
+  const iconSize = isTablet ? 22 : isVeryCompact ? 18 : isCompact ? 20 : 21;
   const labelSize = isTablet ? 12 : isVeryCompact ? 9.5 : isCompact ? 10 : 11;
 
-  const baseBarHeight = isTablet ? 88 : isLandscape ? 64 : isVeryCompact ? 72 : isCompact ? 70 : 74;
+  const baseBarHeight = isTablet ? 82 : isLandscape ? 64 : 72;
 
   const tabBarStyle: StyleProp<ViewStyle> = {
     backgroundColor: Colors.white,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.border,
-    height: Platform.OS === 'ios' ? baseBarHeight + insets.bottom : baseBarHeight + Math.max(insets.bottom, 0),
-    minHeight: baseBarHeight + Math.max(insets.bottom, 0),
-    paddingBottom: Math.max(insets.bottom, isVeryCompact ? 6 : isCompact ? 8 : 10),
-    paddingTop: isTablet ? 14 : isVeryCompact ? 10 : isCompact ? 12 : 14,
-    paddingHorizontal: isTablet ? 20 : isVeryCompact ? 10 : isCompact ? 12 : 16,
+    height: Platform.OS === 'ios' ? baseBarHeight + insets.bottom : baseBarHeight + Math.max(insets.bottom, 8),
+    minHeight: baseBarHeight + Math.max(insets.bottom, 8),
+    paddingBottom: Math.max(insets.bottom, 6),
+    paddingTop: 8,
+    paddingHorizontal: isTablet ? 12 : 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: 32,
-    marginHorizontal: isTablet ? 24 : isVeryCompact ? 8 : isCompact ? 12 : 16,
-    marginBottom: isVeryCompact ? 6 : isCompact ? 8 : 10,
+    borderRadius: 28,
+    marginHorizontal: isTablet ? 16 : 8,
+    marginBottom: Math.max(insets.bottom > 0 ? 4 : 8, 6),
     marginTop: 0,
     ...Shadow.floating,
   };
 
   const tabBarItemStyle: StyleProp<ViewStyle> = {
     flex: 1,
-    minWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: isVeryCompact ? 4 : isCompact ? 6 : 8,
-    paddingVertical: 6,
+    paddingHorizontal: 2,
+    paddingVertical: 0,
   };
 
   return { iconSize, labelSize, tabBarStyle, tabBarItemStyle, isTablet, isVeryCompact, isCompact, insets };
@@ -116,18 +119,15 @@ export function useTabBarConstants() {
 
 const styles = StyleSheet.create({
   iconWrap: {
-    flex: 1,
-    minWidth: 0,
-    maxWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
     paddingHorizontal: 2,
   },
   iconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     letterSpacing: 0.15,
-    lineHeight: 12,
+    lineHeight: 14,
+    marginTop: 3,
   },
 });

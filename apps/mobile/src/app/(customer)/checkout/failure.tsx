@@ -27,13 +27,13 @@ export default function CheckoutFailureScreen() {
           <Feather name="x-circle" size={64} color="#EF4444" />
         </View>
 
-        <Text className="text-2xl font-bold text-white text-center">Payment Failed</Text>
+        <Text className="text-2xl font-bold text-center" style={{ color: '#1F2937' }}>Payment Failed</Text>
         <Text className="text-base text-gray-500 text-center mt-2 leading-6">{reason}</Text>
 
         <View className="bg-red-50 rounded-xl p-4 mt-6 border border-red-100 w-full">
           <View className="flex-row gap-2 items-start">
             <Feather name="alert-circle" size={18} color="#EF4444" />
-            <Text className="text-sm text-white flex-1 leading-5">
+            <Text className="text-sm flex-1 leading-5" style={{ color: '#991B1B' }}>
               No amount was deducted. You can retry payment or choose a different method.
             </Text>
           </View>

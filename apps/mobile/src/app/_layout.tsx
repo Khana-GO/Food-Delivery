@@ -82,8 +82,6 @@ function AppNavigator() {
         <Stack.Screen name="(driver)" options={{ animation: 'fade', animationDuration: 180 }} />
         <Stack.Screen name="(restaurant-owner)" options={{ animation: 'fade', animationDuration: 180 }} />
         <Stack.Screen name="(admin)" options={{ animation: 'fade', animationDuration: 180 }} />
-        <Stack.Screen name="auth/login" options={{ animation: 'fade', animationDuration: 180 }} />
-        <Stack.Screen name="auth/register" options={{ animation: 'fade', animationDuration: 180 }} />
       </Stack>
       <ToastHost />
     </>

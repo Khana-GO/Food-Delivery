@@ -10,6 +10,7 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -49,9 +50,11 @@ type FieldErrors = Partial<Record<keyof ResetPasswordFormValues, string>>;
 const Logo = React.memo(() => (
   <View className="items-center justify-center w-full">
     <View className="flex-row items-center gap-3">
-      <View className="w-12 h-12 rounded-2xl bg-primary items-center justify-center shadow-lg shadow-primary/30">
-        <MaterialCommunityIcons name="food" size={32} color="#FFFFFF" />
-      </View>
+      <Image
+        source={require('@/assets/images/logo/logo.png')}
+        style={{ width: 48, height: 48, borderRadius: 12 }}
+        resizeMode="contain"
+      />
       <View className="items-start">
         <Text className="text-3xl font-extrabold tracking-tight text-white">
           Khana<Text className="text-primary">Go</Text>

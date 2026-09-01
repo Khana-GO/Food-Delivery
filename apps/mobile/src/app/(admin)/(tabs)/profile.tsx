@@ -11,23 +11,22 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
-import { ConfirmDialog, useResponsive } from '@/components/res-owner/owner/kit';
+import { ConfirmDialog } from '@/components/res-owner/owner/kit';
 import * as ImagePicker from 'expo-image-picker';
 import { useUploadProfileImage } from '@/hooks/owner/user/useUploadProfileImage';
 import { useDeleteProfileImage } from '@/hooks/owner/user/useDeleteProfileImage';
 import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
+import { Colors, Radius, Shadow } from '@/constants/theme';
+import PremiumCard from '@/components/ui/PremiumCard';
 
 export default function AdminProfile() {
-  const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticating } = useAuth();
   const { mutate: uploadImage, isPending: isUploading } = useUploadProfileImage();
   const { mutate: deleteImage, isPending: isDeleting } = useDeleteProfileImage();
   const { data: unreadData } = useUnreadCount();
   const unreadCount = unreadData?.count ?? 0;
   const [showLogout, setShowLogout] = useState(false);
-  const { isTablet } = useResponsive();
 
   const handleLogout = useCallback(async () => {
     setShowLogout(false);
@@ -62,122 +61,234 @@ export default function AdminProfile() {
     ]);
   }, [deleteImage]);
 
-  const sections: Array<{ title: string; rows: Array<{ id: string; icon: any; label: string; sub?: string; badge?: number; onPress: () => void; tint?: 'brand' | 'green' | 'slate' }> }> = [
+  const sections: Array<{ title: string; rows: Array<{ id: string; icon: any; label: string; sub?: string; badge?: number; onPress: () => void }> }> = [
     {
       title: 'Management',
       rows: [
-        { id: 'users', icon: 'users', label: 'Manage Users', sub: 'Roles, verification & deletions', tint: 'brand', onPress: () => router.push('/(admin)/(tabs)/users' as any) },
-        { id: 'restaurants', icon: 'home', label: 'Manage Restaurants', sub: 'Verify & moderate venues', tint: 'green', onPress: () => router.push('/(admin)/(tabs)/restaurants' as any) },
-        { id: 'orders', icon: 'shopping-bag', label: 'Orders', sub: 'Live queue & history', tint: 'brand', onPress: () => router.push('/(admin)/(tabs)/orders' as any) },
+        { id: 'users', icon: 'users', label: 'Manage Users', sub: 'Roles, verification & deletions', onPress: () => router.push('/(admin)/(tabs)/users' as any) },
+        { id: 'restaurants', icon: 'home', label: 'Manage Restaurants', sub: 'Verify & moderate venues', onPress: () => router.push('/(admin)/(tabs)/restaurants' as any) },
+        { id: 'orders', icon: 'shopping-bag', label: 'Orders', sub: 'Live queue & history', onPress: () => router.push('/(admin)/(tabs)/orders' as any) },
       ],
     },
     {
       title: 'Insights',
       rows: [
-        { id: 'analytics', icon: 'bar-chart-2', label: 'Analytics', sub: 'Platform insights', tint: 'slate', onPress: () => router.push('/(admin)/(tabs)/analytics' as any) },
-        { id: 'notifications', icon: 'bell', label: 'Notifications', badge: unreadCount > 0 ? Math.min(unreadCount, 99) : undefined, tint: 'brand', onPress: () => router.push('/(admin)/(tabs)/notifications' as any) },
+        { id: 'analytics', icon: 'bar-chart-2', label: 'Analytics', sub: 'Platform insights', onPress: () => router.push('/(admin)/(tabs)/analytics' as any) },
+        { id: 'notifications', icon: 'bell', label: 'Notifications', badge: unreadCount > 0 ? Math.min(unreadCount, 99) : undefined, onPress: () => router.push('/(admin)/(tabs)/notifications' as any) },
       ],
     },
   ];
 
-  const TINT_BG = { brand: 'bg-red-50', green: 'bg-green-50', slate: 'bg-slate-100' } as const;
-  const TINT_FG = { brand: '#E23744', green: '#16A34A', slate: '#475569' } as const;
+  if (!user) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  const hasImage = !!user.imageUrl;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-        <View style={{ paddingTop: insets.top }} className="bg-primary">
-          <View className="rounded-b-[32px] bg-primary px-5 pb-14 pt-6">
-            <View className="flex-row items-center">
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handlePickImage}
-                disabled={isUploading || isDeleting}
-                className="relative h-[72px] w-[72px] overflow-hidden rounded-full border-[3px] border-white/40 bg-white/15"
+        {/* Ultra-compact header 36/14 - avatar 64, texts smaller */}
+        <View style={{ backgroundColor: Colors.primary }}>
+          <View
+            style={{
+              paddingTop: 36,
+              paddingBottom: 14,
+              paddingHorizontal: 16,
+              borderBottomLeftRadius: Radius['3xl'],
+              borderBottomRightRadius: Radius['3xl'],
+              alignItems: 'center',
+            }}
+          >
+            <TouchableOpacity onPress={handlePickImage} disabled={isUploading || isDeleting} activeOpacity={0.7} style={{ position: 'relative' }}>
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 3,
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  ...Shadow.lg,
+                }}
               >
-                {user?.imageUrl ? (
-                  <Image source={{ uri: user.imageUrl }} className="h-full w-full" style={{ borderRadius: 999 }} />
+                {hasImage ? (
+                  <Image source={{ uri: user.imageUrl! }} style={{ width: '100%', height: '100%', borderRadius: 32 }} />
                 ) : (
-                  <View className="h-full w-full items-center justify-center rounded-full bg-white/10">
-                    <Text className="text-2xl font-extrabold text-white">
-                      {(user?.firstName?.charAt(0) || 'A').toUpperCase()}
-                      {(user?.lastName?.charAt(0) || '').toUpperCase()}
-                    </Text>
-                  </View>
+                  <Text style={{ fontSize: 24, fontWeight: '800', color: Colors.white }}>
+                    {user.firstName?.charAt(0).toUpperCase()}
+                    {user.lastName?.charAt(0).toUpperCase()}
+                  </Text>
                 )}
-                <View className="absolute bottom-0 right-0 h-6 w-6 items-center justify-center rounded-full border-2 border-primary bg-white">
-                  <Feather name="camera" size={12} color="#E23744" />
-                </View>
-                {(isUploading || isDeleting) && (
-                  <View className="absolute inset-0 items-center justify-center rounded-full bg-black/50">
-                    <ActivityIndicator size="small" color="#FFF" />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              <View className="ml-4 flex-1">
-                <Text className="text-lg font-extrabold text-white" numberOfLines={1}>{user?.firstName} {user?.lastName}</Text>
-                <Text className="mt-0.5 text-xs text-white/80" numberOfLines={1}>{user?.email}</Text>
-                {user?.phone ? <Text className="mt-0.5 text-xs text-white/70">{user.phone}</Text> : null}
-                <View className="mt-1.5 self-start rounded-full bg-white/20 px-2.5 py-1">
-                  <Text className="text-[10px] font-bold uppercase tracking-wider text-white">Administrator</Text>
-                </View>
               </View>
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  backgroundColor: Colors.white,
+                  borderRadius: 14,
+                  padding: 5,
+                  borderWidth: 2,
+                  borderColor: Colors.primary,
+                }}
+              >
+                <Feather name="camera" size={11} color={Colors.primary} />
+              </View>
+              {(isUploading || isDeleting) && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 32,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                  }}
+                >
+                  <ActivityIndicator size="small" color="#FFF" />
+                </View>
+              )}
+            </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => router.push('/(admin)/profile/edit' as any)} className="rounded-full bg-white/20 p-2.5">
-                <Feather name="edit-2" size={18} color="#FFF" />
+            <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.white, marginTop: 10 }}>{user.firstName} {user.lastName}</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>{user.email}</Text>
+            {user.phone ? <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>{user.phone}</Text> : null}
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#4ADE80' }} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>Online</Text>
+              <View
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: 'rgba(255,255,255,0.25)',
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.3)',
+                }}
+              >
+                <Text style={{ color: Colors.white, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}>ADMINISTRATOR</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TouchableOpacity
+                onPress={() => router.push('/(admin)/profile/edit' as any)}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: Radius.full,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.25)',
+                }}
+                activeOpacity={0.7}
+              >
+                <Feather name="edit-2" size={11} color={Colors.white} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.white }}>Edit Profile</Text>
               </TouchableOpacity>
-              {user?.imageUrl ? (
-                <TouchableOpacity onPress={handleDeleteImage} disabled={isDeleting} className="ml-2 rounded-full bg-red-500/30 p-2">
-                  <Feather name="trash-2" size={16} color="#FFF" />
+              {user.imageUrl ? (
+                <TouchableOpacity onPress={handleDeleteImage} disabled={isDeleting} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }} activeOpacity={0.7}>
+                  <Feather name="trash-2" size={13} color={Colors.white} />
                 </TouchableOpacity>
               ) : null}
             </View>
           </View>
         </View>
 
-        <View className="-mt-9 px-4">
-          <View className="flex-row overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm" style={{ alignSelf: 'center', width: '100%', maxWidth: isTablet ? 688 : undefined }}>
+        {/* Stats cards ultra-compact padding 10 */}
+        <View style={{ paddingHorizontal: 16, marginTop: -12 }}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
             {[
-              { value: 'Admin', label: 'Role', color: 'text-primary' },
-              { value: user?.isVerified ? 'Verified' : 'Unverified', label: 'Status', color: user?.isVerified ? 'text-green-600' : 'text-amber-600' },
-              { value: 'Online', label: 'Presence', color: 'text-green-600' },
-            ].map((s, i) => (
-              <View key={s.label} className={`flex-1 items-center py-4 ${i > 0 ? 'border-l border-gray-50' : ''}`}>
-                <Text className={`text-sm font-extrabold ${s.color}`}>{s.value}</Text>
-                <Text className="mt-0.5 text-[11px] font-medium text-gray-400">{s.label}</Text>
+              { value: 'Admin', label: 'Role', icon: 'shield' },
+              { value: user.isVerified ? 'Verified' : 'Unverified', label: 'Status', icon: 'check-circle' },
+              { value: 'Online', label: 'Presence', icon: 'activity' },
+            ].map((s) => (
+              <View
+                key={s.label}
+                style={{
+                  flex: 1,
+                  backgroundColor: Colors.white,
+                  borderRadius: Radius.xl,
+                  padding: 10,
+                  borderWidth: 1,
+                  borderColor: Colors.borderLight,
+                  ...Shadow.sm,
+                  alignItems: 'center',
+                }}
+              >
+                <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                  <Feather name={s.icon as any} size={10} color={Colors.white} />
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.textDark, marginTop: 6 }} numberOfLines={1}>{s.value}</Text>
+                <Text style={{ fontSize: 9, color: Colors.textSecondary, marginTop: 1 }}>{s.label}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View className="px-4" style={{ alignSelf: 'center', width: '100%', maxWidth: isTablet ? 720 : undefined }}>
+        <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
           {sections.map((section) => (
-            <View key={section.title} className="mt-5">
-              <Text className="mb-2 px-1 text-[13px] font-bold uppercase tracking-wide text-gray-400">{section.title}</Text>
-              <View className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <View key={section.title} style={{ marginTop: 16 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textTertiary, letterSpacing: 0.8, marginBottom: 8 }}>{section.title.toUpperCase()}</Text>
+              <PremiumCard elevation="sm" padding={0} style={{ overflow: 'hidden' }}>
                 {section.rows.map((row, i) => (
-                  <Pressable key={row.id} onPress={row.onPress} className={`flex-row items-center px-4 py-3.5 active:bg-gray-50 ${i !== section.rows.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                    <View className={`h-10 w-10 items-center justify-center rounded-xl ${TINT_BG[row.tint || 'slate']}`}>
-                      <Feather name={row.icon} size={17} color={TINT_FG[row.tint || 'slate']} />
+                  <Pressable
+                    key={row.id}
+                    onPress={row.onPress}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: i !== section.rows.length - 1 ? 1 : 0, borderBottomColor: Colors.borderLight }}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECDD3' }}>
+                      <Feather name={row.icon} size={15} color={Colors.primary} />
                     </View>
-                    <View className="ml-3 flex-1">
-                      <Text className="text-sm font-semibold text-gray-900">{row.label}</Text>
-                      {row.sub ? <Text className="mt-0.5 text-xs text-gray-400">{row.sub}</Text> : null}
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>{row.label}</Text>
+                      {row.sub ? <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 2 }}>{row.sub}</Text> : null}
                     </View>
-                    {!!row.badge && <View className="mr-2 rounded-full bg-primary px-2 py-0.5"><Text className="text-[11px] font-bold text-white">{row.badge}</Text></View>}
-                    <Feather name="chevron-right" size={17} color="#CBD5E1" />
+                    {!!row.badge && (
+                      <View style={{ marginRight: 8, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.white }}>{row.badge}</Text>
+                      </View>
+                    )}
+                    <Feather name="chevron-right" size={15} color={Colors.textTertiary} />
                   </Pressable>
                 ))}
-              </View>
+              </PremiumCard>
             </View>
           ))}
 
-          <Pressable onPress={() => setShowLogout(true)} disabled={isAuthenticating} className="mt-5 flex-row items-center justify-center rounded-2xl border border-red-200 bg-red-50 py-4 active:bg-red-100">
-            <Feather name="log-out" size={18} color="#DC2626" />
-            <Text className="ml-2 text-sm font-bold text-red-600">{isAuthenticating ? 'Logging out…' : 'Log Out'}</Text>
-          </Pressable>
-          <Text className="mt-5 text-center text-xs text-gray-300">KhanaGo Admin · v1.0.0</Text>
+          <TouchableOpacity
+            onPress={() => setShowLogout(true)}
+            disabled={isAuthenticating}
+            style={{
+              marginTop: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: Colors.errorBg,
+              paddingVertical: 16,
+              borderRadius: Radius.xl,
+              borderWidth: 1,
+              borderColor: '#FECDD3',
+            }}
+            activeOpacity={0.7}
+          >
+            <Feather name="log-out" size={18} color={Colors.error} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.error }}>{isAuthenticating ? 'Logging out…' : 'Log Out'}</Text>
+          </TouchableOpacity>
+          <Text style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: Colors.textMuted }}>KhanaGo Admin · v1.0.0</Text>
         </View>
       </ScrollView>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, Animated, StatusBar, Easing, Dimensions, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Animated, StatusBar, Easing, Dimensions, Pressable, StyleSheet, Image } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -52,7 +52,11 @@ export default function SplashPage() {
         <StatusBar barStyle="dark-content" backgroundColor={Colors.background} translucent />
         <Animated.View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
           <View style={styles.logoWrap}>
-            <Text style={[styles.logoIcon, { fontSize: 28 * textScale }]}>🍽️</Text>
+            <Image
+              source={require('@/assets/images/logo/logo.png')}
+              style={{ width: 56 * textScale, height: 56 * textScale, borderRadius: 14 }}
+              resizeMode="contain"
+            />
           </View>
           <Text style={{ fontWeight: '800', letterSpacing: -0.6, marginTop: 18, fontSize: 34 * textScale }}>
             <Text style={{ color: Colors.textDark }}>Khana</Text>

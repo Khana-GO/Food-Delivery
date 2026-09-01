@@ -111,17 +111,22 @@ export const ProfileEditForm = ({ user, onSubmit, isLoading }: ProfileEditFormPr
         {errors.lastName && <Text className="mt-1 text-xs text-red-500">{errors.lastName}</Text>}
       </View>
 
-      {/* Email */}
+      {/* Email - not editable */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Email *</Text>
-        <TextInput
-          className={`border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
-          placeholder="Enter email"
-          value={form.email}
-          onChangeText={(text) => setForm({ ...form, email: text })}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        <View className={`border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 bg-gray-100 flex-row items-center`}>
+          <TextInput
+            className="flex-1 text-base text-gray-500"
+            placeholder="Enter email"
+            value={form.email}
+            editable={false}
+            selectTextOnFocus={false}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <Feather name="lock" size={14} color="#94A3B8" />
+        </View>
+        <Text className="mt-1 text-xs text-gray-400">Email cannot be changed</Text>
         {errors.email && <Text className="mt-1 text-xs text-red-500">{errors.email}</Text>}
       </View>
 

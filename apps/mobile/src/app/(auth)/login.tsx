@@ -6,6 +6,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
   ImageBackground,
   StatusBar,
   TextInput,
@@ -40,14 +41,16 @@ type FieldErrors = Partial<Record<keyof LoginFormValues, string>>;
 const Logo = React.memo(() => (
   <View className="items-center justify-center w-full">
     <View className="flex-row items-center gap-3">
-      <View className="w-12 h-12 rounded-2xl bg-primary items-center justify-center shadow-lg shadow-primary/30">
-        <MaterialCommunityIcons name="food" size={32} color="#FFFFFF" />
-      </View>
+      <Image
+        source={require('@/assets/images/logo/logo.png')}
+        style={{ width: 48, height: 48, borderRadius: 12 }}
+        resizeMode="contain"
+      />
       <View className="items-start">
         <Text className="text-3xl font-extrabold tracking-tight text-white">
           Khana<Text className="text-primary">Go</Text>
         </Text>
-        <Text className="text-white/80 text-xs font-medium tracking-wide">
+        <Text className="text-xs font-medium tracking-wide text-white/80">
           Delicious Food, Delivered Fast
         </Text>
       </View>
@@ -58,7 +61,7 @@ const Logo = React.memo(() => (
 const Divider = React.memo(() => (
   <View className="flex-row items-center gap-4 mb-5">
     <View className="flex-1 h-px bg-gray-200" />
-    <Text className="text-gray-400 text-xs font-medium tracking-wider">
+    <Text className="text-xs font-medium tracking-wider text-gray-400">
       or continue with
     </Text>
     <View className="flex-1 h-px bg-gray-200" />
@@ -89,7 +92,7 @@ const SocialButton = React.memo(({ provider, onPress, disabled }: SocialButtonPr
         size={22}
         color={isGoogle ? '#EA4335' : '#000000'}
       />
-      <Text className="text-black font-semibold text-sm">
+      <Text className="text-sm font-semibold text-black">
         {isGoogle ? 'Google' : 'Apple'}
       </Text>
     </TouchableOpacity>
@@ -147,7 +150,7 @@ const InputField = React.memo(({
       >
         <View className="mr-3">{leftIcon}</View>
         <TextInput
-          className="flex-1 text-base text-black py-3"
+          className="flex-1 py-3 text-base text-black"
           placeholder={placeholder}
           placeholderTextColor="#999"
           value={value}
@@ -179,7 +182,7 @@ const InputField = React.memo(({
         )}
       </View>
       {hasError && (
-        <Text className="text-red-500 text-xs mt-1 ml-1">
+        <Text className="mt-1 ml-1 text-xs text-red-500">
           {error}
         </Text>
       )}
@@ -341,7 +344,7 @@ const handleLogin = useCallback(async () => {
         }}
         resizeMode="cover"
       >
-        <View className="flex-1 bg-black/30 justify-center items-center px-6">
+        <View className="items-center justify-center flex-1 px-6 bg-black/30">
           <Logo />
         </View>
       </ImageBackground>
@@ -362,10 +365,10 @@ const handleLogin = useCallback(async () => {
           <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[560px]">
             {/* Header */}
             <View className="mb-6">
-              <Text className="text-3xl font-extrabold text-black tracking-tight mb-1">
+              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black">
                 Welcome Back
               </Text>
-              <Text className="text-gray-500 text-sm tracking-wide">
+              <Text className="text-sm tracking-wide text-gray-500">
                 Sign in to continue exploring delicious food
               </Text>
             </View>
@@ -404,13 +407,13 @@ const handleLogin = useCallback(async () => {
                 leftIcon={<Feather name="lock" size={20} color="#666" />}
               />
 
-              <View className="flex-row justify-end items-center mt-1 mb-2">
+              <View className="flex-row items-center justify-end mt-1 mb-2">
                 <TouchableOpacity
                   onPress={goToForgotPassword}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   disabled={isLoginLoading}
                 >
-                  <Text className="text-primary text-sm font-semibold tracking-wide">
+                  <Text className="text-sm font-semibold tracking-wide text-primary">
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
@@ -421,7 +424,7 @@ const handleLogin = useCallback(async () => {
             {generalError ? (
               <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
                 <Feather name="alert-triangle" size={16} color="#EF4444" />
-                <Text className="text-red-500 text-sm text-center flex-1 font-medium">
+                <Text className="flex-1 text-sm font-medium text-center text-red-500">
                   {generalError}
                 </Text>
               </View>
@@ -436,7 +439,7 @@ const handleLogin = useCallback(async () => {
               disabled={isLoginLoading}
               activeOpacity={0.8}
             >
-              <Text className="text-white text-center font-bold text-base tracking-wide">
+              <Text className="text-base font-bold tracking-wide text-center text-white">
                 {isLoginLoading ? 'Signing in...' : 'Sign In'}
               </Text>
             </TouchableOpacity>
@@ -458,8 +461,8 @@ const handleLogin = useCallback(async () => {
             </View>
 
             {/* Sign Up Link */}
-            <View className="flex-row justify-center items-center">
-              <Text className="text-gray-500 text-sm">
+            <View className="flex-row items-center justify-center">
+              <Text className="text-sm text-gray-500">
                 Don't have an account?
               </Text>
               <TouchableOpacity
@@ -467,7 +470,7 @@ const handleLogin = useCallback(async () => {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 disabled={isLoginLoading}
               >
-                <Text className="text-primary font-bold text-sm ml-1">
+                <Text className="ml-1 text-sm font-bold text-primary">
                   Sign Up
                 </Text>
               </TouchableOpacity>
