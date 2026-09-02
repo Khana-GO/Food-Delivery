@@ -145,12 +145,37 @@ export class NotificationsService {
     }, 'getUnreadCount');
   }
 
-  // ─── MARK AS READ ───
+  // ─── MARK AS READ ─── (idempotent: no 404 if already read or concurrent request)
   async markAsRead(
     id: string,
     userId: string,
   ): Promise<NotificationResponseDto> {
     return this.handleDbOperation(async () => {
+      const existing = await this.db.query.notificationsTable.findFirst({
+        where: and(
+          eq(notificationsTable.id, id),
+          eq(notificationsTable.userId, userId),
+        ),
+      });
+      if (!existing) {
+        this.logger.warn(`[markAsRead] not found ${id} for user ${userId} - idempotent skip`);
+        // Return a lightweight success DTO instead of throwing 404 to avoid log spam on double-tap / stale cache
+        return new NotificationResponseDto({
+          id,
+          userId,
+          title: '',
+          body: '',
+          type: 'system',
+          isRead: true,
+          isPushSent: false,
+          createdAt: new Date(),
+          readAt: new Date(),
+          data: null,
+        } as any);
+      }
+      if (existing.isRead) {
+        return new NotificationResponseDto(existing);
+      }
       const [updated] = await this.db
         .update(notificationsTable)
         .set({
@@ -166,7 +191,7 @@ export class NotificationsService {
         .returning();
 
       if (!updated) {
-        throw new NotFoundException('Notification not found or already read');
+        return new NotificationResponseDto(existing);
       }
 
       this.logger.log(`Notification ${id} marked as read`);
@@ -201,7 +226,7 @@ export class NotificationsService {
     }, 'markAllAsRead');
   }
 
-  // ─── DELETE NOTIFICATION ───
+  // ─── DELETE NOTIFICATION ─── (idempotent)
   async delete(id: string, userId: string): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const result = await this.db
@@ -215,7 +240,8 @@ export class NotificationsService {
         .returning();
 
       if (result.length === 0) {
-        throw new NotFoundException('Notification not found');
+        this.logger.warn(`[delete] Notification ${id} already deleted or not found for user ${userId} - idempotent success`);
+        return { message: 'Notification already deleted' };
       }
 
       this.logger.log(`Notification ${id} deleted`);

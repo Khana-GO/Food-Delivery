@@ -304,15 +304,15 @@ export default function HomeScreen() {
           {/* ─── Promo banner ─── */}
           <View style={{ paddingHorizontal: 16, marginTop: 2, marginBottom: 6 }}>
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} snapToInterval={width - 32 + 12} decelerationRate="fast">
-              <View style={[styles.promoCard, { width: width - 32, backgroundColor: '#0F172A' }]}>
+              <View style={[styles.promoCard, { width: width - 32, backgroundColor: Colors.primary }]}>
                 <View style={{ flex: 1, paddingRight: 12 }}>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FDE68A', letterSpacing: 0.6 }}>LIMITED TIME</Text>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 }}>LIMITED TIME</Text>
                   </View>
                   <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 }}>Free delivery on Rs.500+</Text>
-                  <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '500' }}>Hot meals from verified kitchens — no extra fee</Text>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>Hot meals from verified kitchens — no extra fee</Text>
                   <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={{ marginTop: 10, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Order now →</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.primary }}>Order now →</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
@@ -473,7 +473,7 @@ export default function HomeScreen() {
                             <Text style={{ fontSize: 28 }}>🍽️</Text>
                           </View>
                         )}
-                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.textDark, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primaryDark }}>
                           <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
                         </View>
                         <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.96)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F0' }}>
@@ -538,8 +538,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: Colors.primary,
-    paddingTop: 52,
-    paddingBottom: 32,
+    paddingTop: 12,
+    paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: Radius['3xl'],
     borderBottomRightRadius: Radius['3xl'],
@@ -547,8 +547,8 @@ const styles = StyleSheet.create({
   headerShimmer: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 20,
-    paddingTop: 52,
-    paddingBottom: 32,
+    paddingTop: 12,
+    paddingBottom: 20,
     borderBottomLeftRadius: Radius['3xl'],
     borderBottomRightRadius: Radius['3xl'],
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.textDark,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,

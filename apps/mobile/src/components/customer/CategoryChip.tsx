@@ -41,8 +41,8 @@ const styles = StyleSheet.create({
     ...Shadow.xs,
   },
   selected: {
-    backgroundColor: Colors.textDark,
-    borderColor: Colors.textDark,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
     ...Shadow.sm,
   },
   text: { fontSize: 13, fontWeight: '600', letterSpacing: 0.1 },

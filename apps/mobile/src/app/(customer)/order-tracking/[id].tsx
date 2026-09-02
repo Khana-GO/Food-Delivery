@@ -113,20 +113,20 @@ export default function OrderTrackingScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      {/* ─── Header ─── */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
+      {/* ─── Header ─── premium crimson */}
+      <View className="px-6 pt-12 pb-4 border-b border-gray-100" style={{ backgroundColor: '#B5122A' }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => router.back()} className="p-1" style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+              <Feather name="arrow-left" size={18} color="#FFFFFF" />
             </TouchableOpacity>
             <View>
-              <Text className="text-xl font-bold text-black">Track Order</Text>
-              <Text className="text-xs text-gray-500">Order #{id.slice(0, 8).toUpperCase()}</Text>
+              <Text className="text-xl font-bold" style={{ color: '#FFFFFF' }}>Track Order</Text>
+              <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.85)' }}>Order #{id.slice(0, 8).toUpperCase()}</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={handleRefresh} className="p-2">
-            <Feather name="refresh-cw" size={20} color="#94A3B8" />
+          <TouchableOpacity onPress={handleRefresh} className="p-2" style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+            <Feather name="refresh-cw" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 

@@ -210,40 +210,35 @@ export default function MenuItemsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header — professional with darker accent, responsive */}
-      <View className={`${isVeryCompact ? 'px-4 pt-10 pb-3' : 'px-6 pt-12 pb-4'} bg-white border-b border-gray-100 shadow-sm`}>
-        <View className="flex-row items-center justify-between gap-2">
-          <View className="flex-row items-center flex-1 min-w-0 gap-2">
+    <View style={{ flex: 1, backgroundColor: '#F7F7F5' }}>
+      {/* Premium crimson header */}
+      <View style={{ backgroundColor: '#B5122A', paddingTop: isVeryCompact ? 36 : 44, paddingBottom: 14, paddingHorizontal: isVeryCompact ? 16 : 20, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8, minWidth: 0 }}>
             <TouchableOpacity
               onPress={() => router.back()}
-              className={`${isVeryCompact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-full bg-gray-50 border border-gray-100 shrink-0`}
+              style={{ width: isVeryCompact ? 32 : 36, height: isVeryCompact ? 32 : 36, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
             >
-              <Feather name="arrow-left" size={isVeryCompact ? 16 : 18} color="#1A1A1A" />
+              <Feather name="arrow-left" size={isVeryCompact ? 16 : 18} color="#FFFFFF" />
             </TouchableOpacity>
-            <View
-              className={`${isVeryCompact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-xl bg-[#B91C1C] shadow-sm shrink-0`}
-            >
+            <View style={{ width: isVeryCompact ? 32 : 36, height: isVeryCompact ? 32 : 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
               <Feather name="book-open" size={isVeryCompact ? 14 : 16} color="#FFFFFF" />
             </View>
-            <View className="flex-1 min-w-0">
+            <View style={{ flex: 1, minWidth: 0 }}>
               <Text
-                className={`${isVeryCompact ? 'text-lg' : 'text-xl'} font-extrabold text-gray-900 leading-none`}
+                style={{ fontSize: isVeryCompact ? 16 : 18, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 }}
                 numberOfLines={1}
-                adjustsFontSizeToFit
               >
                 Menu Items
               </Text>
-              <Text className="text-[11px] font-semibold text-gray-400" numberOfLines={1}>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '600' }} numberOfLines={1}>
                 {totalCount} total dishes
               </Text>
             </View>
           </View>
           <TouchableOpacity
             activeOpacity={0.85}
-            className={`flex-row items-center justify-center rounded-xl bg-[#B91C1C] shadow-md border border-[#7F1D1D] shrink-0 ${
-              isVeryCompact ? 'h-9 w-9 px-0' : 'gap-2 px-4 py-2.5'
-            }`}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: isVeryCompact ? 10 : 16, paddingVertical: isVeryCompact ? 8 : 10, borderRadius: 999, gap: 6, shadowColor: '#7F0D1D', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}
             onPress={() =>
               router.push({
                 pathname: '/(restaurant-owner)/menu/create',
@@ -251,8 +246,8 @@ export default function MenuItemsScreen() {
               } as never)
             }
           >
-            <Feather name="plus" size={isVeryCompact ? 16 : 18} color="#FFF" />
-            {!isVeryCompact ? <Text className="text-sm font-semibold text-white">Add Item</Text> : null}
+            <Feather name="plus" size={isVeryCompact ? 14 : 16} color="#B5122A" />
+            {!isVeryCompact ? <Text style={{ fontSize: 12, fontWeight: '800', color: '#B5122A' }}>Add Item</Text> : null}
           </TouchableOpacity>
         </View>
       </View>

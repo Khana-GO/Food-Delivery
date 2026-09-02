@@ -159,13 +159,13 @@ export default function CheckoutScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100" style={{ shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
+      <View className="px-6 pt-12 pb-4 border-b border-gray-100" style={{ backgroundColor: '#B5122A', shadowColor: '#7F0D1D', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8 }}>
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Feather name="arrow-left" size={24} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+              <Feather name="arrow-left" size={18} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-black">Checkout</Text>
-            {backendCart?.restaurantName ? <Text className="ml-2 text-xs text-gray-500" numberOfLines={1}>{backendCart.restaurantName}</Text> : null}
+            <Text className="text-xl font-bold" style={{ color: '#FFFFFF' }}>Checkout</Text>
+            {backendCart?.restaurantName ? <Text className="ml-2 text-xs" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={1}>{backendCart.restaurantName}</Text> : null}
           </View>
         </View>
 

@@ -76,7 +76,7 @@ export default function Orders() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 32, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
   title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
   subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1 },
@@ -90,10 +90,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.textDark,
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: Radius.xl,
     marginTop: 4,
-    ...Shadow.md,
+    ...Shadow.primary,
   },
 });

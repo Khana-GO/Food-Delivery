@@ -42,7 +42,11 @@ export default function Payment() {
             style={[styles.methodCard, selected === m.id && styles.methodSelected, !!m.disabled && { opacity: 0.6 }]}
           >
             <View style={[styles.iconCircle, selected === m.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}>
-              <Feather name={m.icon} size={16} color={selected === m.id ? '#FFFFFF' : Colors.primary} />
+              {m.id === '1' ? (
+                <Text style={{ fontSize: 16, fontWeight: '800', color: selected === m.id ? '#FFFFFF' : Colors.primary }}>₹</Text>
+              ) : (
+                <Feather name={m.icon} size={16} color={selected === m.id ? '#FFFFFF' : Colors.primary} />
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.methodLabel}>{m.label}</Text>
@@ -54,18 +58,7 @@ export default function Payment() {
           </TouchableOpacity>
         ))}
 
-        <PremiumCard>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BBF7D0' }}>
-              <Feather name="plus" size={16} color="#15803D" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textDark }}>Add new method</Text>
-              <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>Cards & wallets coming soon</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color="#CBD5E1" />
-          </View>
-        </PremiumCard>
+
       </ScrollView>
     </View>
   );

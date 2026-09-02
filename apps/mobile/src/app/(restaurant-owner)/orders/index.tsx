@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, FlatList, ActivityIndicator, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   StatusPill,
   FilterChip,
-  SearchInput,
   EmptyState,
   ContentWidth,
   useResponsive,
@@ -15,6 +14,8 @@ import {
 } from '@/components/res-owner/owner/kit';
 import { useRestaurantOrders } from '@/hooks/owner/orders/useRestaurantOrders';
 import { useOrderStore } from '@/stores/customer/orderStore';
+import { Colors, Radius, Shadow } from '@/constants/theme';
+import PremiumCard from '@/components/ui/PremiumCard';
 
 type TabKey = 'all' | OrderStatus;
 
@@ -75,28 +76,64 @@ export default function OrdersScreen() {
   const revenueToday = orders.filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0);
 
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-      <View className="bg-white px-4 pb-3 pt-3">
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View style={{ backgroundColor: Colors.primary, paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 16, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
         <View style={{ maxWidth: isTablet ? 688 : undefined, alignSelf: 'center', width: '100%' }}>
-          <View className="flex-row items-center justify-between">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text className="text-xl font-extrabold tracking-tight text-gray-900">Orders</Text>
-              <Text className="mt-0.5 text-xs text-gray-500">{activeCount} active · {rs(revenueToday)} today</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.white }}>Orders</Text>
+              <Text style={{ marginTop: 2, fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>{activeCount} active • {rs(revenueToday)} today • {orders.length} total</Text>
             </View>
-            <View className="relative h-11 w-11 items-center justify-center rounded-full bg-green-50">
-              <Feather name="check-circle" size={19} color="#16A34A" />
-              <View className="absolute -right-0.5 -top-0.5 h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1">
-                <Text className="text-[10px] font-bold text-white">{counts.pending || 0}</Text>
-              </View>
+            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+              <Feather name="shopping-bag" size={16} color={Colors.white} />
+              {counts.pending ? (
+                <View style={{ position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 1, borderColor: Colors.primary }}>
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: Colors.primary }}>{counts.pending}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
-          <View className="mt-3">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search by order, customer or item…" />
+          <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, paddingHorizontal: 12, height: 42, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+            <Feather name="search" size={14} color={Colors.white} />
+            <TextInput
+              style={{ flex: 1, marginLeft: 8, fontSize: 13, color: Colors.white }}
+              placeholder="Search order, customer or item…"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+            />
+            {search.length > 0 ? (
+              <Pressable onPress={() => setSearch('')} hitSlop={8}>
+                <Feather name="x-circle" size={16} color={Colors.white} />
+              </Pressable>
+            ) : null}
           </View>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3" contentContainerStyle={{ alignSelf: 'center', paddingHorizontal: 16 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ alignSelf: 'center', paddingHorizontal: 16, gap: 6 }}>
           {TABS.map((t) => (
-            <FilterChip key={t.key} label={t.label} active={tab === t.key} count={counts[t.key]} onPress={() => setTab(t.key)} />
+            <Pressable
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: Radius.full,
+                backgroundColor: tab === t.key ? Colors.white : 'rgba(255,255,255,0.18)',
+                borderWidth: 1,
+                borderColor: tab === t.key ? Colors.white : 'rgba(255,255,255,0.25)',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: tab === t.key ? Colors.primary : Colors.white }}>{t.label}</Text>
+              {typeof counts[t.key] === 'number' ? (
+                <View style={{ backgroundColor: tab === t.key ? Colors.primaryBg : 'rgba(255,255,255,0.2)', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: tab === t.key ? Colors.primary : Colors.white }}>{counts[t.key]}</Text>
+                </View>
+              ) : null}
+            </Pressable>
           ))}
         </ScrollView>
       </View>
@@ -121,34 +158,37 @@ export default function OrdersScreen() {
             />
           }
           renderItem={({ item }) => (
-            <Pressable
+            <PremiumCard
+              elevation="sm"
+              padding={14}
+              pressable
               onPress={() => router.push(`/(restaurant-owner)/orders/${item.id}` as never)}
-              className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-sm shadow-gray-100 active:bg-gray-50 ${isTablet ? 'flex-1' : ''}`}
+              style={{ flex: isTablet ? 1 : undefined }}
             >
-              <View className="flex-row items-center justify-between">
-                <Text className="text-sm font-extrabold tracking-wide text-gray-900">#{item.id.slice(0, 8)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>#{item.id.slice(0, 8).toUpperCase()}</Text>
                 <StatusPill status={item.status} />
               </View>
-              <View className="mt-3 flex-row items-center">
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-                  <Text className="text-sm font-bold text-slate-600">{item.customer.charAt(0)}</Text>
+              <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.backgroundAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.borderLight }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textSecondary }}>{item.customer.charAt(0).toUpperCase()}</Text>
                 </View>
-                <View className="ml-3 flex-1">
-                  <Text className="text-sm font-semibold text-gray-800" numberOfLines={1}>{item.customer}</Text>
-                  <Text className="mt-0.5 text-xs text-gray-400" numberOfLines={1}>{item.items}</Text>
-                </View>
-              </View>
-              <View className="mt-3 flex-row items-center justify-between border-t border-dashed border-gray-100 pt-3">
-                <View className="flex-row items-center">
-                  <Feather name="clock" size={13} color="#94A3B8" />
-                  <Text className="ml-1 text-xs text-gray-400">{item.time}</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Text className="mr-2 text-base font-extrabold text-green-600">{rs(item.total)}</Text>
-                  <Feather name="chevron-right" size={16} color="#CBD5E1" />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }} numberOfLines={1}>{item.customer}</Text>
+                  <Text style={{ marginTop: 2, fontSize: 11, color: Colors.textSecondary }} numberOfLines={1}>{item.items}</Text>
                 </View>
               </View>
-            </Pressable>
+              <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: Colors.borderLight, borderStyle: 'dashed', paddingTop: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Feather name="clock" size={12} color={Colors.textTertiary} />
+                  <Text style={{ fontSize: 11, color: Colors.textTertiary }}>{item.time}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.success }}>{rs(item.total)}</Text>
+                  <Feather name="chevron-right" size={14} color={Colors.textTertiary} />
+                </View>
+              </View>
+            </PremiumCard>
           )}
         />
       )}

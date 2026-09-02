@@ -49,7 +49,7 @@ export default function MenuItemDetailScreen() {
       <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Feather name="alert-circle" size={32} color={Colors.textTertiary} />
         <Text style={{ marginTop: 12, fontWeight: '700', color: Colors.textDark }}>Item not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.textDark, paddingHorizontal: 18, paddingVertical: 10, borderRadius: Radius.full }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: Radius.full }}>
           <Text style={{ color: '#FFF', fontWeight: '700' }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -101,7 +101,7 @@ export default function MenuItemDetailScreen() {
                   </View>
                 </View>
               </View>
-              <View style={{ backgroundColor: Colors.textDark, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full }}>
+              <View style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primaryDark }}>
                 <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Rs. {item.price}</Text>
               </View>
             </View>

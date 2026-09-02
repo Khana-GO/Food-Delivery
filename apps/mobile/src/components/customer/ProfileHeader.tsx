@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { User } from '@food_delivery/types';
@@ -15,8 +16,9 @@ interface Props {
 
 export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, isUploading }: Props) => {
   const hasImage = !!user.imageUrl;
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 12 }]}>
       <View style={styles.inner}>
         {/* Avatar */}
         <TouchableOpacity onPress={onImagePress} disabled={!!isUploading} activeOpacity={0.85} style={styles.avatarTouch}>
@@ -70,8 +72,8 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: Colors.primary,
-    paddingTop: 52,
-    paddingBottom: 32,
+    paddingTop: 12,
+    paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: Radius['3xl'],
     borderBottomRightRadius: Radius['3xl'],

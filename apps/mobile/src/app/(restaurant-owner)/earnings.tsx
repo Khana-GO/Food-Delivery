@@ -1,147 +1,290 @@
-import React from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
-  ScreenHeader,
-  SectionHeader,
-  PrimaryButton,
-  ContentWidth,
-  useResponsive,
-  rs,
-} from '@/components/res-owner/owner/kit';
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useRestaurantOrders } from '@/hooks/owner/orders/useRestaurantOrders';
+import { Colors, Radius, Shadow } from '@/constants/theme';
+import PremiumCard from '@/components/ui/PremiumCard';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
-const BREAKDOWN = [
-  { label: 'Today', amount: 1240, icon: 'clock' as const },
-  { label: 'This Week', amount: 8450, icon: 'calendar' as const },
-  { label: 'This Month', amount: 32580, icon: 'trending-up' as const },
-];
+const rs = (n: number) => `Rs. ${Math.round(n).toLocaleString('en-IN')}`;
 
-const TRANSACTIONS = [
-  { id: '1', title: 'Order #124', sub: 'Anish Sharma · 2 min ago', amount: 450, status: 'Completed' },
-  { id: '2', title: 'Order #123', sub: 'Sita Gurung · 15 min ago', amount: 320, status: 'Completed' },
-  { id: '3', title: 'Order #122', sub: 'Ram Thapa · 1 hr ago', amount: 580, status: 'Pending' },
-  { id: '4', title: 'Withdrawal', sub: 'NIC Asia ····4521 · 2 hrs ago', amount: -5000, status: 'Completed' },
-];
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function orderDate(o: any): Date {
+  return new Date(o.deliveredAt || o.updatedAt || o.createdAt);
+}
 
 export default function EarningsScreen() {
-  const { isTablet } = useResponsive();
-  const total = 45290;
+  const insets = useSafeAreaInsets();
+  const { data, isLoading, refetch, isRefetching } = useRestaurantOrders();
+  const raw: any[] = (data as any)?.data ?? (data as any) ?? [];
+  const [downloading, setDownloading] = useState(false);
+
+  const computed = useMemo(() => {
+    // Only delivered orders count as earnings for restaurant (or all non-cancelled? Use DELIVERED)
+    const delivered = raw.filter((o: any) => (o.orderStatus || o.status)?.toUpperCase() === 'DELIVERED');
+    const total = delivered.reduce((s: number, o: any) => s + (parseFloat(o.totalAmount) || o.total || 0), 0);
+
+    const todayStart = startOfDay(new Date());
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+    weekStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date();
+    monthStart.setDate(monthStart.getDate() - 30);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const today = delivered.filter((o: any) => orderDate(o) >= todayStart).reduce((s: number, o: any) => s + (parseFloat(o.totalAmount) || 0), 0);
+    const week = delivered.filter((o: any) => orderDate(o) >= weekStart).reduce((s: number, o: any) => s + (parseFloat(o.totalAmount) || 0), 0);
+    const month = delivered.filter((o: any) => orderDate(o) >= monthStart).reduce((s: number, o: any) => s + (parseFloat(o.totalAmount) || 0), 0);
+
+    const thisMonthTx = delivered.filter((o: any) => orderDate(o) >= monthStart).sort((a: any, b: any) => orderDate(b).getTime() - orderDate(a).getTime());
+
+    const recent = delivered
+      .slice()
+      .sort((a: any, b: any) => orderDate(b).getTime() - orderDate(a).getTime())
+      .slice(0, 12);
+
+    const deliveries = delivered.length;
+    return { total, today, week, month, recent, thisMonthTx, deliveries, delivered };
+  }, [raw]);
+
+  const handleDownloadStatement = useCallback(async () => {
+    if (computed.thisMonthTx.length === 0) {
+      Alert.alert('No data', 'No delivered orders in the last 30 days to generate statement.');
+      return;
+    }
+    try {
+      setDownloading(true);
+      const rows = computed.thisMonthTx
+        .map((o: any, idx: number) => {
+          const d = orderDate(o).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          const amt = rs(parseFloat(o.totalAmount) || 0);
+          const customer = o.customerName || o.customer || 'Customer';
+          const id = `#${String(o.id).slice(0, 8).toUpperCase()}`;
+          return `<tr>
+            <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; color:#0A0A0A;">${idx + 1}</td>
+            <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; color:#0A0A0A;">${id}</td>
+            <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; color:#334155;">${customer}</td>
+            <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; color:#334155;">${d}</td>
+            <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; font-weight:700; color:#15803D; text-align:right;">${amt}</td>
+          </tr>`;
+        })
+        .join('');
+
+      const html = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <style>
+              body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding:24px; color:#0A0A0A; }
+              .header { background: #B5122A; color: #fff; padding:20px; border-radius:16px; margin-bottom:20px; }
+              .meta { font-size:11px; opacity:0.85; letter-spacing:0.6px; }
+              table { width:100%; border-collapse:collapse; margin-top:8px; }
+              th { text-align:left; font-size:11px; letter-spacing:0.6px; color:#64748B; padding:8px 12px; border-bottom:2px solid #E8E8E8; }
+              .total-box { margin-top:16px; background:#F7F7F5; border:1px solid #E8E8E8; border-radius:12px; padding:14px; display:flex; justify-content:space-between; }
+              .footer { margin-top:20px; font-size:11px; color:#94A3B8; text-align:center; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div style="display:flex; align-items:center; gap:12;">
+                <div style="width:40px; height:40px; border-radius:20px; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.25); font-weight:800;">₹</div>
+                <div>
+                  <div style="font-size:18px; font-weight:800;">KhanaGo — Earnings Statement</div>
+                  <div class="meta">LAST 30 DAYS • ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:12; margin-bottom:16px;">
+              <div style="flex:1; background:#fff; border:1px solid #E8E8E8; border-radius:12px; padding:12px; text-align:center;">
+                <div style="font-size:11px; color:#64748B; font-weight:700; letter-spacing:0.5px;">TOTAL (30 DAYS)</div>
+                <div style="font-size:18px; font-weight:800; color:#0A0A0A; margin-top:6px;">${rs(computed.month)}</div>
+              </div>
+              <div style="flex:1; background:#fff; border:1px solid #E8E8E8; border-radius:12px; padding:12px; text-align:center;">
+                <div style="font-size:11px; color:#64748B; font-weight:700; letter-spacing:0.5px;">DELIVERED ORDERS</div>
+                <div style="font-size:18px; font-weight:800; color:#0A0A0A; margin-top:6px;">${computed.thisMonthTx.length}</div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th style="text-align:right;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+
+            <div class="total-box">
+              <span style="font-size:13px; font-weight:700; color:#334155;">Total Earnings (30 days)</span>
+              <span style="font-size:16px; font-weight:800; color:#B5122A;">${rs(computed.month)}</span>
+            </div>
+
+            <div class="footer">Generated by KhanaGo Restaurant • ${new Date().toISOString().slice(0, 10)} • All amounts in NPR</div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Earnings Statement — Last 30 Days', UTI: 'com.adobe.pdf' });
+      } else {
+        Alert.alert('Statement ready', `PDF saved to ${uri}`);
+      }
+    } catch (e: any) {
+      Alert.alert('Download failed', e?.message || 'Could not generate PDF.');
+    } finally {
+      setDownloading(false);
+    }
+  }, [computed]);
+
+  const breakdown = [
+    { label: 'Today', amount: computed.today, icon: 'clock' as const, sub: 'delivered today' },
+    { label: 'This Week', amount: computed.week, icon: 'calendar' as const, sub: 'last 7 days' },
+    { label: 'This Month', amount: computed.month, icon: 'trending-up' as const, sub: 'last 30 days' },
+  ];
 
   return (
-    <View className="flex-1 bg-gray-50">
-      <ScreenHeader
-        title="Earnings"
-        subtitle="Your money at a glance"
-        right={
-          <View className="flex-row items-center rounded-full bg-green-50 px-3 py-1.5">
-            <Feather name="arrow-up-right" size={13} color="#16A34A" />
-            <Text className="ml-1 text-xs font-bold text-green-600">+12%</Text>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      {/* Header */}
+      <View style={{ backgroundColor: Colors.primary, paddingTop: insets.top + 12, paddingBottom: 16, paddingHorizontal: 20, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }} activeOpacity={0.7}>
+            <Feather name="arrow-left" size={18} color={Colors.white} />
+          </TouchableOpacity>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+            <Feather name="dollar-sign" size={18} color={Colors.white} />
           </View>
-        }
-      />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.white }}>Earnings</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{computed.deliveries} delivered • real-time</Text>
+          </View>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.14)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' }} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.white }}>Live</Text>
+          </View>
+        </View>
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[{ padding: 16 }, ContentWidth(isTablet ? 720 : 9999)]}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={!!isRefetching} onRefresh={() => refetch()} tintColor={Colors.primary} />}
       >
-        {/* ─── Balance card (deep green) ─── */}
-        <View className="overflow-hidden rounded-3xl bg-green-800 p-6">
-          <View className="absolute -right-8 -top-12 h-36 w-36 rounded-full bg-white/10" />
-          <View className="absolute right-10 top-10 h-20 w-20 rounded-full bg-white/10" />
-          <Text className="text-[13px] font-medium text-green-100/90">Available balance</Text>
-          <View className="mt-1 flex-row items-end justify-between">
-            <Text className="text-4xl font-extrabold tracking-tight text-white">{rs(total)}</Text>
-            <View className="mb-1 flex-row items-center rounded-full bg-white/15 px-3 py-1.5">
-              <Feather name="trending-up" size={13} color="#BBF7D0" />
-              <Text className="ml-1 text-xs font-bold text-green-50">+12% this month</Text>
+        {/* Balance card - white */}
+        <PremiumCard elevation="md" padding={20} style={{ marginTop: -0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.6 }}>TOTAL EARNINGS</Text>
+            <View style={{ backgroundColor: Colors.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: '#BBF7D0', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Feather name="trending-up" size={12} color={Colors.success} />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.success }}>Delivered</Text>
             </View>
           </View>
-
-          <View className="mt-5 flex-row gap-3">
-            <Pressable className="flex-1 items-center rounded-xl bg-white py-3 active:bg-green-50">
-              <Feather name="download" size={16} color="#166534" />
-              <Text className="mt-1 text-xs font-bold text-green-900">Withdraw</Text>
-            </Pressable>
-            <Pressable className="flex-1 items-center rounded-xl bg-white/15 py-3 active:bg-white/25">
-              <Feather name="file-text" size={16} color="#FFFFFF" />
-              <Text className="mt-1 text-xs font-bold text-white">Statement</Text>
-            </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
+            <Text style={{ fontSize: 30, fontWeight: '800', color: Colors.textDark, letterSpacing: -1 }}>{rs(computed.total)}</Text>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary }}>{computed.deliveries} orders</Text>
           </View>
-        </View>
+          <Text style={{ fontSize: 12, color: Colors.textTertiary, marginTop: 6 }}>Revenue from delivered orders • updates in real time</Text>
 
-        {/* ─── Breakdown ─── */}
-        <View className="mt-4 flex-row flex-wrap justify-center gap-3">
-          {BREAKDOWN.map((b) => (
-            <View
-              key={b.label}
-              style={{ width: isTablet ? undefined : '47.5%', flexGrow: 1 }}
-              className="min-w-[160px] grow rounded-2xl border border-gray-100 bg-white p-4 shadow-sm shadow-gray-100"
-            >
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-red-50">
-                <Feather name={b.icon} size={16} color="#E23744" />
+          <TouchableOpacity
+            onPress={handleDownloadStatement}
+            disabled={downloading}
+            style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 13, borderRadius: Radius.full, ...Shadow.primary }}
+            activeOpacity={0.8}
+          >
+            {downloading ? <ActivityIndicator size="small" color={Colors.white} /> : <Feather name="download" size={16} color={Colors.white} />}
+            <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.white }}>{downloading ? 'Preparing...' : 'Download Statement (Last 30 Days PDF)'}</Text>
+          </TouchableOpacity>
+          <Text style={{ fontSize: 11, color: Colors.textTertiary, textAlign: 'center', marginTop: 8 }}>Includes all delivered orders from the last month</Text>
+        </PremiumCard>
+
+        {/* Breakdown */}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+          {breakdown.map((b) => (
+            <PremiumCard key={b.label} elevation="sm" style={{ flex: 1, alignItems: 'center', paddingVertical: 14 }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECDD3' }}>
+                <Feather name={b.icon} size={14} color={Colors.primary} />
               </View>
-              <Text className="mt-2.5 text-lg font-extrabold tracking-tight text-gray-900">{rs(b.amount)}</Text>
-              <Text className="text-xs text-gray-400">{b.label}</Text>
-            </View>
+              <Text style={{ marginTop: 8, fontSize: 15, fontWeight: '800', color: Colors.textDark }}>{rs(b.amount)}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textDark }}>{b.label}</Text>
+              <Text style={{ fontSize: 10, color: Colors.textTertiary }}>{b.sub}</Text>
+            </PremiumCard>
           ))}
         </View>
 
-        {/* ─── Transactions ─── */}
-        <View className="mb-8 mt-6">
-          <SectionHeader title="Recent Transactions" actionLabel="See all" onAction={() => {}} />
-          <View className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100">
-            {TRANSACTIONS.map((t, i) => {
-              const credit = t.amount > 0;
-              return (
-                <View
-                  key={t.id}
-                  className={`flex-row items-center px-4 py-3.5 ${
-                    i !== TRANSACTIONS.length - 1 ? 'border-b border-gray-50' : ''
-                  }`}
-                >
-                  <View
-                    className={`h-10 w-10 items-center justify-center rounded-full ${
-                      credit ? 'bg-green-50' : 'bg-red-50'
-                    }`}
-                  >
-                    <Feather
-                      name={credit ? 'plus-circle' : 'minus-circle'}
-                      size={18}
-                      color={credit ? '#16A34A' : '#DC2626'}
-                    />
-                  </View>
-                  <View className="ml-3 flex-1">
-                    <Text className="text-sm font-bold text-gray-900">{t.title}</Text>
-                    <Text className="mt-0.5 text-xs text-gray-400">{t.sub}</Text>
-                  </View>
-                  <View className="items-end">
-                    <Text
-                      className={`text-sm font-extrabold ${credit ? 'text-green-600' : 'text-red-500'}`}
-                    >
-                      {credit ? '+' : '-'} {rs(Math.abs(t.amount))}
-                    </Text>
-                    <View
-                      className={`mt-0.5 rounded-full px-2 py-px ${
-                        t.status === 'Completed' ? 'bg-green-50' : 'bg-amber-50'
-                      }`}
-                    >
-                      <Text
-                        className={`text-[10px] font-bold ${
-                          t.status === 'Completed' ? 'text-green-600' : 'text-amber-600'
-                        }`}
-                      >
-                        {t.status}
-                      </Text>
+        {/* Recent transactions - real */}
+        <View style={{ marginTop: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textDark }}>Recent Earnings</Text>
+            <View style={{ backgroundColor: Colors.primaryBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: '#FECDD3' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>{computed.recent.length} shown</Text>
+            </View>
+          </View>
+
+          {isLoading ? (
+            <View style={{ padding: 24, alignItems: 'center' }}><ActivityIndicator color={Colors.primary} /></View>
+          ) : computed.recent.length === 0 ? (
+            <PremiumCard elevation="sm" style={{ alignItems: 'center', paddingVertical: 28 }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.primaryBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECDD3' }}>
+                <Feather name="inbox" size={24} color={Colors.primary} />
+              </View>
+              <Text style={{ marginTop: 10, fontSize: 13, fontWeight: '700', color: Colors.textTertiary }}>No earnings yet</Text>
+              <Text style={{ fontSize: 11, color: Colors.textMuted, marginTop: 4, textAlign: 'center' }}>Deliver orders to see earnings here</Text>
+            </PremiumCard>
+          ) : (
+            <PremiumCard elevation="sm" padding={0} style={{ overflow: 'hidden' }}>
+              {computed.recent.map((t: any, i: number) => {
+                const d = orderDate(t);
+                const isDelivered = (t.orderStatus || t.status)?.toUpperCase() === 'DELIVERED';
+                return (
+                  <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: i !== computed.recent.length - 1 ? 1 : 0, borderBottomColor: Colors.borderLight }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: isDelivered ? Colors.successBg : '#FEF3C7', borderWidth: 1, borderColor: isDelivered ? '#BBF7D0' : '#FDE68A' }}>
+                      <Feather name={isDelivered ? 'check-circle' : 'clock'} size={18} color={isDelivered ? Colors.success : '#D97706'} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }} numberOfLines={1}>Order #{String(t.id).slice(0, 8).toUpperCase()} • {t.customerName || t.customer || 'Customer'}</Text>
+                      <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }} numberOfLines={1}>{d.toLocaleDateString()} • {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {t.paymentStatus || 'PAID'}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.success }}>+ {rs(parseFloat(t.totalAmount) || 0)}</Text>
+                      <View style={{ marginTop: 3, backgroundColor: isDelivered ? Colors.successBg : '#FFFBEB', paddingHorizontal: 7, paddingVertical: 2, borderRadius: Radius.full, borderWidth: 1, borderColor: isDelivered ? '#BBF7D0' : '#FDE68A' }}>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: isDelivered ? Colors.success : '#92400E' }}>{(t.orderStatus || t.status || '').toUpperCase()}</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </PremiumCard>
+          )}
         </View>
 
-        <PrimaryButton label="Withdraw Earnings" variant="green" icon="download" onPress={() => {}} />
-        <View className="h-8" />
+        <View style={{ marginTop: 16, backgroundColor: Colors.white, borderRadius: Radius.xl, padding: 14, borderWidth: 1, borderColor: Colors.borderLight, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Feather name="info" size={16} color={Colors.textTertiary} />
+          <Text style={{ flex: 1, fontSize: 11, color: Colors.textSecondary, lineHeight: 16 }}>Earnings reflect delivered orders only. Delivery fees are included as per your restaurant share. Statement covers the last 30 days and can be shared or saved as PDF.</Text>
+        </View>
       </ScrollView>
     </View>
   );

@@ -59,7 +59,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
-    "swagger": "^0.7.5"
+    "swagger": "^0.7.5",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -75,6 +76,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.0.0",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "0.31.10",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
