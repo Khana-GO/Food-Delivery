@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   itemImage: { width: '100%', height: '100%' },
   itemName: { fontSize: 14, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.2 },
-  pricePillSmall: { backgroundColor: Colors.textDark, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
+  pricePillSmall: { backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
   priceSmall: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
   qtyWrap: {
     flexDirection: 'row',

@@ -116,7 +116,7 @@ export default function CategoriesScreen() {
             {/* Responsive search – ensures text never cuts on 320px */}
             <View className={`flex-row items-center bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden ${isVeryCompact ? 'h-11 px-3' : 'h-12 px-4'}`}>
               <Feather name="search" size={isVeryCompact ? 15 : 18} color="#94A3B8" />
-              <TextInput
+              <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                 value={search}
                 onChangeText={setSearch}
                 placeholder={isVeryCompact ? 'Search...' : 'Search categories…'}

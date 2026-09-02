@@ -148,7 +148,7 @@ export default function ForgotPasswordScreen() {
               </Text>
               <View className="flex-row items-center rounded-xl border border-gray-200 bg-white px-4 h-14">
                 <Feather name="mail" size={20} color="#666" />
-                <TextInput
+                <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                   className="flex-1 ml-3 text-base text-black py-3"
                   placeholder="Enter your email"
                   placeholderTextColor="#999"

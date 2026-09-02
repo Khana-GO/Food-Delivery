@@ -18,7 +18,7 @@ interface OrderProgressTimelineProps {
 const statusFlow = [
   { id: 'PENDING', label: 'Order Placed', icon: 'clock' as const },
   { id: 'CONFIRMED', label: 'Confirmed', icon: 'check-circle' as const },
-  { id: 'PREPARING', label: 'Preparing', icon: 'cooking' as const },
+  { id: 'PREPARING', label: 'Preparing', icon: 'loader' as const },
   { id: 'READY', label: 'Ready', icon: 'package' as const },
   { id: 'PICKED_UP', label: 'Picked Up', icon: 'truck' as const },
   { id: 'DELIVERED', label: 'Delivered!', icon: 'check' as const },

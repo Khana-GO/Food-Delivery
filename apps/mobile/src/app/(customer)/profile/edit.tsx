@@ -62,7 +62,7 @@ export default function EditProfileScreen() {
     const payload: any = {};
     if (form.firstName !== user?.firstName) payload.firstName = form.firstName.trim();
     if (form.lastName !== user?.lastName) payload.lastName = form.lastName.trim();
-    if (form.email !== user?.email) payload.email = form.email.trim().toLowerCase();
+    // email is not editable per requirement — ignore changes
     if ((form.phone || '').trim() !== (user?.phone || '').trim()) {
       const p = (form.phone || '').trim();
       if (p) payload.phone = p;
@@ -100,7 +100,7 @@ export default function EditProfileScreen() {
 
               <Field label="First Name *" error={errors.firstName} value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} placeholder="Enter first name" icon="user" />
               <Field label="Last Name *" error={errors.lastName} value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} placeholder="Enter last name" icon="user" />
-              <Field label="Email *" error={errors.email} value={form.email ?? ''} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" icon="mail" keyboardType="email-address" autoCapitalize="none" />
+              <Field label="Email" error={undefined} value={form.email ?? ''} onChange={() => {}} placeholder="you@example.com" icon="mail" keyboardType="email-address" autoCapitalize="none" editable={false} hint="Email cannot be changed" />
               <Field label="Phone" error={errors.phone} value={form.phone ?? ''} onChange={(v) => setForm({ ...form, phone: v.replace(/[^0-9]/g, '').slice(0, 10) })} placeholder="98XXXXXXXX" icon="phone" keyboardType="phone-pad" />
             </PremiumCard>
 
@@ -128,6 +128,8 @@ function Field({
   icon,
   keyboardType,
   autoCapitalize,
+  editable = true,
+  hint,
 }: {
   label: string;
   error?: string;
@@ -137,11 +139,13 @@ function Field({
   icon?: React.ComponentProps<typeof Feather>['name'];
   keyboardType?: any;
   autoCapitalize?: any;
+  editable?: boolean;
+  hint?: string;
 }) {
   return (
     <View style={{ marginTop: 14 }}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputWrap, !!error && styles.inputError]}>
+      <View style={[styles.inputWrap, !!error && styles.inputError, !editable && { backgroundColor: '#F1F5F9', opacity: 0.7 }]}>
         {icon ? <Feather name={icon} size={15} color="#94A3B8" /> : null}
         <TextInput
           value={value}
@@ -151,10 +155,15 @@ function Field({
           style={styles.input}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize ?? 'sentences'}
-          selectionColor={Colors.primary}
+          selectionColor="rgba(15,23,42,0.16)"
+          cursorColor="#334155"
+          editable={editable}
+          selectTextOnFocus={editable}
         />
+        {!editable ? <Feather name="lock" size={14} color="#94A3B8" /> : null}
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {hint && !error ? <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 4 }}>{hint}</Text> : null}
     </View>
   );
 }

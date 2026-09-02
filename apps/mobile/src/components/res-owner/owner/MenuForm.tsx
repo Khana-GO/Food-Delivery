@@ -125,7 +125,7 @@ export function MenuForm({ initial, categories, submitLabel, onSubmit }: MenuFor
 
       {/* ─── Basics ─── */}
       <Field label="Item Name" required error={errors.name}>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={inputCls(errors.name)}
           placeholder="e.g., Chicken Momo"
           placeholderTextColor="#94A3B8"
@@ -135,7 +135,7 @@ export function MenuForm({ initial, categories, submitLabel, onSubmit }: MenuFor
       </Field>
 
       <Field label="Description">
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`${inputCls()} min-h-[88px]`}
           placeholder="Short, tasty description customers will read…"
           placeholderTextColor="#94A3B8"
@@ -147,7 +147,7 @@ export function MenuForm({ initial, categories, submitLabel, onSubmit }: MenuFor
       </Field>
 
       <Field label="Price (Rs.)" required error={errors.price}>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={inputCls(errors.price)}
           placeholder="e.g., 299"
           placeholderTextColor="#94A3B8"

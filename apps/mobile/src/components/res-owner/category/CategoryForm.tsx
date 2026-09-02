@@ -61,7 +61,7 @@ export function CategoryForm({
     >
       <View className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm shadow-gray-100">
         <Field label="Category Name" required error={error}>
-          <TextInput
+          <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
             className={`rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-gray-900 ${
               error ? 'border-red-400' : 'border-gray-200'
             }`}

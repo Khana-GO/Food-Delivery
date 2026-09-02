@@ -20,17 +20,39 @@ export default function Explore() {
   const [filter, setFilter] = useState('All');
   const [cat, setCat] = useState<string | null>(null);
   const { refetch, isRefetching } = useDashboard();
-  const { popularRestaurants, recommendations, categories, isLoading } = useDashboardStore();
+  const { popularRestaurants, recommendations, categories, featuredMenuItems, isLoading } = useDashboardStore();
   const { favoriteIds } = useFavoritesStore();
   const { mutate: addFav } = useAddFavorite() as any;
   const { mutate: remFav } = useRemoveFavorite() as any;
 
   const all = [...popularRestaurants, ...recommendations].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i);
+
+  // Build set of restaurantIds that have menu items in selected category (for Nasta/Drinks/Snacks)
+  const catMeta = categories.find((c) => c.id === cat);
+  const catNameLower = catMeta?.name.toLowerCase().trim() || null;
+  const restaurantIdsWithCat = (() => {
+    if (!cat || !catNameLower) return null;
+    const set = new Set<string>();
+    for (const item of featuredMenuItems || []) {
+      if (item.categoryId === cat) set.add(item.restaurantId);
+      else {
+        const itemCatName = categories.find((c) => c.id === (item as any).categoryId)?.name.toLowerCase().trim();
+        if (itemCatName === catNameLower) set.add(item.restaurantId);
+      }
+    }
+    return set;
+  })();
+
   const filtered = all.filter((r) => {
-    if (q && !r.name.toLowerCase().includes(q.toLowerCase())) return false;
+    if (q && !r.name.toLowerCase().includes(q.toLowerCase()) && !r.cuisineType?.toLowerCase().includes(q.toLowerCase()) && !r.address?.toLowerCase().includes(q.toLowerCase())) return false;
     if (cat) {
-      // simple: if cuisine contains cat name
-      if (!r.cuisineType?.toLowerCase().includes(cat.toLowerCase())) return false;
+      if (restaurantIdsWithCat) {
+        if (restaurantIdsWithCat.size === 0) return true; // no featured mapping yet — show all instead of empty
+        if (!restaurantIdsWithCat.has(r.id)) {
+          if (catNameLower && r.cuisineType?.toLowerCase().includes(catNameLower)) return true;
+          return false;
+        }
+      } else if (!r.cuisineType?.toLowerCase().includes(cat.toLowerCase())) return false;
     }
     if (filter === 'Fast Delivery' && (r.estimatedDeliveryTime ?? 99) > 30) return false;
     if (filter === 'Top Rated' && Number(r.averageRating ?? 0) < 4.2) return false;
@@ -54,7 +76,7 @@ export default function Explore() {
           <Text style={styles.subtitle}>Find your next favourite meal</Text>
           <View style={styles.search}>
             <Feather name="search" size={18} color="#94A3B8" />
-            <TextInput value={q} onChangeText={setQ} placeholder="Search restaurants, cuisines..." placeholderTextColor="#94A3B8" style={styles.input} />
+            <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155" value={q} onChangeText={setQ} placeholder="Search restaurants, cuisines..." placeholderTextColor="#94A3B8" style={styles.input} />
             {q.length ? (
               <TouchableOpacity onPress={() => setQ('')}>
                 <Feather name="x-circle" size={18} color="#94A3B8" />

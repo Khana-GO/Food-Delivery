@@ -423,6 +423,8 @@ export default function Input({
           onFocus={handleFocus}
           onBlur={handleBlur}
           editable={editable}
+          selectionColor="rgba(15,23,42,0.16)"
+          cursorColor="#334155"
           {...props}
         />
 

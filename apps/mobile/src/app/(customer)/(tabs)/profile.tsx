@@ -14,6 +14,7 @@ import { useOrders } from '@/hooks/customer/useOrders';
 import { useFavorites } from '@/hooks/customer/useFavorites';
 import { useOrderStore } from '@/stores/customer/orderStore';
 import { useFavoritesStore } from '@/stores/customer/favoritesStore';
+import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 import * as ImagePicker from 'expo-image-picker';
 
 function RealStatsRow() {
@@ -42,6 +43,11 @@ function RealStatsRow() {
       </PremiumCard>
     </View>
   );
+}
+
+function useRealNotificationBadge() {
+  const { data } = useUnreadCount();
+  return data?.count ?? 0;
 }
 
 export default function CustomerProfile() {
@@ -87,13 +93,14 @@ export default function CustomerProfile() {
   }, [logout]);
 
   const { totalItems: profileCartCount } = useCartStore();
+  const realUnread = useRealNotificationBadge();
   const menuItems = [
     { icon: 'shopping-cart' as const, label: 'My Cart', badge: profileCartCount || undefined, onPress: () => router.push('/(customer)/cart' as any) },
     { icon: 'shopping-bag' as const, label: 'My Orders', onPress: () => router.push('/(customer)/(tabs)/orders' as any) },
     { icon: 'heart' as const, label: 'Favorites', onPress: () => router.push('/(customer)/(tabs)/favorites' as any) },
     { icon: 'map-pin' as const, label: 'Saved Addresses', onPress: () => router.push('/(customer)/addresses' as any) },
     { icon: 'credit-card' as const, label: 'Payment Methods', onPress: () => router.push('/(customer)/payment' as any) },
-    { icon: 'bell' as const, label: 'Notifications', badge: 2, onPress: () => router.push('/(customer)/notifications' as any) },
+    { icon: 'bell' as const, label: 'Notifications', badge: realUnread > 0 ? realUnread : undefined, onPress: () => router.push('/(customer)/notifications' as any) },
     { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(customer)/settings' as any) },
   ];
 
@@ -186,7 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginTop: 14,
-    backgroundColor: '#DC2626',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: Radius.xl,
   },
@@ -218,6 +225,6 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: Radius.full },
   modalCancel: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   modalCancelText: { fontWeight: '700', color: Colors.textDark, fontSize: 14 },
-  modalConfirm: { backgroundColor: '#EF4444' },
+  modalConfirm: { backgroundColor: Colors.primary },
   modalConfirmText: { fontWeight: '700', color: '#FFFFFF', fontSize: 14 },
 });

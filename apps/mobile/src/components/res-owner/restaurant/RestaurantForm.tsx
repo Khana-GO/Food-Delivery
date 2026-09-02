@@ -110,7 +110,8 @@ function TextField({
         className={inputClass(error)}
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"
-        selectionColor="#B91C1C"
+        selectionColor="rgba(15,23,42,0.16)"
+        cursorColor="#334155"
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}
@@ -398,7 +399,8 @@ export const RestaurantForm = ({
                 } ${slugTouched ? '' : 'opacity-70'}`}
                 placeholder="himalayan-spice-kitchen"
                 placeholderTextColor="#94A3B8"
-                selectionColor="#B91C1C"
+                selectionColor="rgba(15,23,42,0.16)"
+                cursorColor="#334155"
                 value={formData.slug}
                 onChangeText={(t) => {
                   setSlugTouched(true);
@@ -432,7 +434,8 @@ export const RestaurantForm = ({
               }`}
               placeholder="What makes your kitchen special?"
               placeholderTextColor="#94A3B8"
-              selectionColor="#B91C1C"
+              selectionColor="rgba(15,23,42,0.16)"
+              cursorColor="#334155"
               value={formData.description}
               onChangeText={(t) => updateField('description', t)}
               multiline

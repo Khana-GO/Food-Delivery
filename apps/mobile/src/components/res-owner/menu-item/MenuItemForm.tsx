@@ -199,7 +199,7 @@ export const MenuItemForm = ({
         <Text className="text-sm font-semibold text-black mb-1.5">
           Item Name <Text className="text-[#B91C1C]">*</Text>
         </Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.name ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-base font-normal text-black bg-white`}
           placeholder="e.g., Chicken Momo"
           placeholderTextColor="#94A3B8"
@@ -216,7 +216,7 @@ export const MenuItemForm = ({
       {/* Description */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Description</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className="border border-gray-200 rounded-xl px-4 py-3 text-base text-black bg-white min-h-[80px]"
           placeholder="Describe your item..."
           placeholderTextColor="#94A3B8"
@@ -233,7 +233,7 @@ export const MenuItemForm = ({
         <Text className="text-sm font-semibold text-black mb-1.5">
           Price (Rs.) <Text className="text-[#B91C1C]">*</Text>
         </Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.price ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-base font-normal text-black bg-white`}
           placeholder="e.g., 299"
           placeholderTextColor="#94A3B8"

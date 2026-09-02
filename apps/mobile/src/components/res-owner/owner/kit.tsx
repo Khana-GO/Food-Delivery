@@ -276,7 +276,7 @@ export function SearchInput({
   return (
     <View className="flex-row items-center h-12 px-4 bg-white border border-gray-200 rounded-2xl">
       <Feather name="search" size={18} color="#94A3B8" />
-      <TextInput
+      <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
         className="flex-1 ml-3 text-sm text-gray-900"
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"

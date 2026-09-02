@@ -94,21 +94,18 @@ export default function RestaurantDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      {/* Hero — cover shows full width, no stretch, crisp */}
-      <View style={{ height: 280, backgroundColor: '#0F172A', overflow: 'hidden' }}>
+      {/* Hero — compact, attractive, responsive */}
+      <View style={{ height: isVeryCompact ? 180 : 210, backgroundColor: Colors.primary, overflow: 'hidden' }}>
         {restaurant.coverImageUrl ? (
           <Image source={{ uri: restaurant.coverImageUrl }} style={StyleSheet.absoluteFill as any} contentFit="cover" transition={300} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
         ) : (
-          <View style={{ flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 56 }}>🏔️</Text>
+          <View style={{ flex: 1, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 42 }}>🏔️</Text>
           </View>
         )}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(15,23,42,0.18)' } as any]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.12)' } as any]} />
         <TouchableOpacity onPress={() => router.back()} style={styles.heroBtnLeft}>
           <Feather name="arrow-left" size={18} color={Colors.textDark} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.heroBtnRight}>
-          <Feather name="share-2" size={16} color={Colors.textDark} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.heroBtnRight2}>
           <Feather name="heart" size={16} color={Colors.primary} />
@@ -150,7 +147,7 @@ export default function RestaurantDetailScreen() {
               <View style={styles.divider} />
               <Stat label="Fee" value={`Rs. ${restaurant.deliveryFee || 0}`} sub="Delivery" />
               <View style={styles.divider} />
-              <Stat label="Min order" value={`Rs. ${restaurant.minimumOrderAmount || 0}`} sub="Minimum" />
+              <Stat label="Min order" value={`${restaurant.minimumOrderAmount || 0}`} sub="Minimum" />
             </View>
 
             {restaurant.description ? <Text style={{ marginTop: 12, fontSize: 13, color: Colors.textSecondary, lineHeight: 19 }}>{restaurant.description}</Text> : null}
@@ -160,7 +157,7 @@ export default function RestaurantDetailScreen() {
           <View style={{ paddingHorizontal: 16, marginTop: 4 }}>
             <View style={[styles.searchWrap, isVeryCompact && { height: 44, paddingHorizontal: 12 } as any]}>
               <Feather name="search" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
-              <TextInput
+              <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder={isVeryCompact ? 'Search dishes...' : 'Search dishes in this restaurant...'}
@@ -235,20 +232,20 @@ export default function RestaurantDetailScreen() {
       {totalItems > 0 && restaurantId === restaurant?.id ? (
         <View style={styles.cartBarWrap}>
           <TouchableOpacity onPress={() => router.push('/(customer)/cart' as any)} activeOpacity={0.92} style={styles.cartBar}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
-                <Text style={{ color: '#FFF', fontWeight: '800' }}>{totalItems}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
+                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>{totalItems}</Text>
               </View>
               <View>
-                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 14 }}>View Cart</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600' }}>{totalItems} {totalItems === 1 ? 'item' : 'items'}</Text>
+                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>View Cart</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '600' }}>{totalItems} {totalItems === 1 ? 'item' : 'items'}</Text>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>Rs. {totalPrice}</Text>
+              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>Rs. {totalPrice}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '600' }}>Checkout</Text>
-                <Feather name="arrow-right" size={14} color="#FFF" />
+                <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '600' }}>Checkout</Text>
+                <Feather name="arrow-right" size={12} color="#FFF" />
               </View>
             </View>
           </TouchableOpacity>
@@ -260,10 +257,10 @@ export default function RestaurantDetailScreen() {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>{value}</Text>
-      <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 2, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' }}>{label}</Text>
-      <Text style={{ fontSize: 10, color: Colors.textTertiary }}>{sub}</Text>
+    <View style={{ flex: 1, alignItems: 'center', minWidth: 0, paddingHorizontal: 2 }}>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={{ fontSize: 9, color: Colors.textSecondary, marginTop: 2, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' }} numberOfLines={1}>{label}</Text>
+      <Text style={{ fontSize: 9, color: Colors.textTertiary }} numberOfLines={1}>{sub}</Text>
     </View>
   );
 }
@@ -387,8 +384,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     ...Shadow.primaryLg,
   },
 });

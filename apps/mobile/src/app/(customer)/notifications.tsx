@@ -168,6 +168,11 @@ export default function CustomerNotifications() {
         refreshControl={<RefreshControl refreshing={isFetching && page === 1} onRefresh={() => refetch()} tintColor={Colors.primary} colors={[Colors.primary]} />}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
+        updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View style={{ paddingVertical: 56, alignItems: 'center', paddingHorizontal: 32 }}>
             <View

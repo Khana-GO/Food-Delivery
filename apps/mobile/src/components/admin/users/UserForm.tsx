@@ -78,7 +78,7 @@ export const UserForm = ({
     <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">First Name *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.firstName ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Enter first name"
           placeholderTextColor="#94A3B8"
@@ -90,7 +90,7 @@ export const UserForm = ({
 
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Last Name *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.lastName ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Enter last name"
           placeholderTextColor="#94A3B8"
@@ -102,7 +102,7 @@ export const UserForm = ({
 
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Email *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Enter email"
           placeholderTextColor="#94A3B8"
@@ -116,7 +116,7 @@ export const UserForm = ({
 
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Phone *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.phone ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="+9779800000000"
           placeholderTextColor="#94A3B8"
@@ -147,7 +147,7 @@ export const UserForm = ({
       {!isEdit && (
         <View className="mb-4">
           <Text className="text-sm font-semibold text-black mb-1.5">Password *</Text>
-          <TextInput
+          <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
             className={`border ${errors.password ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
             placeholder="Password123!"
             placeholderTextColor="#94A3B8"

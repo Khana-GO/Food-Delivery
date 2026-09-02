@@ -18,6 +18,7 @@ import { useDashboardStore } from '@/stores/customer/dashboardStore';
 import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -34,6 +35,8 @@ export default function HomeScreen() {
   const { popularRestaurants, recommendations, recentlyOrdered, categories, featuredMenuItems, isLoading } = useDashboardStore();
   const { favoriteIds } = useFavoritesStore();
   const { totalItems: cartCount } = useCartStore();
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.count ?? 0;
   const isRefreshing = isDashboardRefetching || isFavoritesRefetching;
 
   const handleRefresh = useCallback(() => {
@@ -199,7 +202,7 @@ export default function HomeScreen() {
               <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
                 <TouchableOpacity onPress={() => router.push('/(customer)/notifications' as any)} activeOpacity={0.8} style={styles.headerIcon}>
                   <Feather name="bell" size={18} color={Colors.white} />
-                  <View style={styles.dot} />
+                  {unreadCount > 0 ? <View style={styles.dot} /> : null}
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.push('/(customer)/cart' as any)} activeOpacity={0.8} style={styles.headerIcon}>
                   <Feather name="shopping-cart" size={18} color={Colors.white} />
@@ -228,7 +231,7 @@ export default function HomeScreen() {
               ]}
             >
               <Feather name="search" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
-              <TextInput
+              <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                 style={[styles.searchInput, isVeryCompact && ({ fontSize: 13 } as any)]}
                 placeholder={isVeryCompact ? 'Search...' : 'Search restaurants, dishes…'}
                 placeholderTextColor="#94A3B8"

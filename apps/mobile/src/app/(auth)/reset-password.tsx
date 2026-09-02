@@ -203,7 +203,7 @@ export default function ResetPasswordScreen() {
                 className={`flex-row items-center rounded-xl border ${fieldErrors.code ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
               >
                 <Feather name="mail" size={20} color="#666" />
-                <TextInput
+                <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                   className="flex-1 ml-3 text-base text-black py-3"
                   placeholder="Enter 6-digit code"
                   placeholderTextColor="#999"
@@ -234,7 +234,7 @@ export default function ResetPasswordScreen() {
                 className={`flex-row items-center rounded-xl border ${fieldErrors.newPassword ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
               >
                 <Feather name="lock" size={20} color="#666" />
-                <TextInput
+                <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                   className="flex-1 ml-3 text-base text-black py-3"
                   placeholder="Enter new password"
                   placeholderTextColor="#999"
@@ -277,7 +277,7 @@ export default function ResetPasswordScreen() {
                 className={`flex-row items-center rounded-xl border ${fieldErrors.confirmPassword ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
               >
                 <Feather name="lock" size={20} color="#666" />
-                <TextInput
+                <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                   className="flex-1 ml-3 text-base text-black py-3"
                   placeholder="Confirm your new password"
                   placeholderTextColor="#999"

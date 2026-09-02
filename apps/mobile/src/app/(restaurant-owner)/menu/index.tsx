@@ -312,7 +312,7 @@ export default function MenuItemsScreen() {
             <View className={`${isVeryCompact ? 'h-7 w-7' : 'h-8 w-8'} items-center justify-center rounded-full bg-[#FEF2F2] shrink-0`}>
               <Feather name="search" size={isVeryCompact ? 14 : 16} color="#B91C1C" />
             </View>
-            <TextInput
+            <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
               className={`${isVeryCompact ? 'text-[13px]' : 'text-[15px]'} font-normal text-gray-900`}
               placeholder={isVeryCompact ? 'Search dishes...' : isCompact ? 'Search menu...' : 'Search menu items, categories...'}
               placeholderTextColor="#94A3B8"

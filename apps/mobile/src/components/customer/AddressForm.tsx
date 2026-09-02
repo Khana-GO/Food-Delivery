@@ -60,7 +60,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
       {/* Address Line */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Address *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.addressLine ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Street, Tole, Ward"
           value={form.addressLine}
@@ -73,7 +73,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
       {/* City */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">City *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.city ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Kathmandu"
           value={form.city}
@@ -85,7 +85,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
       {/* State (optional) */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">State (Optional)</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className="px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
           placeholder="Bagmati Province"
           value={form.state}
@@ -96,7 +96,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
       {/* Country */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Country *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.country ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Nepal"
           value={form.country}
@@ -108,7 +108,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
       {/* Postal Code */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Postal Code (Optional)</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className="px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
           placeholder="44600"
           value={form.postalCode}

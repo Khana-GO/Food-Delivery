@@ -220,7 +220,7 @@ export default function DriverEditProfile() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...Typography.labelMedium, color: Colors.textSecondary, marginBottom: 6 }}>First Name</Text>
-                  <TextInput
+                  <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                     style={{
                       backgroundColor: Colors.surface,
                       borderWidth: 1,
@@ -239,7 +239,7 @@ export default function DriverEditProfile() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...Typography.labelMedium, color: Colors.textSecondary, marginBottom: 6 }}>Last Name</Text>
-                  <TextInput
+                  <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                     style={{
                       backgroundColor: Colors.surface,
                       borderWidth: 1,
@@ -320,7 +320,7 @@ export default function DriverEditProfile() {
 
               <View>
                 <Text style={{ ...Typography.labelMedium, color: Colors.textSecondary, marginBottom: 6 }}>Phone Number</Text>
-                <TextInput
+                <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
                   style={{
                     backgroundColor: Colors.surface,
                     borderWidth: 1,

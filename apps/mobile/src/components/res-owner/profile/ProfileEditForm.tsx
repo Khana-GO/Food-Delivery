@@ -90,7 +90,7 @@ export const ProfileEditForm = ({ user, onSubmit, isLoading }: ProfileEditFormPr
       {/* First Name */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">First Name *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.firstName ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Enter first name"
           value={form.firstName}
@@ -102,7 +102,7 @@ export const ProfileEditForm = ({ user, onSubmit, isLoading }: ProfileEditFormPr
       {/* Last Name */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Last Name *</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className={`border ${errors.lastName ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-base text-black bg-white`}
           placeholder="Enter last name"
           value={form.lastName}
@@ -115,7 +115,7 @@ export const ProfileEditForm = ({ user, onSubmit, isLoading }: ProfileEditFormPr
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Email *</Text>
         <View className={`border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 bg-gray-100 flex-row items-center`}>
-          <TextInput
+          <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
             className="flex-1 text-base text-gray-500"
             placeholder="Enter email"
             value={form.email}
@@ -133,7 +133,7 @@ export const ProfileEditForm = ({ user, onSubmit, isLoading }: ProfileEditFormPr
       {/* Phone */}
       <View className="mb-4">
         <Text className="text-sm font-semibold text-black mb-1.5">Phone</Text>
-        <TextInput
+        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
           className="px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
           placeholder="Enter phone number"
           value={form.phone ?? ''}

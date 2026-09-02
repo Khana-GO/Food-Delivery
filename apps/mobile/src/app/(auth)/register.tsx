@@ -186,7 +186,7 @@ const InputField = React.memo(
           } bg-white px-4 h-14 ${!editable ? "opacity-60 bg-gray-50" : ""}`}
         >
           <View className="mr-3">{leftIcon}</View>
-          <TextInput
+          <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
             className="flex-1 text-base text-black py-3"
             placeholder={placeholder}
             placeholderTextColor="#999"

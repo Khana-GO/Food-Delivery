@@ -228,7 +228,7 @@ export default function CheckoutScreen() {
         {/* Notes */}
         <View className="mt-4">
           <Text className="text-sm font-semibold text-black mb-1.5">Order Notes (Optional)</Text>
-          <TextInput
+          <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
             className="px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
             placeholder="Special instructions for the restaurant"
             value={notes}

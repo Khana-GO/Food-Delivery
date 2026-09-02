@@ -143,7 +143,7 @@ export default function AdminUsersScreen() {
             }}
           >
             <Feather name="search" size={14} color={Colors.white} />
-            <TextInput
+            <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
               style={{ flex: 1, marginLeft: 8, fontSize: 12, color: Colors.white }}
               placeholder="Search name, email, phone..."
               placeholderTextColor="rgba(255,255,255,0.6)"
