@@ -162,7 +162,7 @@ export class EsewaService {
           totalAmount: amt,
           message: 'Payment canceled/failed',
         };
-      // fallback to legacy shape for callers expecting success/failure
+      //  fallback to legacy shape for callers expecting success/failure
       return {
         status: 'failure',
         message: `Status: ${status || 'unknown'}`,

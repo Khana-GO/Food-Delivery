@@ -24,37 +24,37 @@ export default function CheckoutSuccessScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 items-center justify-center px-8">
-        <View className="w-28 h-28 rounded-full bg-green-50 items-center justify-center mb-6 border border-green-100">
+      <View className="items-center justify-center flex-1 px-8">
+        <View className="items-center justify-center mb-6 border border-green-100 rounded-full w-28 h-28 bg-green-50">
           <Feather name="check-circle" size={64} color="#22C55E" />
         </View>
 
-        <Text className="text-2xl font-bold text-black text-center">Payment Successful!</Text>
-        <Text className="text-base text-gray-500 text-center mt-2 leading-6">
+        <Text className="text-2xl font-bold text-center text-black">Payment Successful!</Text>
+        <Text className="mt-2 text-base leading-6 text-center text-gray-500">
           Your order has been placed successfully. You will receive a confirmation shortly.
         </Text>
 
         {orderId ? (
-          <View className="bg-gray-50 rounded-xl px-4 py-3 mt-6 border border-gray-100">
-            <Text className="text-xs text-gray-500 text-center">Order ID</Text>
-            <Text className="text-sm font-mono font-bold text-black text-center mt-1">{orderId}</Text>
+          <View className="px-4 py-3 mt-6 border border-gray-100 bg-gray-50 rounded-xl">
+            <Text className="text-xs text-center text-gray-500">Order ID</Text>
+            <Text className="mt-1 font-mono text-sm font-bold text-center text-black">{orderId}</Text>
           </View>
         ) : null}
 
         <View className="w-full gap-3 mt-8">
-          <TouchableOpacity onPress={handleTrackOrder} className="bg-primary rounded-xl py-4 items-center">
-            <Text className="text-white font-bold text-base">Track Order</Text>
+          <TouchableOpacity onPress={handleTrackOrder} className="items-center py-4 bg-primary rounded-xl">
+            <Text className="text-base font-bold text-white">Track Order</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleViewOrder}
-            className="bg-white rounded-xl py-4 items-center border border-gray-200"
+            className="items-center py-4 bg-white border border-gray-200 rounded-xl"
           >
-            <Text className="text-black font-semibold text-base">View Order Details</Text>
+            <Text className="text-base font-semibold text-black">View Order Details</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleGoHome} className="py-3 items-center">
-            <Text className="text-gray-500 font-medium">Back to Home</Text>
+          <TouchableOpacity onPress={handleGoHome} className="items-center py-3">
+            <Text className="font-medium text-gray-500">Back to Home</Text>
           </TouchableOpacity>
         </View>
       </View>
