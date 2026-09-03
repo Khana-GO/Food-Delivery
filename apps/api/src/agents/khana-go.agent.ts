@@ -152,7 +152,7 @@ export class KhanaGoAgent {
         model: modelName,
         temperature,
         maxTokens,
-        openAIApiKey: apiKey,
+        apiKey,
         configuration: config,
       } as any);
     } catch (e: any) {
