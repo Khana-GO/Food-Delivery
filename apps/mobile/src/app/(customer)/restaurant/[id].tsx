@@ -251,6 +251,28 @@ export default function RestaurantDetailScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
+
+      {/* ─── AI Assistant CTA – theme consistent ─── */}
+      <TouchableOpacity
+        onPress={() => router.push(`/(customer)/chatbot?restaurantId=${restaurant.id}` as any)}
+        activeOpacity={0.9}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginHorizontal: 16,
+          marginTop: 16,
+          paddingVertical: 14,
+          borderRadius: Radius.full,
+          backgroundColor: Colors.primaryBg,
+          borderWidth: 1,
+          borderColor: '#FECACA',
+        }}
+      >
+        <Feather name="message-circle" size={18} color={Colors.primary} />
+        <Text style={{ fontWeight: '700', color: Colors.primary, fontSize: 14 }}>Ask AI about this restaurant</Text>
+      </TouchableOpacity>
     </View>
   );
 }

@@ -25,6 +25,7 @@ import { CartModule } from './cart/cart.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { PaymentModule } from './payment/payment.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AddressesModule,
     PaymentModule,
     AnalyticsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

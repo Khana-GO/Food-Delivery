@@ -518,3 +518,44 @@ export interface ETAInfo {
   traffic: 'light' | 'moderate' | 'heavy';
   updatedAt: Date;
 }
+
+
+export interface ChatContext {
+  restaurantId?: string;
+  orderId?: string;
+  location?: { lat: number; lng: number };
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date | string;
+  quickReplies?: string[];
+  isLoading?: boolean;
+  error?: boolean;
+}
+
+export interface ChatRequest {
+  message: string;
+  sessionId?: string;
+  userId: string;
+  context?: ChatContext;
+}
+
+export interface ChatResponse {
+  response: string;
+  quickReplies?: string[];
+  intent?: string;
+  sessionId: string;
+  data?: any;
+}
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  messages: ChatMessage[];
+  context?: ChatContext & { lastAction?: string };
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+}

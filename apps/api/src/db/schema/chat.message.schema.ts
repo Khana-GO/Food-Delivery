@@ -13,6 +13,8 @@ export const chatMessagesTable = pgTable('chat_messages', {
       onDelete: 'cascade',
     }),
 
+  sessionId: uuid('session_id'),
+
   role: chatRoleEnum().notNull(),
 
   message: text('message').notNull(),

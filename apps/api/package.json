@@ -25,6 +25,10 @@
   },
   "dependencies": {
     "@food_delivery/types": "workspace:*",
+    "@langchain/community": "^1.1.29",
+    "@langchain/core": "^1.2.9",
+    "@langchain/langgraph": "^1.4.13",
+    "@langchain/openai": "^1.5.11",
     "@neondatabase/serverless": "^1.1.0",
     "@nestjs-modules/mailer": "^2.3.7",
     "@nestjs/cache-manager": "^12.0.0",
@@ -53,6 +57,7 @@
     "drizzle-orm": "0.44.2",
     "handlebars": "^4.7.9",
     "ioredis": "^6.0.0",
+    "langchain": "^1.5.10",
     "multer": "^2.2.0",
     "nestjs-cloudinary-community": "^0.5.2",
     "nodemailer": "^9.0.3",
@@ -60,7 +65,9 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
     "swagger": "^0.7.5",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

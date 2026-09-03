@@ -50,6 +50,27 @@ export default function OrderDetailsScreen() {
 
         {/* ... Rest of order details ... */}
       </ScrollView>
+
+      <TouchableOpacity
+        onPress={() => router.push(`/(customer)/chatbot?orderId=${order.id}` as any)}
+        activeOpacity={0.9}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginHorizontal: 16,
+          marginVertical: 16,
+          paddingVertical: 14,
+          borderRadius: 9999,
+          backgroundColor: '#FDECEE',
+          borderWidth: 1,
+          borderColor: '#FECACA',
+        }}
+      >
+        <Feather name="message-circle" size={18} color="#B5122A" />
+        <Text style={{ fontWeight: '700', color: '#B5122A', fontSize: 14 }}>Ask AI about this order</Text>
+      </TouchableOpacity>
     </View>
   );
 }

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity */
 import React, { useMemo, useCallback } from 'react';
 import {
   View,
