@@ -1,13 +1,29 @@
 // mobile/src/components/auth/GoogleLoginButton.tsx
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity, Text, ActivityIndicator, View, Image } from 'react-native';
 
 interface GoogleLoginButtonProps {
   onPress: () => void;
   isLoading: boolean;
   disabled?: boolean;
 }
+
+const GoogleLogo = () => (
+  <View
+    style={{
+      width: 22,
+      height: 22,
+    }}
+  >
+    <Image
+      source={{
+        uri: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+      }}
+      style={{ width: 22, height: 22 }}
+      resizeMode="contain"
+    />
+  </View>
+);
 
 export const GoogleLoginButton = ({
   onPress,
@@ -27,7 +43,7 @@ export const GoogleLoginButton = ({
         <ActivityIndicator size="small" color="#666" />
       ) : (
         <View className="flex-row items-center justify-center gap-2.5">
-          <Ionicons name="logo-google" size={22} color="#EA4335" />
+          <GoogleLogo />
           <Text className="text-sm font-semibold text-black">
             Continue with Google
           </Text>

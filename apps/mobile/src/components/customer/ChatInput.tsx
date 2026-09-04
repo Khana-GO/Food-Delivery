@@ -24,7 +24,7 @@ export const ChatInput = ({ onSend, isSending }: ChatInputProps) => {
       <View style={styles.inputWrap}>
         <TextInput
           style={styles.input}
-          placeholder="Ask about food, restaurants, orders..."
+          placeholder="Ask here..."
           placeholderTextColor={Colors.textTertiary}
           value={text}
           onChangeText={setText}

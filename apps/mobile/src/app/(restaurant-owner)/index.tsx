@@ -208,7 +208,7 @@ export default function RestaurantDashboard() {
           </View>
 
           {/* My Restaurants */}
-          <View>
+          <View style={{ marginTop: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textDark }}>My Restaurants</Text>
               <TouchableOpacity onPress={() => router.push('/(restaurant-owner)/restaurant' as any)} activeOpacity={0.7}>
@@ -262,7 +262,7 @@ export default function RestaurantDashboard() {
           </View>
 
           {/* Live Orders - real */}
-          <View>
+          <View style={{ marginTop: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textDark }}>Live Orders</Text>
               <TouchableOpacity onPress={() => router.push('/(restaurant-owner)/orders' as any)} activeOpacity={0.7}>

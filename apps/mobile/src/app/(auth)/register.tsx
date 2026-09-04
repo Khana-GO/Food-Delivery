@@ -13,10 +13,11 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRoute } from "lib/roles";
+import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation (matches backend RegisterUserDto)
@@ -90,42 +91,6 @@ const Divider = React.memo(() => (
     <View className="flex-1 h-px bg-gray-200" />
   </View>
 ));
-
-interface SocialButtonProps {
-  provider: "google" | "apple";
-  onPress: (provider: "google" | "apple") => void;
-  disabled?: boolean;
-}
-
-const SocialButton = React.memo(
-  ({ provider, onPress, disabled }: SocialButtonProps) => {
-    const isGoogle = provider === "google";
-    const handlePress = useCallback(
-      () => onPress(provider),
-      [onPress, provider],
-    );
-
-    return (
-      <TouchableOpacity
-        className={`flex-1 flex-row items-center justify-center gap-2.5 py-3.5 rounded-xl border border-gray-200 bg-white ${
-          disabled ? "opacity-50" : ""
-        }`}
-        onPress={handlePress}
-        disabled={disabled}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={isGoogle ? "logo-google" : "logo-apple"}
-          size={22}
-          color={isGoogle ? "#EA4335" : "#000000"}
-        />
-        <Text className="text-black font-semibold text-sm">
-          {isGoogle ? "Google" : "Apple"}
-        </Text>
-      </TouchableOpacity>
-    );
-  },
-);
 
 interface InputFieldProps {
   label: string;
@@ -566,15 +531,11 @@ export default function RegisterScreen() {
 
             {/* Social Login */}
             <View className="flex-row gap-3 mb-6">
-              <SocialButton
-                provider="google"
+              <GoogleLoginButton
                 onPress={handleSocialLogin}
+                isLoading={isLoginLoading}
                 disabled={isLoginLoading}
-              />
-              <SocialButton
-                provider="apple"
-                onPress={handleSocialLogin}
-                disabled={isLoginLoading}
+                style={{ flex: 1 }}
               />
             </View>
 

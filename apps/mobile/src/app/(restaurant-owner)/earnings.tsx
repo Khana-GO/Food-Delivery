@@ -148,11 +148,22 @@ export default function EarningsScreen() {
       `;
 
       const { uri } = await Print.printToFileAsync({ html, base64: false });
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Earnings Statement — Last 30 Days', UTI: 'com.adobe.pdf' });
-      } else {
-        Alert.alert('Statement ready', `PDF saved to ${uri}`);
+      
+      // Try sharing, fallback to alert with file path
+      try {
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uri, { 
+            mimeType: 'application/pdf', 
+            dialogTitle: 'Earnings Statement — Last 30 Days', 
+            UTI: 'com.adobe.pdf' 
+          });
+        } else {
+          Alert.alert('Statement ready', `PDF saved to: ${uri}`);
+        }
+      } catch (shareError) {
+        // If sharing fails, at least tell user where file is
+        Alert.alert('Statement ready', `PDF generated successfully! Saved to: ${uri}`);
       }
     } catch (e: any) {
       Alert.alert('Download failed', e?.message || 'Could not generate PDF.');
@@ -212,11 +223,11 @@ export default function EarningsScreen() {
           <TouchableOpacity
             onPress={handleDownloadStatement}
             disabled={downloading}
-            style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 13, borderRadius: Radius.full, ...Shadow.primary }}
+            style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: Colors.primary, paddingVertical: 13, paddingHorizontal: 16, borderRadius: Radius.full, ...Shadow.primary }}
             activeOpacity={0.8}
           >
             {downloading ? <ActivityIndicator size="small" color={Colors.white} /> : <Feather name="download" size={16} color={Colors.white} />}
-            <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.white }}>{downloading ? 'Preparing...' : 'Download Statement (Last 30 Days PDF)'}</Text>
+            <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.white }}>{downloading ? 'Preparing...' : 'Download Statement'}</Text>
           </TouchableOpacity>
           <Text style={{ fontSize: 11, color: Colors.textTertiary, textAlign: 'center', marginTop: 8 }}>Includes all delivered orders from the last month</Text>
         </PremiumCard>

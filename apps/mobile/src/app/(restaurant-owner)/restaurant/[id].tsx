@@ -132,7 +132,7 @@ export default function RestaurantManageScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Header */}
       <View style={{ backgroundColor: Colors.primary, paddingTop: insets.top + 12, paddingBottom: 16, paddingHorizontal: 16, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
           <TouchableOpacity onPress={() => router.back()} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }} activeOpacity={0.7}>
             <Feather name="arrow-left" size={18} color={Colors.white} />
           </TouchableOpacity>
@@ -140,9 +140,9 @@ export default function RestaurantManageScreen() {
             <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.white }} numberOfLines={1}>{restaurant.name}</Text>
             <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 1 }} numberOfLines={1}>{restaurant.cuisineType} • Manage store</Text>
           </View>
-          <View style={{ backgroundColor: isOpen ? Colors.successBg : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1, borderColor: isOpen ? '#BBF7D0' : '#FECACA', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isOpen ? Colors.success : Colors.error }} />
-            <Text style={{ fontSize: 10, fontWeight: '700', color: isOpen ? Colors.success : Colors.error }}>{isOpen ? 'OPEN' : 'CLOSED'}</Text>
+          <View style={{ backgroundColor: isOpen ? '#DBEAFE' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1, borderColor: isOpen ? '#BFDBFE' : '#FECACA', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isOpen ? '#3B82F6' : Colors.error }} />
+            <Text style={{ fontSize: 10, fontWeight: '700', color: isOpen ? '#1E40AF' : Colors.error }}>{isOpen ? 'OPEN' : 'CLOSED'}</Text>
           </View>
         </View>
       </View>
@@ -191,10 +191,10 @@ export default function RestaurantManageScreen() {
               )}
             </Pressable>
 
-            <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: isOpen ? Colors.successBg : '#FEF2F2', paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: isOpen ? '#BBF7D0' : '#FECACA', marginBottom: 4 }}>
-              <Feather name={isOpen ? 'zap' : 'moon'} size={13} color={isOpen ? Colors.success : Colors.error} />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: isOpen ? Colors.success : Colors.error }}>{isToggling ? 'Updating…' : isOpen ? 'Accepting orders' : 'Paused'}</Text>
-              <View style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: isOpen ? Colors.success : Colors.textTertiary, padding: 2, justifyContent: 'center' }}>
+            <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: isOpen ? '#DBEAFE' : '#FEF2F2', paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: isOpen ? '#BFDBFE' : '#FECACA', marginBottom: 4 }}>
+              <Feather name={isOpen ? 'zap' : 'moon'} size={13} color={isOpen ? '#1E40AF' : Colors.error} />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: isOpen ? '#1E40AF' : Colors.error }}>{isToggling ? 'Updating…' : isOpen ? 'Accepting orders' : 'Paused'}</Text>
+              <View style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: isOpen ? '#3B82F6' : Colors.textTertiary, padding: 2, justifyContent: 'center' }}>
                 <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.white, alignSelf: isOpen ? 'flex-end' : 'flex-start', ...Shadow.sm }} />
               </View>
             </View>
@@ -222,9 +222,9 @@ export default function RestaurantManageScreen() {
                 <Text style={{ fontSize: 12, color: Colors.textSecondary }}>{restaurant.cuisineType}</Text>
               </View>
               {restaurant.isVerified ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.successBg, paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, borderWidth: 1, borderColor: '#BBF7D0' }}>
-                  <Feather name="shield" size={11} color={Colors.success} />
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.success }}>Verified</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.full, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                  <Feather name="shield" size={11} color='#15803D' />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#15803D' }}>Verified</Text>
                 </View>
               ) : null}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -234,10 +234,10 @@ export default function RestaurantManageScreen() {
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => toggleOpen(restaurant.id)}
+<TouchableOpacity
+            onPress={() => !isToggling && (toggleOpen(restaurant.id) as any)}
             disabled={isToggling}
-            style={{ marginHorizontal: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isOpen ? Colors.success : Colors.error, paddingVertical: 12, borderRadius: Radius.full, ...Shadow.sm }}
+            style={{ marginHorizontal: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isOpen ? '#3B82F6' : Colors.error, paddingVertical: 12, borderRadius: Radius.full, ...Shadow.sm }}
             activeOpacity={0.8}
           >
             {isToggling ? <ActivityIndicator size="small" color={Colors.white} /> : <Feather name={isOpen ? 'pause-circle' : 'play-circle'} size={16} color={Colors.white} />}

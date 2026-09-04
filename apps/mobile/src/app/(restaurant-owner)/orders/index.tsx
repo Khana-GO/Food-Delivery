@@ -93,19 +93,19 @@ export default function OrdersScreen() {
               ) : null}
             </View>
           </View>
-          <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, paddingHorizontal: 12, height: 42, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
-            <Feather name="search" size={14} color={Colors.white} />
+          <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: Radius.xl, paddingHorizontal: 12, height: 42, borderWidth: 1, borderColor: Colors.borderLight, ...Shadow.sm }}>
+            <Feather name="search" size={14} color={Colors.textTertiary} />
             <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-              style={{ flex: 1, marginLeft: 8, fontSize: 13, color: Colors.white }}
+              style={{ flex: 1, marginLeft: 8, fontSize: 13, color: Colors.textDark }}
               placeholder="Search order, customer or item…"
-              placeholderTextColor="rgba(255,255,255,0.6)"
+              placeholderTextColor={Colors.textTertiary}
               value={search}
               onChangeText={setSearch}
               returnKeyType="search"
             />
             {search.length > 0 ? (
               <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                <Feather name="x-circle" size={16} color={Colors.white} />
+                <Feather name="x-circle" size={16} color={Colors.textTertiary} />
               </Pressable>
             ) : null}
           </View>
