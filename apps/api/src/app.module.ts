@@ -26,6 +26,9 @@ import { AddressesModule } from './addresses/addresses.module';
 import { PaymentModule } from './payment/payment.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AiModule } from './ai/ai.module';
+import { ReviewsModule } from './review/review.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -77,6 +80,9 @@ import { AiModule } from './ai/ai.module';
     PaymentModule,
     AnalyticsModule,
     AiModule,
+    ReviewsModule,
+    PromotionsModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [

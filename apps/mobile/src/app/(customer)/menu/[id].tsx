@@ -96,9 +96,6 @@ export default function MenuItemDetailScreen() {
                     <Feather name="shield" size={12} color="#15803D" />
                     <Text style={{ fontSize: 11, fontWeight: '700', color: '#15803D' }}>Fresh</Text>
                   </View>
-                  <View style={{ backgroundColor: Colors.primaryBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>4.6 ★</Text>
-                  </View>
                 </View>
               </View>
               <View style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primaryDark }}>

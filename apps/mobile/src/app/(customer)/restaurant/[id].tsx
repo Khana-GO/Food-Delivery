@@ -10,12 +10,19 @@ import { MenuItem } from '@food_delivery/types';
 import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import AnimatedPage from '@/components/ui/AnimatedPage';
+import { ReviewCard } from '@/components/review/ReviewCard';
+import { ReviewStatsView } from '@/components/review/ReviewStats';
+import { useReviewsForRestaurant } from '@/hooks/review/useReviewsForRestaurant';
+import { useReviewStats } from '@/hooks/review/useReviewStats';
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { restaurant, menuData, isLoading, error } = useRestaurantDetail(id);
-  const { items: cartItems, addItem, removeItem, totalItems, totalPrice, restaurantId } = useCartStore();
+  const { items: cartItems, addItem, removeItem, totalItems, totalPrice } = useCartStore();
   const { width } = useWindowDimensions();
+  const restaurantId = id; // from params
+  const { data: stats } = useReviewStats(restaurantId);
+  const { data: reviewsData, refetch } = useReviewsForRestaurant(restaurantId, 1, 5);
   const isVeryCompact = width < 360;
 
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -67,7 +74,7 @@ export default function RestaurantDetailScreen() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        <View style={{ height: 220, backgroundColor: '#F1F5F9' }} />
+        <View style={{ height: 160, backgroundColor: '#F1F5F9' }} />
         <View style={{ padding: 16, gap: 12 }}>
           <View style={{ height: 16, backgroundColor: '#E2E8F0', borderRadius: 8, width: '44%' }} />
           <View style={{ height: 90, backgroundColor: '#E2E8F0', borderRadius: Radius.xl }} />
@@ -94,8 +101,8 @@ export default function RestaurantDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      {/* Hero — compact, attractive, responsive */}
-      <View style={{ height: isVeryCompact ? 180 : 210, backgroundColor: Colors.primary, overflow: 'hidden' }}>
+      {/* Hero — compact banner */}
+      <View style={{ height: isVeryCompact ? 140 : 160, backgroundColor: Colors.primary, overflow: 'hidden' }}>
         {restaurant.coverImageUrl ? (
           <Image source={{ uri: restaurant.coverImageUrl }} style={StyleSheet.absoluteFill as any} contentFit="cover" transition={300} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
         ) : (
@@ -103,7 +110,7 @@ export default function RestaurantDetailScreen() {
             <Text style={{ fontSize: 42 }}>🏔️</Text>
           </View>
         )}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.12)' } as any]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)' } as any]} />
         <TouchableOpacity onPress={() => router.back()} style={styles.heroBtnLeft}>
           <Feather name="arrow-left" size={18} color={Colors.textDark} />
         </TouchableOpacity>
@@ -125,18 +132,18 @@ export default function RestaurantDetailScreen() {
                 {restaurant.logoUrl ? (
                   <Image source={{ uri: restaurant.logoUrl }} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
                 ) : (
-                  <Text style={{ fontSize: 22, fontWeight: '800', color: Colors.primary }}>{restaurant.name.charAt(0).toUpperCase()}</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.primary }}>{restaurant.name.charAt(0).toUpperCase()}</Text>
                 )}
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textDark, flex: 1, marginRight: 8 }} numberOfLines={1}>{restaurant.name}</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: Colors.textDark, flex: 1, marginRight: 8, letterSpacing: -0.3 }} numberOfLines={1}>{restaurant.name}</Text>
                   <View style={[styles.badge, restaurant.isOpen ? styles.badgeOpen : styles.badgeClosed]}>
                     <View style={[styles.dot, restaurant.isOpen ? { backgroundColor: '#15803D' } : { backgroundColor: '#B91C1C' }]} />
                     <Text style={[styles.badgeText, restaurant.isOpen ? { color: '#15803D' } : { color: '#B91C1C' }]}>{restaurant.isOpen ? 'Open' : 'Closed'}</Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2 }}>{restaurant.cuisineType}</Text>
+                <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' }}>{restaurant.cuisineType}</Text>
               </View>
             </View>
 
@@ -225,6 +232,35 @@ export default function RestaurantDetailScreen() {
               )}
             </View>
           ) : null}
+
+          {/* Reviews Section */}
+            <View className="mt-6">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-lg font-bold text-black">Reviews</Text>
+                <TouchableOpacity
+                  className="flex-row items-center gap-1"
+                  onPress={() => router.push(`/(customer)/review/create?restaurantId=${restaurantId}` as any)}
+                >
+                  <Feather name="edit-2" size={16} color="#E23744" />
+                  <Text className="text-sm font-semibold text-primary">Write a Review</Text>
+                </TouchableOpacity>
+              </View>
+
+              {stats ? <ReviewStatsView stats={stats} /> : null}
+
+              {reviewsData?.data?.slice(0, 3).map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+
+              {reviewsData && reviewsData.total > 3 ? (
+                <TouchableOpacity
+                  className="items-center py-3 mt-2 bg-primary/10 rounded-xl"
+                  onPress={() => router.push(`/(customer)/reviews/${restaurantId}` as any)}
+                >
+                  <Text className="font-semibold text-primary">View All Reviews</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
         </ScrollView>
       </AnimatedPage>
 
@@ -253,7 +289,7 @@ export default function RestaurantDetailScreen() {
       ) : null}
 
       {/* ─── AI Assistant CTA – theme consistent ─── */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         onPress={() => router.push(`/(customer)/chatbot?restaurantId=${restaurant.id}` as any)}
         activeOpacity={0.9}
         style={{
@@ -272,7 +308,7 @@ export default function RestaurantDetailScreen() {
       >
         <Feather name="message-circle" size={18} color={Colors.primary} />
         <Text style={{ fontWeight: '700', color: Colors.primary, fontSize: 14 }}>Ask AI about this restaurant</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }
@@ -280,9 +316,9 @@ export default function RestaurantDetailScreen() {
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', minWidth: 0, paddingHorizontal: 2 }}>
-      <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={{ fontSize: 9, color: Colors.textSecondary, marginTop: 2, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' }} numberOfLines={1}>{label}</Text>
-      <Text style={{ fontSize: 9, color: Colors.textTertiary }} numberOfLines={1}>{sub}</Text>
+      <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 2, fontWeight: '700', letterSpacing: 0.3, textTransform: 'uppercase' }} numberOfLines={1}>{label}</Text>
+      <Text style={{ fontSize: 10, color: Colors.textTertiary }} numberOfLines={1}>{sub}</Text>
     </View>
   );
 }
@@ -291,20 +327,20 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: Colors.white,
     marginHorizontal: 16,
-    marginTop: -24,
+    marginTop: 12,
     borderRadius: Radius.xl,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E2E8F0',
-    ...Shadow.md,
+    ...Shadow.lg,
   },
-  infoRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  infoRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   logoWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.lg,
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#FECACA',
     alignItems: 'center',
     justifyContent: 'center',
@@ -313,16 +349,16 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: Radius.full,
     borderWidth: 1,
   },
   badgeOpen: { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
   badgeClosed: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3, textTransform: 'uppercase' },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  badgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2, textTransform: 'uppercase' },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F1F5F9' },
   divider: { width: StyleSheet.hairlineWidth, height: 36, backgroundColor: '#E2E8F0' },
   searchWrap: {
@@ -382,18 +418,18 @@ const styles = StyleSheet.create({
   },
   heroTitleWrap: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 14,
     left: 16,
     right: 16,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(226,232,240,0.8)',
   },
-  heroTitle: { fontSize: 18, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
-  heroSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' },
+  heroTitle: { fontSize: 16, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
+  heroSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' },
   cartBarWrap: {
     position: 'absolute',
     bottom: 16,

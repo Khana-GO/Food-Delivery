@@ -95,6 +95,7 @@ export default function OwnerProfile() {
         { id: 'restaurants', icon: 'package', label: 'My Stores', sub: `${restaurants?.length ?? 0} locations • Manage hours & status`, onPress: () => router.push('/(restaurant-owner)/restaurant' as any) },
         { id: 'menu', icon: 'book-open', label: 'Menu & Categories', sub: 'Dishes, pricing & availability', onPress: () => router.push('/(restaurant-owner)/menu' as any) },
         { id: 'orders', icon: 'shopping-bag', label: 'Orders', sub: `${raw.length} total • Live queue & history`, onPress: () => router.push('/(restaurant-owner)/orders' as any) },
+        { id: 'reviews', icon: 'star', label: 'Reviews', sub: 'Customer reviews & ratings', onPress: () => router.push('/(restaurant-owner)/reviews' as any) },
       ],
     },
     {

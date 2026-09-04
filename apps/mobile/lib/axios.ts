@@ -44,15 +44,40 @@ api.interceptors.request.use(
 );
 
 // ─── Refresh Token Helper ───
-let refreshPromise: Promise<string | null> | null = null;
+interface RefreshResult {
+  token: string | null;
+  authFailed: boolean;
+}
+let refreshPromise: Promise<RefreshResult> | null = null;
 
-const refreshAccessToken = (): Promise<string | null> => {
+// ─── Session expired listeners ───
+// Lets the app (AuthContext) log the user out when the refresh token is
+// invalid/expired, instead of silently leaving it in a broken 401 state.
+type SessionExpiredListener = () => void;
+const sessionExpiredListeners = new Set<SessionExpiredListener>();
+
+export function onSessionExpired(listener: SessionExpiredListener): () => void {
+  sessionExpiredListeners.add(listener);
+  return () => sessionExpiredListeners.delete(listener);
+}
+
+function notifySessionExpired() {
+  sessionExpiredListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // ignore listener errors
+    }
+  });
+}
+
+const refreshAccessToken = (): Promise<RefreshResult> => {
   if (refreshPromise) return refreshPromise;
 
-  refreshPromise = (async () => {
+  refreshPromise = (async (): Promise<RefreshResult> => {
     try {
       const refreshToken = await getRefreshToken();
-      if (!refreshToken) return null;
+      if (!refreshToken) return { token: null, authFailed: true };
 
       // Use a fresh axios instance to avoid interceptor loop
       const response = await axios.post(`${BASE_URL}/auth/refresh`, {
@@ -60,16 +85,22 @@ const refreshAccessToken = (): Promise<string | null> => {
       });
 
       const { accessToken, refreshToken: newRefreshToken } = response.data;
-      if (!accessToken) return null;
+      if (!accessToken) return { token: null, authFailed: true };
 
       await saveAccessToken(accessToken);
       if (newRefreshToken) await saveRefreshToken(newRefreshToken);
 
-      return accessToken;
-    } catch (error) {
-      // Refresh failed – clear tokens to prevent infinite loops
-      await deleteTokens();
-      return null;
+      return { token: accessToken, authFailed: false };
+    } catch (error: any) {
+      // Only clear tokens when the refresh token is genuinely rejected
+      // (401/403). Transient failures (network, 5xx) keep the existing tokens
+      // so a future request can still attempt a refresh.
+      const status = error?.response?.status;
+      const authFailed = status === 401 || status === 403;
+      if (authFailed) {
+        await deleteTokens();
+      }
+      return { token: null, authFailed };
     } finally {
       refreshPromise = null;
     }
@@ -84,28 +115,46 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error?.config;
     const status = error?.response?.status;
-    const isAuthRoute =
-      typeof originalRequest?.url === "string" &&
-      originalRequest.url.includes("/auth/");
+    // Never auto-refresh on these auth routes: a 401 here means the
+    // credentials themselves are invalid, not just an expired access token.
+    const url: string = typeof originalRequest?.url === "string" ? originalRequest.url : "";
+    const isCredentialsAuthRoute =
+      url.includes("/auth/login") ||
+      url.includes("/auth/register") ||
+      url.includes("/auth/refresh") ||
+      url.includes("/auth/logout") ||
+      url.includes("/auth/verify-email") ||
+      url.includes("/auth/forgot-password") ||
+      url.includes("/auth/reset-password") ||
+      url.includes("/auth/verify-reset-code");
 
-    // Only retry non-auth routes with 401 and not already retried
+    // Only retry non-credential auth routes with 401 and not already retried
     if (
       status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      !isAuthRoute
+      !isCredentialsAuthRoute
     ) {
       originalRequest._retry = true;
 
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest); // retry
+      const result = await refreshAccessToken();
+      if (result.token) {
+        originalRequest.headers.Authorization = `Bearer ${result.token}`;
+        try {
+          return await api(originalRequest); // retry
+        } catch (retryError) {
+          // The retried request still failed (e.g. token immediately revoked).
+          // The session is no longer usable — clear it and notify.
+          notifySessionExpired();
+          return Promise.reject(retryError);
+        }
+      } else if (result.authFailed) {
+        // Refresh failed because the refresh token is missing/invalid/expired.
+        // Let the app clear the session and redirect to login.
+        notifySessionExpired();
       }
-
-      // If refresh failed, we could emit a logout event here
-      // Example: dispatch an event to clear user state
-      // EventEmitter.emit('logout');
+      // Transient refresh failure (no authFailed): keep tokens, let the
+      // original request's error propagate so the caller can retry later.
     }
 
     return Promise.reject(error);

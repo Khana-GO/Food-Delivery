@@ -1,1 +1,1 @@
-export { api } from '../../lib/axios';
+export { api, onSessionExpired } from '../../lib/axios';

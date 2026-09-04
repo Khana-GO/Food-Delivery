@@ -231,6 +231,18 @@ export class OrdersService {
     dto: CreateOrderDto,
   ): Promise<OrderResponseDto> {
     return this.handleDbOperation(async () => {
+      // 0. Require a phone number on the account before ordering (customers
+      // who signed in via Google may not have provided one yet).
+      const orderingCustomer = await this.db.query.usersTable.findFirst({
+        where: eq(usersTable.id, customerId),
+      });
+      const customerPhone = orderingCustomer?.phone?.trim();
+      if (!customerPhone) {
+        throw new BadRequestException(
+          'A phone number is required to place an order. Please add your phone number in your profile first.',
+        );
+      }
+
       // 1. Validate restaurant
       const restaurant = await this.db.query.restaurantsTable.findFirst({
         where: and(

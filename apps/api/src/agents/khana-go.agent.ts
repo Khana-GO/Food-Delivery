@@ -381,11 +381,11 @@ export class KhanaGoAgent {
           intent,
         };
       }
-      if (
-        intent === 'search_restaurants' ||
-        lower.includes('restaurant') ||
-        lower.includes('food')
-      ) {
+       if (
+         intent === 'search_restaurants' ||
+         (lower.includes('restaurant') || lower.includes('food')) &&
+           intent !== 'restaurant_availability'
+       ) {
         const query =
           message
             .replace(/search|find|show|restaurant|food|eat|near|me/gi, '')
@@ -526,71 +526,161 @@ export class KhanaGoAgent {
         this.saveHistory(historyKey, history, message, response);
         return { response, quickReplies: ['Show restaurants', 'Help'], intent };
       }
-      if (
-        intent === 'order_tracking' ||
-        intent === 'order_history' ||
-        lower.includes('order') ||
-        lower.includes('delivery') ||
-        lower.includes('track')
-      ) {
-        if (context?.orderId) {
-          const data = await this.invokeTool(
-            this.orderTools.getOrderStatusTool(),
-            context.orderId,
-          );
-          if (data.error) {
-            const response = `Order ${context.orderId.slice(0, 8)} not found. Check ID? 📦`;
+        if (
+          intent === 'restaurant_availability' ||
+          lower.includes('open') ||
+          lower.includes('closed') ||
+          lower.includes('hours')
+        ) {
+          if (context?.restaurantId) {
+            const data = await this.invokeTool(
+              this.restaurantTools.getRestaurantAvailabilityTool(),
+              context.restaurantId,
+            );
+            if (data.error) throw new Error(data.error);
+            const response = sanitizeOutput(
+              data.isOpen
+                ? `✅ This restaurant is currently **open** 🟢`
+                : `🔴 This restaurant is currently **closed**`,
+            );
             this.saveHistory(historyKey, history, message, response);
-            return {
-              response,
-              quickReplies: ['Order history', 'Help'],
-              intent,
-            };
+            return { response, quickReplies: ['Show menu', 'Help'], intent };
           }
-          const response = sanitizeOutput(
-            `Order #${data.id.slice(0, 8)} is **${data.status}** 🚚\nTotal: Rs. ${data.totalAmount}${data.estimatedDelivery ? `\nETA: ${new Date(data.estimatedDelivery).toLocaleString()}` : ''}`,
-          );
+          const response =
+            "Which restaurant's availability? Share a restaurant name or ID. 🏪";
           this.saveHistory(historyKey, history, message, response);
-          return {
-            response,
-            quickReplies: ['Track delivery', 'Order history', 'Help'],
-            intent,
-          };
+          return { response, quickReplies: ['Show popular restaurants', 'Help'], intent };
         }
-        if (lower.includes('history')) {
-          const data = await this.invokeTool(
-            this.orderTools.getOrderHistoryTool(),
-            '',
-          );
-          const orders = data.orders || [];
-          if (!orders.length) {
-            const response = 'No orders yet. Explore restaurants? 🍕';
+        if (
+          intent === 'pricing_query' ||
+          lower.includes('price') ||
+          lower.includes('cost') ||
+          lower.includes('fee')
+        ) {
+          if (context?.restaurantId) {
+            const data = await this.invokeTool(
+              this.restaurantTools.getRestaurantDetailsTool(),
+              context.restaurantId,
+            );
+            if (data.error) throw new Error(data.error);
+            const response = sanitizeOutput(
+              `📋 **${sanitizeOutput(data.name)}** pricing:\n` +
+              `• Delivery fee: Rs. ${data.deliveryFee || 0}\n` +
+              `• Minimum order: Rs. ${data.minimumOrderAmount || 0}\n` +
+              `• Rating: ⭐ ${data.rating || 'N/A'}\n` +
+              `${data.isOpen ? '🟢 Open' : '🔴 Closed'}`,
+            );
             this.saveHistory(historyKey, history, message, response);
-            return {
-              response,
-              quickReplies: ['Show popular restaurants', 'Find food'],
-              intent,
-            };
+            return { response, quickReplies: ['Show menu', 'Help'], intent };
           }
-          const formatted = orders
-            .map(
-              (o: any) =>
-                `• Order #${o.id.slice(0, 8)} - ${o.status} (Rs. ${o.totalAmount})`,
-            )
-            .join('\n');
-          const response = sanitizeOutput(`Recent orders 📋\n\n${formatted}`);
+          const response =
+            "Which restaurant's pricing? Share a restaurant name or ID. 💰";
           this.saveHistory(historyKey, history, message, response);
-          return { response, quickReplies: ['Track order', 'Help'], intent };
+          return { response, quickReplies: ['Show popular restaurants', 'Help'], intent };
         }
-        const response =
-          "I can track order! Share order ID or say 'order history'. 📦";
-        this.saveHistory(historyKey, history, message, response);
-        return {
-          response,
-          quickReplies: ['Order history', 'Help', 'Show restaurants'],
-          intent,
-        };
-      }
+        if (
+          intent === 'order_tracking' ||
+          intent === 'order_history' ||
+          lower.includes('order') ||
+          lower.includes('delivery') ||
+          lower.includes('track')
+        ) {
+         const isDetailsRequest = ['detail', 'details', 'info', 'information', "what's in", 'contains', 'items in', 'item list'].some((w) => lower.includes(w));
+         if (context?.orderId) {
+           const tool = isDetailsRequest ? this.orderTools.getOrderDetailsTool() : this.orderTools.getOrderStatusTool();
+           const data = await this.invokeTool(tool, context.orderId);
+           if (data.error) {
+             const response = `Order ${context.orderId.slice(0, 8)} not found. Check ID? 📦`;
+             this.saveHistory(historyKey, history, message, response);
+             return {
+               response,
+               quickReplies: ['Order history', 'Help'],
+               intent,
+             };
+           }
+           if (isDetailsRequest && data.items) {
+             const itemsStr = data.items.map((i: any) => `  • ${i.name} × ${i.quantity} — Rs. ${i.price}`).join('\n');
+             const response = sanitizeOutput(
+               `Order #${data.id.slice(0, 8)} — **${data.status}** 📦\n` +
+               `Customer: ${data.customerName}\n` +
+               `Total: Rs. ${data.totalAmount}\n` +
+               `Delivery: ${data.deliveryAddress}\n` +
+               `ETA: ${data.estimatedDelivery ? new Date(data.estimatedDelivery).toLocaleString() : 'N/A'}\n` +
+               `\nItems:\n${itemsStr}`,
+             );
+             this.saveHistory(historyKey, history, message, response);
+             return {
+               response,
+               quickReplies: ['Track delivery', 'Order history', 'Help'],
+               intent,
+             };
+           }
+           const response = sanitizeOutput(
+             `Order #${data.id.slice(0, 8)} is **${data.status}** 🚚\nTotal: Rs. ${data.totalAmount}${data.estimatedDelivery ? `\nETA: ${new Date(data.estimatedDelivery).toLocaleString()}` : ''}`,
+           );
+           this.saveHistory(historyKey, history, message, response);
+           return {
+             response,
+             quickReplies: ['Track delivery', 'Order history', 'Help'],
+             intent,
+           };
+         }
+         if (lower.includes('history')) {
+           const data = await this.invokeTool(
+             this.orderTools.getOrderHistoryTool(),
+             '',
+           );
+           const orders = data.orders || [];
+           if (!orders.length) {
+             const response = 'No orders yet. Explore restaurants? 🍕';
+             this.saveHistory(historyKey, history, message, response);
+             return {
+               response,
+               quickReplies: ['Show popular restaurants', 'Find food'],
+               intent,
+             };
+           }
+           const formatted = orders
+             .map(
+               (o: any) =>
+                 `• Order #${o.id.slice(0, 8)} - ${o.status} (Rs. ${o.totalAmount})`,
+             )
+             .join('\n');
+           const response = sanitizeOutput(`Recent orders 📋\n\n${formatted}`);
+           this.saveHistory(historyKey, history, message, response);
+           return { response, quickReplies: ['Track order', 'Help'], intent };
+         }
+         if (lower.includes('detail') || lower.includes('details') || lower.includes('info') || lower.includes('info about my order')) {
+           const data = await this.invokeTool(
+             this.orderTools.getOrderHistoryTool(),
+             '',
+           );
+           const orders = data.orders || [];
+           if (!orders.length) {
+             const response = 'No orders found. Share an order ID to see details. 📦';
+             this.saveHistory(historyKey, history, message, response);
+             return { response, quickReplies: ['Order history', 'Help'], intent };
+           }
+           const formatted = orders
+             .slice(0, 5)
+             .map(
+               (o: any) =>
+                 `• Order #${o.id.slice(0, 8)} — ${o.status} (Rs. ${o.totalAmount})\n  Items: ${o.items?.map((i: any) => i.name).join(', ') || 'N/A'}`,
+             )
+             .join('\n');
+           const response = sanitizeOutput(`Your recent orders 📋\n\n${formatted}`);
+           this.saveHistory(historyKey, history, message, response);
+           return { response, quickReplies: ['Order history', 'Help', 'Show restaurants'], intent };
+         }
+         const response =
+           "I can track order! Share order ID or say 'order history'. 📦";
+         this.saveHistory(historyKey, history, message, response);
+         return {
+           response,
+           quickReplies: ['Order history', 'Help', 'Show restaurants'],
+           intent,
+         };
+       }
       const wordCount = message.trim().split(/\s+/).length;
       const isShortFoodQuery =
         wordCount <= 3 &&

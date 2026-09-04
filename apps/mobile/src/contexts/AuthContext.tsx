@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 
-import { api } from "../../lib/axios";
+import { api, onSessionExpired } from "../../lib/axios";
 
 import {
   saveAccessToken,
@@ -91,6 +91,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMountedRef.current = false;
     };
+  }, []);
+
+  // ─── Auto logout when refresh token is invalid/expired ───
+  useEffect(() => {
+    const unsubscribe = onSessionExpired(() => {
+      deleteTokens().then(() => {
+        if (isMountedRef.current) setUserState(null);
+      });
+    });
+    return unsubscribe;
   }, []);
 
   // ─── setUser (exposed) ───

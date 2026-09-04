@@ -43,7 +43,8 @@ export const usersTable = pgTable(
     phone: varchar('phone', {
       length: 20,
     })
-      .notNull()
+      // Nullable so users created via social login (e.g. Google) can exist
+      // without a phone. Ordering is separately gated on having a phone.
       .unique(),
 
     role: userRoleEnum().notNull().default('CUSTOMER'),

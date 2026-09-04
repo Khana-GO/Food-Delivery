@@ -15,6 +15,7 @@ import { useFavorites } from '@/hooks/customer/useFavorites';
 import { useOrderStore } from '@/stores/customer/orderStore';
 import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
+import { useMyReviews } from '@/hooks/review/useMyReviews';
 import * as ImagePicker from 'expo-image-picker';
 
 function RealStatsRow() {
@@ -23,10 +24,11 @@ function RealStatsRow() {
   // trigger fetches (cached)
   useOrders();
   useFavorites();
+  const { data: myReviewsData } = useMyReviews();
   const ordersCount = orders.length;
   const favCount = favoriteIds.size;
-  // rating could be derived from orders or keep 4.8 if no data; use 4.8 as placeholder when no reviews API
-  const rating = '4.8';
+  const rating = myReviewsData?.totalReviews ? myReviewsData.averageRating.toFixed(1) : '—';
+  const ratingSub = myReviewsData?.totalReviews ? `${myReviewsData.totalReviews} rating${myReviewsData.totalReviews > 1 ? 's' : ''}` : 'No ratings yet';
   return (
     <View style={styles.statsRow}>
       <PremiumCard style={styles.statCard as any}>
@@ -36,6 +38,7 @@ function RealStatsRow() {
       <PremiumCard style={styles.statCard as any}>
         <Text style={[styles.statValue, { color: Colors.primary }]}>{rating}</Text>
         <Text style={styles.statLabel}>Rating</Text>
+        <Text style={styles.statSub}>{ratingSub}</Text>
       </PremiumCard>
       <PremiumCard style={styles.statCard as any}>
         <Text style={[styles.statValue, { color: '#15803D' }]}>{favCount}</Text>
@@ -100,6 +103,7 @@ export default function CustomerProfile() {
     { icon: 'heart' as const, label: 'Favorites', onPress: () => router.push('/(customer)/(tabs)/favorites' as any) },
     { icon: 'map-pin' as const, label: 'Saved Addresses', onPress: () => router.push('/(customer)/addresses' as any) },
     { icon: 'credit-card' as const, label: 'Payment Methods', onPress: () => router.push('/(customer)/payment' as any) },
+    { icon: 'star' as const, label: 'My Reviews & Ratings', onPress: () => router.push('/(customer)/reviews' as any) },
     { icon: 'bell' as const, label: 'Notifications', badge: realUnread > 0 ? realUnread : undefined, onPress: () => router.push('/(customer)/notifications' as any) },
     { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(customer)/settings' as any) },
   ];
@@ -187,6 +191,7 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, alignItems: 'center', paddingVertical: 16 } as any,
   statValue: { fontSize: 20, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
   statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
+  statSub: { fontSize: 9, color: Colors.textTertiary, marginTop: 3, fontWeight: '500', textAlign: 'center' },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

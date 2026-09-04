@@ -13,3 +13,5 @@ export * from './cart.item.schema';
 export * from './chat.message.schema';
 export * from './sessions.schema';
 export * from './driver-tracking.schema';
+export * from './promotions.schema';
+export * from './promotion-usage.schema';

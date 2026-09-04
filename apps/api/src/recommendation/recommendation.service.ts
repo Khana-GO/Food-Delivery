@@ -27,6 +27,32 @@ export class RecommendationsService {
     return `restaurants:popular:${limit}`;
   }
 
+  // ─── ATTACH MENU CATEGORIES ───
+  // Enriches restaurant DTOs with the list of menu categories they serve so
+  // the UI can show all categories per restaurant (not just cuisineType).
+  private async withCategories<T extends RestaurantResponseDto>(
+    restaurants: T[],
+  ): Promise<T[]> {
+    if (restaurants.length === 0) return restaurants;
+    const ids = restaurants.map((r) => r.id);
+    const rows = await this.db
+      .select({ id: schema.menuCategoriesTable.id, name: schema.menuCategoriesTable.name, restaurantId: schema.menuCategoriesTable.restaurantId })
+      .from(schema.menuCategoriesTable)
+      .where(inArray(schema.menuCategoriesTable.restaurantId, ids));
+
+    const byRestaurant = new Map<string, { id: string; name: string }[]>();
+    for (const row of rows) {
+      const list = byRestaurant.get(row.restaurantId) || [];
+      list.push({ id: row.id, name: row.name });
+      byRestaurant.set(row.restaurantId, list);
+    }
+
+    return restaurants.map((r) => ({
+      ...r,
+      categories: byRestaurant.get(r.id) || [],
+    }));
+  }
+
   // ─── PERSONALIZED RECOMMENDATIONS ───
   async getPersonalizedRecommendations(
     userId: string,
@@ -179,8 +205,9 @@ export class RecommendationsService {
       }
 
       const finalResult = recommendedRestaurants.slice(0, limit);
-      await this.cache.set(cacheKey, finalResult, this.CACHE_TTL);
-      return finalResult;
+      const enriched = await this.withCategories(finalResult);
+      await this.cache.set(cacheKey, enriched, this.CACHE_TTL);
+      return enriched;
     } catch (error) {
       this.logger.error(
         `Failed to get recommendations: ${(error as Error).message}`,
@@ -213,8 +240,9 @@ export class RecommendationsService {
         .limit(limit);
 
       const result = restaurants as unknown as RestaurantResponseDto[];
-      await this.cache.set(cacheKey, result, this.CACHE_TTL);
-      return result;
+      const enriched = await this.withCategories(result);
+      await this.cache.set(cacheKey, enriched, this.CACHE_TTL);
+      return enriched;
     } catch (error) {
       this.logger.error(
         `Failed to get popular restaurants: ${(error as Error).message}`,
@@ -259,7 +287,7 @@ export class RecommendationsService {
       const orderMap = new Map(restaurantIds.map((id, idx) => [id, idx]));
       restaurants.sort((a, b) => orderMap.get(a.id)! - orderMap.get(b.id)!);
 
-      return restaurants.map(
+      const mapped = restaurants.map(
         (r) =>
           ({
             id: r.id,
@@ -280,6 +308,8 @@ export class RecommendationsService {
             longitude: r.longitude,
           }) as unknown as RestaurantResponseDto,
       );
+
+      return this.withCategories(mapped);
     } catch (error) {
       this.logger.error(
         `Failed to get recently ordered: ${(error as Error).message}`,

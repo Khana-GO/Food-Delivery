@@ -13,50 +13,57 @@ import { useAddFavorite } from '@/hooks/customer/useAddFavorite';
 import { useRemoveFavorite } from '@/hooks/customer/useRemoveFavorite';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
-const FILTERS = ['All', 'Fast Delivery', 'Top Rated', 'Free Delivery'];
+const FILTERS = ['Fast Delivery', 'Top Rated', 'Free Delivery'];
 
 export default function Explore() {
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState('All');
+  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
   const [cat, setCat] = useState<string | null>(null);
   const { refetch, isRefetching } = useDashboard();
-  const { popularRestaurants, recommendations, categories, featuredMenuItems, isLoading } = useDashboardStore();
+  const { popularRestaurants, recommendations, categories, isLoading } = useDashboardStore();
   const { favoriteIds } = useFavoritesStore();
   const { mutate: addFav } = useAddFavorite() as any;
   const { mutate: remFav } = useRemoveFavorite() as any;
 
   const all = [...popularRestaurants, ...recommendations].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i);
 
-  // Build set of restaurantIds that have menu items in selected category (for Nasta/Drinks/Snacks)
+  // Selected category meta (all menu categories a restaurant serves come via r.categories)
   const catMeta = categories.find((c) => c.id === cat);
   const catNameLower = catMeta?.name.toLowerCase().trim() || null;
-  const restaurantIdsWithCat = (() => {
-    if (!cat || !catNameLower) return null;
-    const set = new Set<string>();
-    for (const item of featuredMenuItems || []) {
-      if (item.categoryId === cat) set.add(item.restaurantId);
-      else {
-        const itemCatName = categories.find((c) => c.id === (item as any).categoryId)?.name.toLowerCase().trim();
-        if (itemCatName === catNameLower) set.add(item.restaurantId);
-      }
-    }
-    return set;
-  })();
+
+  const toggleFilter = (f: string) => {
+    setSelectedFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(f)) next.delete(f);
+      else next.add(f);
+      return next;
+    });
+  };
 
   const filtered = all.filter((r) => {
     if (q && !r.name.toLowerCase().includes(q.toLowerCase()) && !r.cuisineType?.toLowerCase().includes(q.toLowerCase()) && !r.address?.toLowerCase().includes(q.toLowerCase())) return false;
-    if (cat) {
-      if (restaurantIdsWithCat) {
-        if (restaurantIdsWithCat.size === 0) return true; // no featured mapping yet — show all instead of empty
-        if (!restaurantIdsWithCat.has(r.id)) {
-          if (catNameLower && r.cuisineType?.toLowerCase().includes(catNameLower)) return true;
-          return false;
-        }
-      } else if (!r.cuisineType?.toLowerCase().includes(cat.toLowerCase())) return false;
+
+    // Category filter must match (r.categories contains ALL menu categories)
+    if (cat && catNameLower) {
+      const hasCategory = (r.categories || []).some(
+        (c: any) => c.name.toLowerCase().trim() === catNameLower,
+      );
+      const cuisineMatch = r.cuisineType
+        ?.toLowerCase()
+        .includes(catNameLower);
+      if (!hasCategory && !cuisineMatch) return false;
     }
-    if (filter === 'Fast Delivery' && (r.estimatedDeliveryTime ?? 99) > 30) return false;
-    if (filter === 'Top Rated' && Number(r.averageRating ?? 0) < 4.2) return false;
-    if (filter === 'Free Delivery' && Number(r.deliveryFee ?? 1) !== 0) return false;
+
+    // Multi-select filters: ALL selected filters must match (AND)
+    for (const f of selectedFilters) {
+      if (f === 'Fast Delivery' && (r.estimatedDeliveryTime ?? 99) > 30) return false;
+      if (f === 'Top Rated') {
+        const rating = Number(r.averageRating ?? 0) || 0;
+        if (rating < 3.5) return false;
+      }
+      if (f === 'Free Delivery' && Number(r.deliveryFee ?? 1) !== 0) return false;
+    }
+
     return true;
   });
 
@@ -85,8 +92,9 @@ export default function Explore() {
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 12 }} bounces={false}>
             {FILTERS.map((f) => (
-              <TouchableOpacity key={f} onPress={() => setFilter(f)} style={[styles.filterPill, filter === f && styles.filterActive]}>
-                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f}</Text>
+              <TouchableOpacity key={f} onPress={() => toggleFilter(f)} style={[styles.filterPill, selectedFilters.has(f) && styles.filterActive]}>
+                <Text style={[styles.filterText, selectedFilters.has(f) && styles.filterTextActive]}>{f}</Text>
+                {selectedFilters.has(f) ? <Feather name="check" size={12} color={Colors.primary} /> : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -110,7 +118,7 @@ export default function Explore() {
       >
         {isLoading && !all.length ? <CardSkeleton count={4} variant="list" /> : null}
         {!isLoading && filtered.length === 0 ? (
-          <EmptyState icon="search" title="No matches found" description="Try adjusting filters or search terms." actionLabel="Clear filters" onAction={() => { setQ(''); setCat(null); setFilter('All'); }} />
+          <EmptyState icon="search" title="No matches found" description="Try adjusting filters or search terms." actionLabel="Clear filters" onAction={() => { setQ(''); setCat(null); setSelectedFilters(new Set()); }} />
         ) : null}
         {filtered.map((r) => (
           <RestaurantCard key={r.id} restaurant={r as any} isFavorite={favoriteIds.has(r.id)} onToggleFavorite={toggle} variant="list" />
@@ -121,7 +129,7 @@ export default function Explore() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'], ...Shadow.primaryLg },
   title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
   subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   search: {
@@ -138,7 +146,7 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   input: { flex: 1, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  filterPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   filterActive: { backgroundColor: Colors.white, borderColor: Colors.white },
   filterText: { fontSize: 12, fontWeight: '600', color: Colors.white },
   filterTextActive: { color: Colors.primary },

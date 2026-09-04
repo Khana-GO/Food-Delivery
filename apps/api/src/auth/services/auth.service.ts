@@ -23,6 +23,7 @@ import * as schema from '../../db/schema';
 import { usersTable } from '../../db/schema';
 import { eq } from 'drizzle-orm/sql/expressions/conditions';
 import { NotificationsService } from '../../notification/notification.service';
+import axios from 'axios';
 
 @Injectable()
 export class AuthService {
@@ -215,6 +216,100 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+  }
+
+  // auth.service.ts
+  async verifyGoogleToken(idToken: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
+        { timeout: 5000 },
+      );
+
+      const data = response.data;
+
+      // Verify audience matches your client ID
+      if (data.aud !== this.configService.get('GOOGLE_CLIENT_ID')) {
+        throw new UnauthorizedException('Invalid token audience');
+      }
+
+      // Verify email is verified
+      if (!data.email_verified) {
+        throw new UnauthorizedException('Email not verified');
+      }
+
+      return {
+        email: data.email,
+        firstName: data.given_name,
+        lastName: data.family_name,
+        picture: data.picture,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      this.logger.error(`Google token verification failed: ${message}`);
+      throw new UnauthorizedException('Invalid Google token');
+    }
+  }
+
+  // apps/api/src/auth/services/auth.service.ts
+
+  // ─── GOOGLE AUTH ───
+  async googleLogin(googleUser: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    picture?: string;
+  }): Promise<{ accessToken: string; refreshToken: string; user: any }> {
+    // ─── Find user by email ───
+    let user = await this.usersService.findByEmail(googleUser.email);
+
+    if (!user) {
+      // ─── Create new user ───
+      const hashedPassword = await bcrypt.hash(
+        crypto.randomUUID() + crypto.randomBytes(8).toString('hex'),
+        this.saltRounds(),
+      );
+
+      user = await this.usersService.create({
+        firstName: googleUser.firstName || 'Google',
+        lastName: googleUser.lastName || 'User',
+        email: googleUser.email,
+        password: hashedPassword,
+        isVerified: true, // Google accounts are trusted
+        phone: null,
+        imageUrl: googleUser.picture,
+        role: 'CUSTOMER', // Default role
+      });
+
+      this.logger.log(`Google user created: ${user.email}`);
+    } else {
+      // ─── Update picture if changed ───
+      const updates: {
+        imageUrl?: string;
+        isVerified?: boolean;
+        verifiedAt?: Date;
+      } = {};
+      if (googleUser.picture && !user.imageUrl) {
+        updates.imageUrl = googleUser.picture;
+      }
+      // Google verified the user's email — mark the account verified so they
+      // aren't blocked by email-verification checks on future logins.
+      if (!user.isVerified) {
+        updates.isVerified = true;
+        updates.verifiedAt = new Date();
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.usersService.update(user.id, updates);
+        user = await this.usersService.findById(user.id);
+      }
+    }
+
+    // ─── Generate tokens ───
+    if (!user) {
+      throw new UnauthorizedException('Failed to resolve Google user');
+    }
+    return this.authResponse(user);
   }
 
   async logout(refreshToken: string, accessToken?: string) {

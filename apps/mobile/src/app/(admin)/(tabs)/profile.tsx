@@ -68,6 +68,7 @@ export default function AdminProfile() {
         { id: 'users', icon: 'users', label: 'Manage Users', sub: 'Roles, verification & deletions', onPress: () => router.push('/(admin)/(tabs)/users' as any) },
         { id: 'restaurants', icon: 'home', label: 'Manage Restaurants', sub: 'Verify & moderate venues', onPress: () => router.push('/(admin)/(tabs)/restaurants' as any) },
         { id: 'orders', icon: 'shopping-bag', label: 'Orders', sub: 'Live queue & history', onPress: () => router.push('/(admin)/(tabs)/orders' as any) },
+        { id: 'reviews', icon: 'star', label: 'Reviews', sub: 'Customer reviews & ratings', onPress: () => router.push('/(admin)/(tabs)/reviews' as any) },
       ],
     },
     {

@@ -17,6 +17,8 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHomeRoute } from 'lib/roles';
+import { useGoogleAuth } from '@/hooks/auth/useGoogleAuth';
+import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation
@@ -235,6 +237,7 @@ function parseBackendError(error: any): string {
 
 export default function LoginScreen() {
   const { login, user, isAuthenticating } = useAuth();
+  const { signInWithGoogle, isLoading: isGoogleLoading, request } = useGoogleAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -448,10 +451,10 @@ const handleLogin = useCallback(async () => {
 
             {/* Social Login */}
             <View className="flex-row gap-3 mb-6">
-              <SocialButton
-                provider="google"
-                onPress={handleSocialLogin}
-                disabled={isLoginLoading}
+              <GoogleLoginButton
+                onPress={signInWithGoogle}
+                isLoading={isGoogleLoading}
+                disabled={!request}
               />
               <SocialButton
                 provider="apple"

@@ -298,22 +298,23 @@ export class UsersService {
         throw new BadRequestException('Email and password are required');
       }
 
-      const normalizedPhone = data.phone?.trim();
-      if (!normalizedPhone) {
-        throw new BadRequestException('Phone number is required');
-      }
+      // Phone is optional at account creation (e.g. Google OAuth users may not
+      // provide one yet). Ordering is separately gated on having a phone number.
+      const normalizedPhone = data.phone?.trim() || null;
 
       const existing = await this.findByEmail(data.email);
       if (existing) {
         throw new ConflictException('Email already registered');
       }
 
-      const existingPhone = await this.db.query.usersTable.findFirst({
-        where: eq(usersTable.phone, normalizedPhone),
-      });
+      if (normalizedPhone) {
+        const existingPhone = await this.db.query.usersTable.findFirst({
+          where: eq(usersTable.phone, normalizedPhone),
+        });
 
-      if (existingPhone) {
-        throw new ConflictException('Phone number already registered');
+        if (existingPhone) {
+          throw new ConflictException('Phone number already registered');
+        }
       }
 
       const saltRounds =

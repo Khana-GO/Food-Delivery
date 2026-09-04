@@ -21,6 +21,7 @@ import { Public } from '../decorators/public.decorator';
 import { UsersService } from '../../users/users.service';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { GoogleAuthDto } from '../dto/google-auth.dto';
 
 @Throttle({ default: { limit: 5, ttl: 60_000 } }) // 5 request in per minute from single ip
 @ApiTags('auth')
@@ -37,6 +38,37 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user' })
   async register(@Body() dto: RegisterUserDto) {
     return this.authService.register(dto);
+  }
+
+  // apps/api/src/auth/auth.controller.ts
+
+  // ─── GOOGLE AUTH ───
+  @Post('google')
+  @Public()
+  @ApiOperation({ summary: 'Login with Google' })
+  async googleAuth(@Body() dto: GoogleAuthDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: any;
+  }> {
+    // Verify the id_token with Google and ALWAYS use the server-verified
+    // payload. Never trust client-supplied email/name/picture — doing so would
+    // allow an attacker to spoof the identity and take over another account.
+    const payload = await this.authService.verifyGoogleToken(dto.idToken);
+
+    return this.authService.googleLogin({
+      email: payload.email,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      picture: payload.picture,
+    });
+  }
+
+  // ─── VERIFY GOOGLE TOKEN (optional) ───
+  @Public()
+  @Post('google/verify')
+  async verifyGoogleToken(@Body('idToken') idToken: string) {
+    return this.authService.verifyGoogleToken(idToken);
   }
 
   @Post('verify-email')

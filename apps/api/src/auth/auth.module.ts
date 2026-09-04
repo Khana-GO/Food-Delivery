@@ -9,6 +9,7 @@ import { RateLimitGuard } from './guards/rate-limit.guard';
 import { AuthService } from './services/auth.service';
 import { SessionsModule } from '../sessions/session.module';
 import { NotificationsModule } from '../notification/notification.module';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -18,7 +19,13 @@ import { NotificationsModule } from '../notification/notification.module';
     NotificationsModule,
   ],
   controllers: [AuthController, RefreshController],
-  providers: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    RateLimitGuard,
+    GoogleStrategy,
+  ],
   exports: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
 })
 export class AuthModule {}

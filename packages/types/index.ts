@@ -87,6 +87,7 @@ export interface Restaurant {  id: string;
   latitude: number;
   longitude: number;
   cuisineType: string;
+  categories?: { id: string; name: string }[];
   openingTime?: string;
   closingTime?: string;
   deliveryFee: number;
@@ -558,4 +559,93 @@ export interface ChatSession {
   context?: ChatContext & { lastAction?: string };
   createdAt: Date | string;
   updatedAt?: Date | string;
+}
+
+
+
+export interface Review {
+  id: string;
+  customerId: string;
+  customerName: string;
+  restaurantId: string;
+  restaurantName: string;
+  itemId?: string;
+  itemName?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  recentReviews: Review[];
+}
+
+export interface CreateReviewPayload {
+  restaurantId: string;
+  itemId?: string;
+  rating: number;
+  comment?: string;
+}
+
+export interface UpdateReviewPayload {
+  rating?: number;
+  comment?: string;
+}
+
+export type SalesReportPeriod = 'day' | 'week' | 'month';
+
+export interface OrderExportRow {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  restaurantName: string;
+  orderDate: string;
+  status: string;
+  subtotal: string;
+  deliveryFee: string;
+  total: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  items: { name: string; quantity: number; price: string; total: string }[];
+  notes: string | null;
+}
+
+export interface RestaurantReportBreakdown {
+  restaurantId: string;
+  name: string;
+  orders: number;
+  revenue: number;
+}
+
+export interface SalesReport {
+  period: SalesReportPeriod;
+  startDate: string;
+  endDate: string;
+  totalOrders: number;
+  totalRevenue: number;
+  delivered: number;
+  cancelled: number;
+  averageOrderValue: number;
+  restaurantBreakdown: Record<string, { orders: number; revenue: number }>;
+  orders: Order[];
+}
+
+export interface SalesReportFilters {
+  period: SalesReportPeriod;
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+  restaurantId?: string;
+  status?: string;
 }

@@ -13,8 +13,11 @@ import { OrderSummary } from '@/components/payment/OrderSummary';
 import { orderService } from '@/services/customer/order.service';
 import { cartService } from '@/stores/customer/cart.service';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { api } from 'lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function CheckoutScreen() {
+  const { user } = useAuth();
   const { items, totalPrice, restaurantId } = useCartStore();
   const { addresses } = useAddressStore();
   const { setSelectedAddress } = useAddressStore();
@@ -26,10 +29,17 @@ export default function CheckoutScreen() {
   const [isPlacingOnline, setIsPlacingOnline] = useState(false);
   const [backendCart, setBackendCart] = useState<any>(null);
 
+  // Add this state
+const [promoCode, setPromoCode] = useState('');
+const [promoApplied, setPromoApplied] = useState(false);
+const [promoDiscount, setPromoDiscount] = useState(0);
+const [promoValidating, setPromoValidating] = useState(false);
+const [promoError, setPromoError] = useState('');
+
   // Derive fees from backend if available, else fallback (must be before handlePlaceOrder)
   const deliveryFee = backendCart?.deliveryFee != null ? Number(backendCart.deliveryFee) : 50;
   const subtotal = backendCart?.subtotal != null ? Number(backendCart.subtotal) : totalPrice;
-  const total = subtotal + deliveryFee;
+  const total = Math.max(subtotal + deliveryFee - promoDiscount, 0);
   const minimumOrder = backendCart?.minimumOrderAmount != null ? Number(backendCart.minimumOrderAmount) : undefined;
   const belowMinimum = minimumOrder != null && subtotal < minimumOrder;
 
@@ -82,6 +92,17 @@ export default function CheckoutScreen() {
   }, [items]);
 
   const handlePlaceOrder = async () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to place an order');
+      return;
+    }
+    if (!user.phone) {
+      Alert.alert(
+        'Phone Number Required',
+        'Please add your phone number in your profile before placing an order.',
+      );
+      return;
+    }
     if (!selectedAddressId) {
       Alert.alert('Address Required', 'Please select a delivery address');
       return;
@@ -157,6 +178,34 @@ export default function CheckoutScreen() {
     );
   }
 
+  const validatePromo = async () => {
+    if (!promoCode.trim()) {
+      setPromoError('Enter a promo code first');
+      return;
+    }
+    setPromoValidating(true);
+    setPromoError('');
+    try {
+      const result = await api.post('/promotions/validate', {
+        code: promoCode,
+        subtotal: totalPrice,
+      });
+      if (result.data.valid) {
+        setPromoApplied(true);
+        setPromoDiscount(Number(result.data.discountAmount) || 0);
+        setPromoError('');
+        Alert.alert('Success', `Promotion applied! You save Rs. ${result.data.discountAmount}`);
+      } else {
+        setPromoError(result.data.message || 'Invalid promo code');
+        setPromoApplied(false);
+      }
+    } catch (error) {
+      setPromoError('Invalid promotion code');
+    } finally {
+      setPromoValidating(false);
+    }
+  };
+
   return (
     <View className="flex-1 bg-gray-50">
       <View className="px-6 pt-12 pb-4 border-b border-gray-100" style={{ backgroundColor: '#B5122A', shadowColor: '#7F0D1D', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8 }}>
@@ -168,6 +217,53 @@ export default function CheckoutScreen() {
             {backendCart?.restaurantName ? <Text className="ml-2 text-xs" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={1}>{backendCart.restaurantName}</Text> : null}
           </View>
         </View>
+
+
+<View className="mt-4">
+  <Text className="text-sm font-semibold text-black mb-1.5">Promo Code</Text>
+  <View className="flex-row items-center gap-2">
+    <TextInput
+      className="flex-1 px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
+      placeholder="Enter promo code"
+      value={promoCode}
+      onChangeText={setPromoCode}
+      editable={!promoApplied}
+    />
+    {!promoApplied ? (
+      <TouchableOpacity
+        className={`bg-primary px-6 py-3 rounded-xl ${promoValidating ? 'opacity-50' : ''}`}
+        onPress={validatePromo}
+        disabled={promoValidating}
+      >
+        {promoValidating ? (
+          <ActivityIndicator size="small" color="#FFF" />
+        ) : (
+          <Text className="font-semibold text-white">Apply</Text>
+        )}
+      </TouchableOpacity>
+    ) : (
+      <TouchableOpacity
+        className="px-6 py-3 bg-red-500 rounded-xl"
+        onPress={() => {
+          setPromoApplied(false);
+          setPromoCode('');
+          setPromoDiscount(0);
+        }}
+      >
+        <Text className="font-semibold text-white">Remove</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+  {promoError && (
+    <Text className="mt-1 text-sm text-red-500">{promoError}</Text>
+  )}
+  {promoApplied && (
+    <Text className="mt-1 text-sm text-green-500">
+      Discount: -Rs. {promoDiscount}
+    </Text>
+  )}
+</View>
+
 
       <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
         {/* Address Section */}
@@ -219,7 +315,7 @@ export default function CheckoutScreen() {
         {/* Payment Method */}
         <PaymentMethodSelector selected={paymentMethod} onSelect={setPaymentMethod} />
         {paymentMethod === 'ONLINE' && (
-          <View className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex-row gap-2">
+          <View className="flex-row gap-2 p-3 mt-3 border border-blue-100 bg-blue-50 rounded-xl">
             <Feather name="info" size={16} color="#2563EB" />
             <Text className="flex-1 text-xs text-blue-800">You'll be redirected to eSewa to complete payment securely. Order will be created as pending and confirmed after payment.</Text>
           </View>

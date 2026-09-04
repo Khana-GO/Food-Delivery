@@ -78,6 +78,12 @@ export class RestaurantResponseDto {
   cuisineType!: string;
 
   @ApiProperty({
+    description: 'Menu categories served by this restaurant',
+    example: ['Momo', 'Chowmein', 'Snacks'],
+  })
+  categories?: { id: string; name: string }[];
+
+  @ApiProperty({
     example: '09:00:00',
   })
   openingTime?: string;

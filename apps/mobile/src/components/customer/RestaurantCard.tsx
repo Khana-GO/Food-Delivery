@@ -55,11 +55,10 @@ export const RestaurantCard = ({ restaurant, isFavorite = false, onToggleFavorit
                 </TouchableOpacity>
               ) : null}
             </View>
-            <Text style={styles.cuisine}>{restaurant.cuisineType}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
               <View style={styles.ratingPill}>
                 <Feather name="star" size={10} color="#FFFFFF" />
-                <Text style={styles.ratingText}>{restaurant.averageRating ? Number(restaurant.averageRating).toFixed(1) : 'New'}</Text>
+                <Text style={styles.ratingText}>{restaurant.averageRating !== undefined && restaurant.averageRating !== null && Number(restaurant.averageRating) > 0 ? Number(restaurant.averageRating).toFixed(1) : 'New'}</Text>
               </View>
               <Text style={styles.dot}>•</Text>
               <Text style={styles.meta}>{restaurant.estimatedDeliveryTime || 30} min</Text>
@@ -106,13 +105,10 @@ export const RestaurantCard = ({ restaurant, isFavorite = false, onToggleFavorit
           <Text style={styles.gridTitle} numberOfLines={1}>
             {restaurant.name}
           </Text>
-          <Text style={styles.gridCuisine} numberOfLines={1}>
-            {restaurant.cuisineType}
-          </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <View style={styles.ratingPill}>
               <Feather name="star" size={10} color="#FFFFFF" />
-              <Text style={styles.ratingText}>{restaurant.averageRating ? Number(restaurant.averageRating).toFixed(1) : 'New'}</Text>
+              <Text style={styles.ratingText}>{restaurant.averageRating !== undefined && restaurant.averageRating !== null && Number(restaurant.averageRating) > 0 ? Number(restaurant.averageRating).toFixed(1) : 'New'}</Text>
             </View>
             <Text style={styles.metaSmall}>{restaurant.deliveryFee ? `Rs. ${restaurant.deliveryFee} fee` : 'Free delivery'}</Text>
           </View>
@@ -149,7 +145,6 @@ const styles = StyleSheet.create({
   listImg: { width: '100%', height: '100%' },
   listInitial: { fontSize: 22, fontWeight: '800', color: Colors.primary },
   listTitle: { fontSize: 14, fontWeight: '700', color: Colors.textDark, flex: 1, letterSpacing: -0.2 },
-  cuisine: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,5 +223,4 @@ const styles = StyleSheet.create({
   deliveryText: { fontSize: 10, fontWeight: '700', color: Colors.textDark },
   gridBody: { padding: 12, paddingTop: 10 },
   gridTitle: { fontSize: 14, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.2 },
-  gridCuisine: { fontSize: 12, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' },
 });
