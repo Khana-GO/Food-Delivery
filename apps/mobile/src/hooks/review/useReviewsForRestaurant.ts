@@ -20,6 +20,7 @@ export const useReviewsForRestaurant = (restaurantId: string, page: number = 1, 
         setLoading(false);
       }
     },
+    enabled: Boolean(restaurantId),
     staleTime: 5 * 60 * 1000,
   });
 };

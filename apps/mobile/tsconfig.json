@@ -6,13 +6,18 @@
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/assets/*": ["./assets/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/assets/*": [
+        "./assets/*"
+      ]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "C:\\Users\\HI SPEED INFOSYS\\Desktop\\Projects\\food_delivery\\apps\\mobile\\nativewind-env.d.ts"
+    "C:\\Users\\HI SPEED INFOSYS\\Desktop\\Projects\\food_delivery\\apps\\mobile\\nativewind-env.d.ts",
+    "/home/shushil/Projects/food_delivery/apps/mobile/nativewind-env.d.ts"
   ]
 }

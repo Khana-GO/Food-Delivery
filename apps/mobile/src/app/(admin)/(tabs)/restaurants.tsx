@@ -118,7 +118,7 @@ export default function AdminRestaurantsScreen() {
               marginTop: 12,
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.14)',
+              backgroundColor: Colors.white,
               borderRadius: Radius.xl,
               paddingHorizontal: 10,
               height: 40,
@@ -126,11 +126,11 @@ export default function AdminRestaurantsScreen() {
               borderColor: 'rgba(255,255,255,0.2)',
             }}
           >
-            <Feather name="search" size={14} color={Colors.white} />
+            <Feather name="search" size={14} color={Colors.textSecondary} />
             <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
               style={{ flex: 1, marginLeft: 8, fontSize: 12, color: Colors.white }}
               placeholder="Search name, address, slug…"
-              placeholderTextColor="rgba(255,255,255,0.6)"
+              placeholderTextColor={Colors.textTertiary}
               value={searchInput}
               onChangeText={setSearchInput}
               autoCapitalize="none"

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { router } from 'expo-router'; // ✅ added
 import { Feather } from '@expo/vector-icons';
 import { useSalesReport } from '@/hooks/admin/useSalesReport';
 import { Colors, Radius, Shadow } from '@/constants/theme';
@@ -76,7 +77,7 @@ export default function ReportsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {/* Crimson header */}
+        {/* Crimson header with back button */}
         <View
           style={{
             backgroundColor: Colors.primary,
@@ -87,8 +88,10 @@ export default function ReportsScreen() {
             borderBottomRightRadius: Radius['3xl'],
           }}
         >
+          {/* 🔙 Back button + title */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View
+            <TouchableOpacity
+              onPress={() => router.back()}
               style={{
                 width: 32,
                 height: 32,
@@ -99,9 +102,10 @@ export default function ReportsScreen() {
                 borderWidth: 1,
                 borderColor: 'rgba(255,255,255,0.25)',
               }}
+              activeOpacity={0.7}
             >
-              <Feather name="file-text" size={14} color={Colors.white} />
-            </View>
+              <Feather name="arrow-left" size={16} color={Colors.white} />
+            </TouchableOpacity>
             <View>
               <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.8 }}>
                 SALES INSIGHTS

@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { router } from 'expo-router'; 
 import { Feather } from '@expo/vector-icons';
 import { usePlatformMetrics } from '@/hooks/admin/usePlatformMetrics';
 import { useRestaurantAnalytics } from '@/hooks/admin/useRestaurantAnalytics';
@@ -14,7 +15,6 @@ import { useDriverAnalytics } from '@/hooks/admin/useDriverAnalytics';
 import { RevenueTrendChart } from '@/components/admin/analytics/RevenueTrendChart';
 import { TopRestaurantsList } from '@/components/admin/analytics/TopRestaurantsList';
 import { TopDriversList } from '@/components/admin/analytics/TopDriversList';
-import { useRouter } from 'expo-router';
 import { useAdminAnalyticsStore } from '@/stores/admin/adminAnalyticsStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import PremiumCard from '@/components/ui/PremiumCard';
@@ -23,7 +23,6 @@ const tabs = ['Platform', 'Restaurants', 'Drivers'];
 
 export default function AdminAnalyticsScreen() {
   const [activeTab, setActiveTab] = useState('Platform');
-  const router = useRouter();
   const { refetch: refetchPlatform, isRefetching: isRefetchingPlatform } = usePlatformMetrics();
   const { refetch: refetchRestaurants, isRefetching: isRefetchingRestaurants } = useRestaurantAnalytics(1, 5, 'totalOrders', 'DESC');
   const { refetch: refetchDrivers, isRefetching: isRefetchingDrivers } = useDriverAnalytics(1, 5, 'totalDeliveries', 'DESC');
@@ -168,7 +167,7 @@ export default function AdminAnalyticsScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {/* Ultra-compact crimson header 36/12 - whole page scrollable (header inside ScrollView) */}
+        {/* Ultra-compact crimson header with back button */}
         <View
           style={{
             backgroundColor: Colors.primary,
@@ -180,7 +179,8 @@ export default function AdminAnalyticsScreen() {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View
+            <TouchableOpacity
+              onPress={() => router.back()}
               style={{
                 width: 32,
                 height: 32,
@@ -191,9 +191,10 @@ export default function AdminAnalyticsScreen() {
                 borderWidth: 1,
                 borderColor: 'rgba(255,255,255,0.25)',
               }}
+              activeOpacity={0.7}
             >
-              <Feather name="bar-chart-2" size={14} color={Colors.white} />
-            </View>
+              <Feather name="arrow-left" size={16} color={Colors.white} />
+            </TouchableOpacity>
             <View>
               <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.8 }}>PLATFORM INSIGHTS</Text>
               <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.white, marginTop: 1 }}>Analytics</Text>

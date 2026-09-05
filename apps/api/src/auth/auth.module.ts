@@ -10,6 +10,7 @@ import { AuthService } from './services/auth.service';
 import { SessionsModule } from '../sessions/session.module';
 import { NotificationsModule } from '../notification/notification.module';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { GoogleTokenService } from './services/google-token.service';
 
 @Module({
   imports: [
@@ -25,7 +26,14 @@ import { GoogleStrategy } from './strategies/google.strategy';
     RolesGuard,
     RateLimitGuard,
     GoogleStrategy,
+    GoogleTokenService,
   ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard, RateLimitGuard],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    RateLimitGuard,
+    GoogleTokenService,
+  ],
 })
 export class AuthModule {}

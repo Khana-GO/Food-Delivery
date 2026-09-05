@@ -73,7 +73,7 @@ export default function AdminOrdersTab() {
               marginTop: 12,
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.14)',
+              backgroundColor: Colors.white,
               borderRadius: Radius.xl,
               paddingHorizontal: 10,
               height: 40,
@@ -81,17 +81,17 @@ export default function AdminOrdersTab() {
               borderColor: 'rgba(255,255,255,0.2)',
             }}
           >
-            <Feather name="search" size={14} color={Colors.white} />
+            <Feather name="search" size={14} color={Colors.textSecondary} />
             <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-              style={{ flex: 1, marginLeft: 8, fontSize: 12, color: Colors.white }}
+              style={{ flex: 1, marginLeft: 8, fontSize: 12, color: Colors.textDark }}
               placeholder="Search orders, customer, restaurant..."
-              placeholderTextColor="rgba(255,255,255,0.6)"
+              placeholderTextColor={Colors.textTertiary}
               value={search}
               onChangeText={setSearch}
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')}>
-                <Feather name="x-circle" size={16} color={Colors.white} />
+                <Feather name="x-circle" size={16} color={Colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>

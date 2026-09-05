@@ -74,8 +74,10 @@ export default function AdminProfile() {
     {
       title: 'Insights',
       rows: [
-        { id: 'analytics', icon: 'bar-chart-2', label: 'Analytics', sub: 'Platform insights', onPress: () => router.push('/(admin)/(tabs)/analytics' as any) },
+        { id: 'analytics', icon: 'bar-chart-2', label: 'Analytics', sub: 'Platform insights', onPress: () => router.push('/(admin)/analytics' as any) },
         { id: 'notifications', icon: 'bell', label: 'Notifications', badge: unreadCount > 0 ? Math.min(unreadCount, 99) : undefined, onPress: () => router.push('/(admin)/(tabs)/notifications' as any) },
+          { id: 'reports', icon: 'file-text', label: 'Reports', sub: 'Platform insights', onPress: () => router.push('/(admin)/reports' as any) },
+
       ],
     },
   ];

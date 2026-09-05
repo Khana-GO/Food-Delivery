@@ -107,14 +107,15 @@ export class OrdersService {
     try {
       return await operation();
     } catch (error) {
-      this.logger.error(`[${context}] Error:`, error);
       if (
         error instanceof NotFoundException ||
         error instanceof ForbiddenException ||
         error instanceof BadRequestException
       ) {
+        this.logger.debug(`[${context}] ${(error as Error).message}`);
         throw error;
       }
+      this.logger.error(`[${context}] Error:`, error);
       throw new InternalServerErrorException(
         'An error occurred while processing your request',
       );

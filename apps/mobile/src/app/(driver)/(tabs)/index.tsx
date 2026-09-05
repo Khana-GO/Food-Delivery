@@ -104,20 +104,23 @@ export default function DriverDashboard() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+            {/* Today – keep semi-transparent */}
             <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.white }}>₹</Text>
               <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800', marginTop: 8 }}>Rs. {earnings?.today ?? 0}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 }}>Today</Text>
             </View>
+            {/* Deliveries – keep semi-transparent */}
             <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
               <Feather name="package" size={18} color={Colors.white} />
               <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800', marginTop: 8 }}>{earnings?.deliveries ?? 0}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 }}>Deliveries</Text>
             </View>
-            <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: Radius.xl, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
-              <Feather name="truck" size={18} color={Colors.white} />
-              <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800', marginTop: 8 }}>{orders?.length ?? 0}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 }}>Available</Text>
+            {/* Available – white background, dark text */}
+            <View style={{ flex: 1, backgroundColor: Colors.white, borderRadius: Radius.xl, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', ...Shadow.sm }}>
+              <Feather name="truck" size={18} color={Colors.primary} />
+              <Text style={{ color: Colors.textDark, fontSize: 20, fontWeight: '800', marginTop: 8 }}>{orders?.length ?? 0}</Text>
+              <Text style={{ color: Colors.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 2 }}>Available</Text>
             </View>
           </View>
         </View>

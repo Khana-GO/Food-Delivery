@@ -129,34 +129,43 @@ export default function AdminUsersScreen() {
           </View>
 
           {/* Search ultra-compact height 40 */}
-          <View
-            style={{
-              marginTop: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.14)',
-              borderRadius: Radius.xl,
-              paddingHorizontal: 10,
-              height: 40,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
-            }}
-          >
-            <Feather name="search" size={14} color={Colors.white} />
-            <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-              style={{ flex: 1, marginLeft: 8, fontSize: 12, color: Colors.white }}
-              placeholder="Search name, email, phone..."
-              placeholderTextColor="rgba(255,255,255,0.6)"
-              value={searchInput}
-              onChangeText={setSearchInput}
-              autoCapitalize="none"
-            />
-            {searchInput.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchInput('')}>
-                <Feather name="x-circle" size={16} color={Colors.white} />
-              </TouchableOpacity>
-            )}
-          </View>
+        <View
+  style={{
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white, // ✅ white background
+    borderRadius: Radius.xl,
+    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    ...Shadow.sm,
+  }}
+>
+  <Feather name="search" size={16} color={Colors.textSecondary} />
+  <TextInput
+    selectionColor={Colors.primary}
+    cursorColor={Colors.primary}
+    style={{
+      flex: 1,
+      marginLeft: 10,
+      fontSize: 13,
+      color: Colors.textDark, 
+      paddingVertical: 8,
+    }}
+    placeholder="Search name, email, phone..."
+    placeholderTextColor={Colors.textTertiary}
+    value={searchInput}
+    onChangeText={setSearchInput}
+    autoCapitalize="none"
+  />
+  {searchInput.length > 0 && (
+    <TouchableOpacity onPress={() => setSearchInput('')} style={{ padding: 4 }}>
+      <Feather name="x-circle" size={18} color={Colors.textTertiary} />
+    </TouchableOpacity>
+  )}
+</View>
 
           {/* Status tabs ultra-compact */}
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>

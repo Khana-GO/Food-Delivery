@@ -79,7 +79,7 @@ export default function DriverProfile() {
     { icon: 'truck' as const, label: 'My Deliveries', onPress: () => router.push('/(driver)/delivery-history' as any) },
     { icon: 'credit-card' as const, label: 'Earnings', onPress: () => router.push('/(driver)/(tabs)/earnings' as any), customIcon: <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.primary }}>₹</Text> },
     { icon: 'bell' as const, label: 'Notifications', onPress: () => router.push('/(driver)/(tabs)/notifications' as any), badge: unreadCount > 0 ? unreadCount : undefined },
-    { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(driver)/settings' as any) },
+    // { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(driver)/settings' as any) },
   ];
 
   if (!user) {

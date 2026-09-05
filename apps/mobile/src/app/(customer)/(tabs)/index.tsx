@@ -659,6 +659,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Shadow.xs,
   },
+
+  
   emptyInlineTitle: { marginTop: 8, fontSize: 13, fontWeight: '700', color: Colors.textDark },
   emptyInlineSub: { marginTop: 4, fontSize: 12, color: Colors.textSecondary, textAlign: 'center', lineHeight: 16 },
   emptyInlineBtn: { marginTop: 12, backgroundColor: Colors.textDark, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },

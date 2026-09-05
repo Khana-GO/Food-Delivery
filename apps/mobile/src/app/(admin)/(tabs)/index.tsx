@@ -218,16 +218,16 @@ export default function AdminDashboard() {
             <View
               style={{
                 flex: 1,
-                backgroundColor: 'rgba(255,255,255,0.14)',
+                backgroundColor: 'white',
                 borderRadius: Radius.xl,
                 padding: 10,
                 borderWidth: 1,
                 borderColor: 'rgba(255,255,255,0.2)',
               }}
             >
-              <Feather name="home" size={12} color={Colors.white} />
-              <Text style={{ color: Colors.white, fontSize: 14, fontWeight: '800', marginTop: 5 }}>{restaurantStats?.total ?? 0}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 9, fontWeight: '600', marginTop: 1 }}>Restaurants</Text>
+              <Feather name="home" size={12} color={Colors.textDark} />
+              <Text style={{ color: Colors.textDark, fontSize: 14, fontWeight: '800', marginTop: 5 }}>{restaurantStats?.total ?? 0}</Text>
+              <Text style={{ color: 'Colors.textDark)', fontSize: 9, fontWeight: '600', marginTop: 1 }}>Restaurants</Text>
             </View>
             <View
               style={{
@@ -406,55 +406,71 @@ export default function AdminDashboard() {
 
         {/* CTA PremiumCard */}
         <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-          <PremiumCard elevation="md" padding={0} style={{ overflow: 'hidden', backgroundColor: Colors.secondary, borderWidth: 0 }}>
-            <View style={{ padding: 20, flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={{ color: Colors.white, fontWeight: '800', fontSize: 15 }}>Manage users</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 6, lineHeight: 16 }}>
-                  Search, filter, edit roles and handle deletions from one place.
-                </Text>
-                <TouchableOpacity
-                  onPress={() => router.push('/(admin)/(tabs)/users' as any)}
-                  style={{
-                    marginTop: 14,
-                    backgroundColor: Colors.white,
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: Radius.full,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    alignSelf: 'flex-start',
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }}>Open Users</Text>
-                  <Feather name="arrow-right" size={14} color={Colors.textDark} />
-                </TouchableOpacity>
-              </View>
-              <View
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 20,
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.15)',
-                }}
-              >
-                <Feather name="users" size={30} color={Colors.white} />
-              </View>
-            </View>
-          </PremiumCard>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 14 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success }} />
-            <Text style={{ fontSize: 11, color: Colors.textTertiary }}>
-              {isLoading ? 'Syncing…' : `Last updated just now • ${userStats?.totalUsers ?? 0} users • ${restaurantStats?.total ?? 0} restaurants`}
-            </Text>
-          </View>
-        </View>
+  <PremiumCard
+    elevation="md"
+    padding={0}
+    style={{
+      overflow: 'hidden',
+      backgroundColor: Colors.primary,
+      borderWidth: 0,
+    }}
+  >
+    <View style={{ padding: 20, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text style={{ color: Colors.white, fontWeight: '800', fontSize: 15 }}>Manage users</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 6, lineHeight: 16 }}>
+          Search, filter, edit roles and handle deletions from one place.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(admin)/(tabs)/users' as any)}
+          style={{
+            marginTop: 14,
+            backgroundColor: Colors.white,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            borderRadius: Radius.full,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            alignSelf: 'flex-start',
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }}>Open Users</Text>
+          <Feather name="arrow-right" size={14} color={Colors.textDark} />
+        </TouchableOpacity>
+      </View>
+      <View
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.15)',
+        }}
+      >
+        <Feather name="users" size={30} color={Colors.white} />
+      </View>
+    </View>
+  </PremiumCard>
+  <View
+    style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      marginTop: 14,
+    }}
+  >
+    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success }} />
+    <Text style={{ fontSize: 11, color: Colors.textTertiary }}>
+      {isLoading ? 'Syncing…' : `Last updated just now • ${userStats?.totalUsers ?? 0} users • ${restaurantStats?.total ?? 0} restaurants`}
+    </Text>
+  </View>
+</View>
       </ScrollView>
     </View>
   );
