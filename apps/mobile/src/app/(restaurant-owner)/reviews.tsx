@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, FlatList, RefreshControl, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useReviewsForRestaurant } from '@/hooks/review/useReviewsForRestaurant';
 import { useReviewStats } from '@/hooks/review/useReviewStats';
@@ -14,6 +14,7 @@ export default function OwnerReviewsScreen() {
   const { data: restaurants } = useMyRestaurants();
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(restaurants?.[0]?.id || '');
   const scrollRef = useRef<ScrollView>(null);
+  const router = useRouter();
   
   const { data: reviewsData, refetch } = useReviewsForRestaurant(selectedRestaurantId);
   const { data: stats } = useReviewStats(selectedRestaurantId);
@@ -89,17 +90,6 @@ export default function OwnerReviewsScreen() {
           <View className="px-4 pt-4">
             {stats && <ReviewStatsView stats={stats} />}
           </View>
-        }
-        ListEmptyComponent={
-          <View className="items-center justify-center py-20">
-            <Feather name="star" size={48} color="#D1D5DB" />
-            <Text className="mt-4 text-lg font-medium text-gray-400">No Reviews Yet</Text>
-            <Text className="mt-1 text-sm text-gray-400">Reviews will appear here</Text>
-          </View>
-        }
-      />
-    </View>
-  );
 }
         ListEmptyComponent={
           <View className="items-center justify-center py-20">

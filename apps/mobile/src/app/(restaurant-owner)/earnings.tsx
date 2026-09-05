@@ -11,11 +11,13 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useRestaurantOrders } from '@/hooks/owner/orders/useRestaurantOrders';
+import { useQuery } from '@tanstack/react-query';
+import { orderService } from '@/services/customer/order.service';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import PremiumCard from '@/components/ui/PremiumCard';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system';
 
 const rs = (n: number) => `Rs. ${Math.round(n).toLocaleString('en-IN')}`;
 
@@ -31,7 +33,20 @@ function orderDate(o: any): Date {
 
 export default function EarningsScreen() {
   const insets = useSafeAreaInsets();
-  const { data, isLoading, refetch, isRefetching } = useRestaurantOrders();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const { data, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['earnings', 'delivered'],
+    queryFn: () =>
+      orderService.getOrders({
+        status: 'DELIVERED',
+        limit: 100,
+        startDate: thirtyDaysAgo.toISOString(),
+      }),
+    staleTime: 15_000,
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: false,
+  });
   const raw: any[] = (data as any)?.data ?? (data as any) ?? [];
   const [downloading, setDownloading] = useState(false);
 
@@ -147,23 +162,34 @@ export default function EarningsScreen() {
         </html>
       `;
 
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      
+      const { base64, uri } = await Print.printToFileAsync({ html, base64: true });
+
+      let shareUri = uri;
+      if (base64) {
+        const fileName = `KhanaGo-Earnings-Statement-${new Date().toISOString().slice(0, 10)}.pdf`;
+        const file = new File(Paths.cache, fileName);
+        if (file.exists) {
+          file.delete();
+        }
+        file.write(base64, { encoding: 'base64' });
+        shareUri = file.uri;
+      }
+
       // Try sharing, fallback to alert with file path
       try {
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          await Sharing.shareAsync(uri, { 
-            mimeType: 'application/pdf', 
-            dialogTitle: 'Earnings Statement — Last 30 Days', 
-            UTI: 'com.adobe.pdf' 
+          await Sharing.shareAsync(shareUri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Earnings Statement — Last 30 Days',
+            UTI: 'com.adobe.pdf',
           });
         } else {
-          Alert.alert('Statement ready', `PDF saved to: ${uri}`);
+          Alert.alert('Statement ready', `PDF saved to: ${shareUri}`);
         }
       } catch (shareError) {
         // If sharing fails, at least tell user where file is
-        Alert.alert('Statement ready', `PDF generated successfully! Saved to: ${uri}`);
+        Alert.alert('Statement ready', `PDF generated successfully! Saved to: ${shareUri}`);
       }
     } catch (e: any) {
       Alert.alert('Download failed', e?.message || 'Could not generate PDF.');

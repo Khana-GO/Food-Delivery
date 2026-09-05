@@ -24,6 +24,7 @@ export default function AdminTabsLayout() {
       <Tabs.Screen name="orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="shopping-bag" label="Orders" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
       <Tabs.Screen name="notifications" options={{ tabBarIcon: ({ focused }) => <TabIcon name="bell" label="Alerts" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
       <Tabs.Screen name="profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="reviews" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -18,6 +18,7 @@ import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRoute } from "lib/roles";
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { useGoogleAuth } from "@/hooks/auth/useGoogleAuth";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Validation (matches backend RegisterUserDto)
@@ -74,7 +75,7 @@ const Logo = React.memo(() => (
         <Text className="text-3xl font-extrabold tracking-tight text-white">
           Khana<Text className="text-primary">Go</Text>
         </Text>
-        <Text className="text-white/80 text-xs font-medium tracking-wide">
+        <Text className="text-xs font-medium tracking-wide text-white/80">
           Delicious Food, Delivered Fast
         </Text>
       </View>
@@ -85,7 +86,7 @@ const Logo = React.memo(() => (
 const Divider = React.memo(() => (
   <View className="flex-row items-center gap-4 mb-5">
     <View className="flex-1 h-px bg-gray-200" />
-    <Text className="text-gray-400 text-xs font-medium tracking-wider">
+    <Text className="text-xs font-medium tracking-wider text-gray-400">
       or continue with
     </Text>
     <View className="flex-1 h-px bg-gray-200" />
@@ -152,7 +153,7 @@ const InputField = React.memo(
         >
           <View className="mr-3">{leftIcon}</View>
           <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-            className="flex-1 text-base text-black py-3"
+            className="flex-1 py-3 text-base text-black"
             placeholder={placeholder}
             placeholderTextColor="#999"
             value={value}
@@ -184,7 +185,7 @@ const InputField = React.memo(
           )}
         </View>
         {hasError && (
-          <Text className="text-red-500 text-xs mt-1 ml-1">{error}</Text>
+          <Text className="mt-1 ml-1 text-xs text-red-500">{error}</Text>
         )}
       </View>
     );
@@ -325,6 +326,9 @@ export default function RegisterScreen() {
     console.log(`Social login requested: ${provider}`);
   }, []);
 
+    const { signInWithGoogle, isLoading: isGoogleLoading, request } = useGoogleAuth();
+  
+
   const goToLogin = useCallback(() => {
     router.replace("/(auth)/login" as any);
   }, []);
@@ -347,7 +351,7 @@ export default function RegisterScreen() {
         }}
         resizeMode="cover"
       >
-        <View className="flex-1 bg-black/30 justify-center items-center px-6">
+        <View className="items-center justify-center flex-1 px-6 bg-black/30">
           <Logo />
         </View>
       </ImageBackground>
@@ -368,10 +372,10 @@ export default function RegisterScreen() {
           <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[620px]">
             {/* Header */}
             <View className="mb-6">
-              <Text className="text-3xl font-extrabold text-black tracking-tight mb-1">
+              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black">
                 Create Account
               </Text>
-              <Text className="text-gray-500 text-sm tracking-wide">
+              <Text className="text-sm tracking-wide text-gray-500">
                 Join KhanaGo and start ordering your favourites.
               </Text>
             </View>
@@ -426,7 +430,7 @@ export default function RegisterScreen() {
 
               <InputField
                 label="Phone Number"
-                placeholder="Enter your phone number"
+                placeholder="Enter your  number"
                 value={form.phone}
                 onChangeText={(text) => updateField("phone", text)}
                 error={fieldErrors.phone}
@@ -458,7 +462,7 @@ export default function RegisterScreen() {
 
               <InputField
                 label="Confirm Password"
-                placeholder="Confirm your password"
+                placeholder="Confirm password"
                 value={form.confirmPassword}
                 onChangeText={(text) => updateField("confirmPassword", text)}
                 error={fieldErrors.confirmPassword}
@@ -490,15 +494,15 @@ export default function RegisterScreen() {
                   <Feather name="check" size={14} color="white" />
                 )}
               </View>
-              <Text className="text-gray-500 text-sm flex-1 flex-wrap">
+              <Text className="flex-wrap flex-1 text-sm text-gray-500">
                 I agree to the{" "}
-                <Text className="text-black font-bold">Terms</Text>
+                <Text className="font-bold text-black">Terms</Text>
                 {" & "}
-                <Text className="text-black font-bold">Privacy Policy</Text>
+                <Text className="font-bold text-black">Privacy Policy</Text>
               </Text>
             </TouchableOpacity>
             {fieldErrors.agreed && (
-              <Text className="text-red-500 text-xs -mt-2 mb-2 ml-1">
+              <Text className="mb-2 ml-1 -mt-2 text-xs text-red-500">
                 {fieldErrors.agreed}
               </Text>
             )}
@@ -507,7 +511,7 @@ export default function RegisterScreen() {
             {generalError ? (
               <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
                 <Feather name="alert-triangle" size={16} color="#EF4444" />
-                <Text className="text-red-500 text-sm text-center flex-1 font-medium">
+                <Text className="flex-1 text-sm font-medium text-center text-red-500">
                   {generalError}
                 </Text>
               </View>
@@ -522,7 +526,7 @@ export default function RegisterScreen() {
               disabled={isLoginLoading || !form.agreed}
               activeOpacity={0.8}
             >
-              <Text className="text-white text-center font-bold text-base tracking-wide">
+              <Text className="text-base font-bold tracking-wide text-center text-white">
                 {isLoginLoading ? "Creating account..." : "Create Account"}
               </Text>
             </TouchableOpacity>
@@ -532,16 +536,15 @@ export default function RegisterScreen() {
             {/* Social Login */}
             <View className="flex-row gap-3 mb-6">
               <GoogleLoginButton
-                onPress={handleSocialLogin}
+                onPress={signInWithGoogle}
                 isLoading={isLoginLoading}
                 disabled={isLoginLoading}
-                style={{ flex: 1 }}
               />
             </View>
 
             {/* Login Link */}
-            <View className="flex-row justify-center items-center">
-              <Text className="text-gray-500 text-sm">
+            <View className="flex-row items-center justify-center">
+              <Text className="text-sm text-gray-500">
                 Already have an account?
               </Text>
               <TouchableOpacity
@@ -549,7 +552,7 @@ export default function RegisterScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 disabled={isLoginLoading}
               >
-                <Text className="text-primary font-bold text-sm ml-1">
+                <Text className="ml-1 text-sm font-bold text-primary">
                   Log In
                 </Text>
               </TouchableOpacity>

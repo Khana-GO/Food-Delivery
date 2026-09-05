@@ -424,7 +424,6 @@ const handleLogin = useCallback(async () => {
                 onPress={signInWithGoogle}
                 isLoading={isGoogleLoading}
                 disabled={!request}
-                style={{ flex: 1 }}
               />
             </View>
 

@@ -3,7 +3,7 @@ import { CreateOrderPayload, Order } from '@food_delivery/types';
 
 export const orderService = {
   // ─── GET ORDERS ───
-  getOrders: async (params?: { status?: string; page?: number; limit?: number }): Promise<{ data: Order[]; total: number; page: number; limit: number; totalPages: number }> => {
+  getOrders: async (params?: { status?: string; page?: number; limit?: number; startDate?: string; endDate?: string }): Promise<{ data: Order[]; total: number; page: number; limit: number; totalPages: number }> => {
     const response = await api.get('/orders', { params });
     return response.data;
   },
