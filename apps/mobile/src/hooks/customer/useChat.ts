@@ -62,15 +62,19 @@ export const useChat = () => {
   );
 
   const clearChat = useCallback(async () => {
-    if (sessionId) {
-      try {
-        await aiService.clearSession(sessionId);
-      } catch (error) {
-        console.warn('Failed to clear session:', error);
-      }
-    }
+    const currentSessionId = sessionId;
+    // Immediately clear local message state so UI reacts with 0ms delay
     useChatStore.getState().clearMessages();
     setSessionId(null);
+
+    // Best-effort notify backend to clear session history if valid UUID exists
+    if (currentSessionId && /^[0-9a-fA-F-]{36}$/.test(currentSessionId)) {
+      try {
+        await aiService.clearSession(currentSessionId);
+      } catch (error) {
+        console.warn('Failed to clear backend session:', error);
+      }
+    }
   }, [sessionId, setSessionId]);
 
   return {

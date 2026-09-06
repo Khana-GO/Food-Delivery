@@ -61,7 +61,20 @@ export default function ChatbotScreen() {
   };
 
   const handleClear = () => {
-    Alert.alert('Clear chat', 'Are you sure you want to clear the conversation?', [
+    if (messages.length === 0) return;
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm) {
+        if (window.confirm('Clear your conversation with KhanaGo AI?')) {
+          clearChat();
+        }
+      } else {
+        clearChat();
+      }
+      return;
+    }
+
+    Alert.alert('Clear Chat', 'Are you sure you want to clear this conversation?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Clear', style: 'destructive', onPress: () => clearChat() },
     ]);
@@ -85,8 +98,18 @@ export default function ChatbotScreen() {
             <Text style={styles.subtitle}>Food assistant • Online</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={handleClear} style={styles.trashBtn} activeOpacity={0.8}>
-          <Feather name="trash-2" size={18} color={Colors.textTertiary} />
+        <TouchableOpacity
+          onPress={handleClear}
+          style={[styles.trashBtn, messages.length === 0 && { opacity: 0.35 }]}
+          activeOpacity={0.7}
+          disabled={messages.length === 0}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather
+            name="trash-2"
+            size={18}
+            color={messages.length > 0 ? '#EF4444' : Colors.textTertiary}
+          />
         </TouchableOpacity>
       </View>
 
