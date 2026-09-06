@@ -3,16 +3,16 @@ import {
   View,
   Text,
   TouchableOpacity,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   Image,
   ImageBackground,
   StatusBar,
   TextInput,
-  useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
@@ -207,12 +207,6 @@ function parseBackendError(error: any): string {
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
-  const insets = useSafeAreaInsets();
-  const { height: screenHeight } = useWindowDimensions();
-  // Form requires ~410px + bottom safe area. Extend image down to meet the card directly above Welcome Back.
-  const formRequiredHeight = 410 + Math.max(insets.bottom, 16);
-  const imageHeight = Math.max(260, Math.min(380, Math.round(screenHeight - formRequiredHeight + 28)));
-
   const { login, user, isAuthenticating } = useAuth();
   const { signInWithGoogle, isLoading: isGoogleLoading, request } = useGoogleAuth();
 
@@ -298,151 +292,148 @@ export default function LoginScreen() {
   const isLoginLoading = isAuthenticating;
 
   return (
-    <View className="flex-1 bg-white">
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header with Food Image */}
-      <ImageBackground
-        source={{
-          uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
-        }}
-        style={{
-          width: '100%',
-          height: imageHeight,
-          paddingTop: insets.top,
-        }}
-        resizeMode="cover"
-      >
-        <View className="items-center justify-center flex-1 px-6 bg-black/35">
-          <Logo />
-        </View>
-      </ImageBackground>
-
-      {/* Fixed Non-Scrolling Form Card */}
+      {/* Form Section with Unified Scrolling */}
       <KeyboardAvoidingView
-        className="flex-1 -mt-7"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View
-          className="flex-1 bg-white rounded-t-[32px] px-6 pt-6 shadow-2xl shadow-black/20 items-center justify-between"
-          style={{ paddingBottom: Math.max(insets.bottom, 16) + 4 }}
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <View className="w-full max-w-sm flex-1 justify-between">
-            {/* Upper Form Section */}
-            <View>
-              {/* Header - Centered */}
-              <View className="mb-3.5 items-center">
-                <Text className="mb-1 text-2xl font-black tracking-tight text-black text-center">
-                  Welcome Back
-                </Text>
-                <Text className="text-xs tracking-wide text-gray-500 text-center">
-                  Sign in to continue exploring delicious food
-                </Text>
-              </View>
+          {/* Header with Food Image */}
+          <ImageBackground
+            source={{
+              uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+            }}
+            className="w-full h-[220px]"
+            imageStyle={{
+              borderBottomLeftRadius: 30,
+              borderBottomRightRadius: 30,
+            }}
+            resizeMode="cover"
+          >
+            <View className="items-center justify-center flex-1 px-6 bg-black/30">
+              <Logo />
+            </View>
+          </ImageBackground>
 
-              {/* Form Fields */}
-              <InputField
-                label="Email Address"
-                placeholder="Enter your email"
-                value={email}
-                onChangeText={handleEmailChange}
-                error={fieldErrors.email}
-                editable={!isLoginLoading}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                textContentType="emailAddress"
-                returnKeyType="next"
-                leftIcon={<Feather name="mail" size={18} color="#6B7280" />}
-              />
+          <View className="flex-1 bg-white rounded-t-3xl -mt-6 px-6 pt-6 pb-8 shadow-lg shadow-black/5">
+            {/* Header */}
+            <View className="mb-6">
+              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black text-center">
+                Welcome Back
+              </Text>
+              <Text className="text-sm tracking-wide text-gray-500 text-center">
+                Sign in to continue exploring delicious food
+              </Text>
+            </View>
 
-              <InputField
-                label="Password"
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={handlePasswordChange}
-                error={fieldErrors.password}
-                editable={!isLoginLoading}
-                isPassword
-                secureTextEntry={!showPassword}
-                onTogglePassword={togglePasswordVisibility}
-                autoComplete="password"
-                textContentType="password"
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-                leftIcon={<Feather name="lock" size={18} color="#6B7280" />}
-              />
+            {/* Form Fields */}
+            <InputField
+              label="Email Address"
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={handleEmailChange}
+              error={fieldErrors.email}
+              editable={!isLoginLoading}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
+              leftIcon={<Feather name="mail" size={18} color="#6B7280" />}
+            />
 
-              {/* Forgot Password Link */}
-              <View className="flex-row items-center justify-end -mt-0.5 mb-2.5">
-                <TouchableOpacity
-                  onPress={goToForgotPassword}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  disabled={isLoginLoading}
-                >
-                  <Text className="text-xs font-bold tracking-wide text-primary">
-                    Forgot Password?
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            <InputField
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={handlePasswordChange}
+              error={fieldErrors.password}
+              editable={!isLoginLoading}
+              isPassword
+              secureTextEntry={!showPassword}
+              onTogglePassword={togglePasswordVisibility}
+              autoComplete="password"
+              textContentType="password"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+              leftIcon={<Feather name="lock" size={18} color="#6B7280" />}
+            />
 
-              {/* General Error */}
-              {generalError ? (
-                <View className="flex-row items-center justify-center gap-1.5 mb-2 px-2.5 py-1.5 bg-red-50 rounded-xl border border-red-100">
-                  <Feather name="alert-triangle" size={14} color="#EF4444" />
-                  <Text className="flex-1 text-xs font-medium text-red-600">
-                    {generalError}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Login Button */}
+            {/* Forgot Password Link */}
+            <View className="flex-row items-center justify-end -mt-0.5 mb-4">
               <TouchableOpacity
-                className={`bg-primary rounded-xl py-3.5 mt-0.5 ${
-                  isLoginLoading ? 'opacity-70' : ''
-                } shadow-lg shadow-primary/25`}
-                onPress={handleLogin}
+                onPress={goToForgotPassword}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 disabled={isLoginLoading}
-                activeOpacity={0.8}
               >
-                <Text className="text-base font-bold tracking-wide text-center text-white">
-                  {isLoginLoading ? 'Signing in...' : 'Sign In'}
+                <Text className="text-xs font-bold tracking-wide text-primary">
+                  Forgot Password?
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Lower Section (Divider, Google Login, Sign Up) */}
-            <View className="pt-2">
-              <Divider />
-
-              {/* Social Login */}
-              <View className="mb-3.5">
-                <GoogleLoginButton
-                  onPress={signInWithGoogle}
-                  isLoading={isGoogleLoading}
-                  disabled={!request}
-                />
-              </View>
-
-              {/* Sign Up Link */}
-              <View className="flex-row items-center justify-center">
-                <Text className="text-sm text-gray-500">
-                  Don't have an account?
+            {/* General Error */}
+            {generalError ? (
+              <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
+                <Feather name="alert-triangle" size={16} color="#EF4444" />
+                <Text className="flex-1 text-sm font-medium text-center text-red-500">
+                  {generalError}
                 </Text>
-                <TouchableOpacity
-                  onPress={goToRegister}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  disabled={isLoginLoading}
-                >
-                  <Text className="ml-1.5 text-sm font-bold text-primary">
-                    Sign Up
-                  </Text>
-                </TouchableOpacity>
               </View>
+            ) : null}
+
+            {/* Login Button */}
+            <TouchableOpacity
+              className={`bg-primary rounded-xl py-4 mt-1 mb-6 ${
+                isLoginLoading ? "opacity-70" : ""
+              } shadow-lg shadow-primary/25`}
+              onPress={handleLogin}
+              disabled={isLoginLoading}
+              activeOpacity={0.8}
+            >
+              <Text className="text-base font-bold tracking-wide text-center text-white">
+                {isLoginLoading ? "Signing in..." : "Sign In"}
+              </Text>
+            </TouchableOpacity>
+
+            <Divider />
+
+            {/* Social Login */}
+            <View className="flex-row gap-3 mb-6">
+              <GoogleLoginButton
+                onPress={signInWithGoogle}
+                isLoading={isGoogleLoading}
+                disabled={!request}
+              />
+            </View>
+
+            {/* Sign Up Link */}
+            <View className="flex-row items-center justify-center">
+              <Text className="text-sm text-gray-500">
+                Don't have an account?
+              </Text>
+              <TouchableOpacity
+                onPress={goToRegister}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={isLoginLoading}
+              >
+                <Text className="ml-1.5 text-sm font-bold text-primary">
+                  Sign Up
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
