@@ -7,7 +7,7 @@ import { Colors } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
-interface AdminOrderStats {
+interface AdminOrderStatsData {
   totalOrders: number;
   totalRevenue: number;
   todayOrders: number;
@@ -17,7 +17,7 @@ interface AdminOrderStats {
 }
 
 export const AdminOrderStats = () => {
-  const { data: stats, isLoading } = useAdminOrderStats() as { data: AdminOrderStats; isLoading: boolean };
+  const { data: stats, isLoading } = useAdminOrderStats() as { data: AdminOrderStatsData; isLoading: boolean };
 
   if (isLoading) {
     return <ActivityIndicator size="large" color="#E23744" className="py-8" />;

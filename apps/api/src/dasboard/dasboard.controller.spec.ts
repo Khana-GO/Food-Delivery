@@ -1,17 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DasboardController } from './dasboard.controller';
-import { DasboardService } from './dasboard.service';
+import { DashboardController } from './dasboard.controller';
+import { DashboardService } from './dasboard.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
-describe('DasboardController', () => {
-  let controller: DasboardController;
+describe('DashboardController', () => {
+  let controller: DashboardController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [DasboardController],
-      providers: [DasboardService],
-    }).compile();
+      controllers: [DashboardController],
+      providers: [
+        {
+          provide: DashboardService,
+          useValue: {},
+        },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
-    controller = module.get<DasboardController>(DasboardController);
+    controller = module.get<DashboardController>(DashboardController);
   });
 
   it('should be defined', () => {

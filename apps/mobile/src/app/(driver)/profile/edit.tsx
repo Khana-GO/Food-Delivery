@@ -16,8 +16,11 @@ import PremiumCard from '@/components/ui/PremiumCard';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUpdateProfile } from '@/hooks/user';
-import { useUploadProfileImage, useDeleteProfileImage } from '@/hooks/user';
+import {
+  useUpdateProfile,
+  useUploadProfileImage,
+  useDeleteProfileImage,
+} from '@/hooks/user';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 
 export default function DriverEditProfile() {

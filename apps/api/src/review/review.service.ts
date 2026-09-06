@@ -236,7 +236,7 @@ export class ReviewsService {
             comment: review.comment || undefined,
             createdAt: review.createdAt,
             updatedAt: review.updatedAt,
-          } as ReviewResponseDto;
+          };
         }),
       );
 
@@ -244,9 +244,9 @@ export class ReviewsService {
       const averageRating =
         total > 0
           ? parseFloat(
-              (
-                reviews.reduce((sum, r) => sum + r.rating, 0) / total
-              ).toFixed(1),
+              (reviews.reduce((sum, r) => sum + r.rating, 0) / total).toFixed(
+                1,
+              ),
             )
           : 0;
 

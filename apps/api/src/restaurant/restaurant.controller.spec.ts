@@ -13,19 +13,15 @@ describe('RestaurantsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RestaurantsController],
       providers: [
-        RestaurantsService,
-        { provide: DATABASE, useValue: {} },
         {
-          provide: CloudinaryService,
-          useValue: { uploadImage: jest.fn(), deleteImage: jest.fn() },
-        },
-        {
-          provide: CacheService,
+          provide: RestaurantsService,
           useValue: {
-            wrap: jest.fn((k, ttl, fn) => fn()),
-            del: jest.fn(),
-            delByPattern: jest.fn(),
-            hashOptions: jest.fn(() => 'hash'),
+            create: jest.fn(),
+            findAll: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            delete: jest.fn(),
+            getStats: jest.fn(),
           },
         },
       ],

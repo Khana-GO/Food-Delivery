@@ -49,7 +49,7 @@ export class OrderTools {
     return new DynamicTool({
       name: 'get_order_details',
       description:
-        'Get complete details of an order by order ID. Includes items, customer info, and status. Input is order ID UUID. If you do not know the exact order ID, call get_order_history first to list the user\'s orders, then use a real ID from that list.',
+        "Get complete details of an order by order ID. Includes items, customer info, and status. Input is order ID UUID. If you do not know the exact order ID, call get_order_history first to list the user's orders, then use a real ID from that list.",
       func: async (input: string) => {
         try {
           const currentUserId = orderContext.getStore()?.userId;

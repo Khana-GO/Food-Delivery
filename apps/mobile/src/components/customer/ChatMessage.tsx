@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { ChatMessage as ChatMessageType } from '@/types/chat.types';
+import {
+  ChatMessage as ChatMessageType,
+  normalizeChatTimestamp,
+} from '@/types/chat.types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
-import { normalizeChatTimestamp } from '@/types/chat.types';
 
 interface ChatMessageProps {
   message: ChatMessageType;

@@ -6,6 +6,7 @@ import { AuthService } from './services/auth.service';
 import { UsersService } from '../users/users.service';
 import { MailService } from '../mail/mail.service';
 import { SessionsService } from '../sessions/sessions.service';
+import { NotificationsService } from '../notification/notification.service';
 
 describe('AuthService', () => {
   it('creates a user with a hashed verification token and sends only the raw token by email', async () => {
@@ -37,6 +38,7 @@ describe('AuthService', () => {
       mail,
       config,
       {} as any,
+      { create: jest.fn().mockImplementation(async () => ({})) } as any,
       { transaction } as any,
     );
 
@@ -89,6 +91,7 @@ describe('AuthService', () => {
       { sendVerificationCode } as unknown as MailService,
       config,
       {} as SessionsService,
+      {} as NotificationsService,
       { transaction } as any,
     );
 
@@ -147,6 +150,7 @@ describe('AuthService', () => {
       mail,
       config,
       sessionService,
+      {} as NotificationsService,
       {} as any,
     );
 
@@ -199,6 +203,7 @@ describe('AuthService', () => {
         mail,
         config,
         sessionService,
+        {} as NotificationsService,
         {} as any,
       );
 
@@ -237,6 +242,7 @@ describe('AuthService', () => {
         mail,
         config,
         sessionService,
+        {} as NotificationsService,
         {} as any,
       );
 
@@ -280,6 +286,7 @@ describe('AuthService', () => {
         mail,
         config,
         sessionService,
+        {} as NotificationsService,
         {} as any,
       );
 
@@ -314,6 +321,7 @@ describe('AuthService', () => {
         mail,
         config,
         sessionService,
+        {} as NotificationsService,
         {} as any,
       );
 
@@ -349,6 +357,7 @@ describe('AuthService', () => {
         mail,
         config,
         sessionService,
+        {} as NotificationsService,
         {} as any,
       );
 
@@ -377,6 +386,7 @@ describe('AuthService', () => {
         mail,
         config,
         sessionService,
+        {} as NotificationsService,
         {} as any,
       );
 

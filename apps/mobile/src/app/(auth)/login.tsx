@@ -3,16 +3,16 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   Image,
   ImageBackground,
   StatusBar,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,7 +61,7 @@ const Logo = React.memo(() => (
 ));
 
 const Divider = React.memo(() => (
-  <View className="flex-row items-center gap-4 mb-5">
+  <View className="flex-row items-center gap-3 mb-3">
     <View className="flex-1 h-px bg-gray-200" />
     <Text className="text-xs font-medium tracking-wider text-gray-400">
       or continue with
@@ -110,20 +110,22 @@ const InputField = React.memo(({
   const hasError = !!error;
 
   return (
-    <View className="mb-4">
-      <Text className="text-sm font-semibold text-black mb-1.5">
+    <View className="mb-2.5">
+      <Text className="text-xs font-semibold text-gray-700 mb-1">
         {label}
       </Text>
       <View
         className={`flex-row items-center rounded-xl border ${
           hasError ? 'border-red-500' : 'border-gray-200'
-        } bg-white px-4 h-14 ${!editable ? 'opacity-60 bg-gray-50' : ''}`}
+        } bg-white px-3.5 h-12 ${!editable ? 'opacity-60 bg-gray-50' : ''}`}
       >
-        <View className="mr-3">{leftIcon}</View>
-        <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-          className="flex-1 py-3 text-base text-black"
+        <View className="mr-2.5">{leftIcon}</View>
+        <TextInput
+          selectionColor="rgba(15,23,42,0.16)"
+          cursorColor="#334155"
+          className="flex-1 py-2 text-sm text-black"
           placeholder={placeholder}
-          placeholderTextColor="#999"
+          placeholderTextColor="#9CA3AF"
           value={value}
           onChangeText={onChangeText}
           editable={editable}
@@ -143,17 +145,17 @@ const InputField = React.memo(({
           >
             <Feather
               name={secureTextEntry ? 'eye' : 'eye-off'}
-              size={20}
-              color="#666"
+              size={18}
+              color="#6B7280"
             />
           </TouchableOpacity>
         )}
         {hasError && !isPassword && (
-          <Feather name="alert-circle" size={20} color="#EF4444" />
+          <Feather name="alert-circle" size={18} color="#EF4444" />
         )}
       </View>
       {hasError && (
-        <Text className="mt-1 ml-1 text-xs text-red-500">
+        <Text className="mt-0.5 ml-1 text-xs text-red-500">
           {error}
         </Text>
       )}
@@ -205,6 +207,12 @@ function parseBackendError(error: any): string {
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
+  // Form requires ~410px + bottom safe area. Extend image down to meet the card directly above Welcome Back.
+  const formRequiredHeight = 410 + Math.max(insets.bottom, 16);
+  const imageHeight = Math.max(260, Math.min(380, Math.round(screenHeight - formRequiredHeight + 28)));
+
   const { login, user, isAuthenticating } = useAuth();
   const { signInWithGoogle, isLoading: isGoogleLoading, request } = useGoogleAuth();
 
@@ -253,45 +261,34 @@ export default function LoginScreen() {
     return result.data;
   }, [email, password]);
 
+  const handleLogin = useCallback(async () => {
+    setGeneralError('');
+    const values = validate();
+    if (!values) return;
 
+    loginAttemptsRef.current += 1;
 
-// ... inside LoginScreen
-const handleLogin = useCallback(async () => {
-  setGeneralError('');
-  const values = validate();
-  if (!values) return;
+    try {
+      const loggedInUser = await login({ email: values.email, password: values.password });
+      loginAttemptsRef.current = 0;
+      const homeRoute = getHomeRoute(loggedInUser.role);
+      router.replace(homeRoute as any);
+    } catch (error: any) {
+      const errorMessage = parseBackendError(error);
+      const lower = errorMessage.toLowerCase();
 
-  loginAttemptsRef.current += 1;
-
-  try {
-    const user = await login({ email: values.email, password: values.password });
-    loginAttemptsRef.current = 0;
-    const homeRoute = getHomeRoute(user.role);
-    router.replace(homeRoute as any);
-  } catch (error: any) {
-    const errorMessage = parseBackendError(error);
-    const lower = errorMessage.toLowerCase();
-
-    if (lower.includes('email')) {
-      setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
-    } else if (lower.includes('password')) {
-      setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
-    } else {
-      setGeneralError(errorMessage);
+      if (lower.includes('email')) {
+        setFieldErrors((prev) => ({ ...prev, email: errorMessage }));
+      } else if (lower.includes('password')) {
+        setFieldErrors((prev) => ({ ...prev, password: errorMessage }));
+      } else {
+        setGeneralError(errorMessage);
+      }
     }
-  }
-}, [login, validate]);
-
-  const handleSocialLogin = useCallback(() => {
-    console.log('Social login requested: google');
-  }, []);
+  }, [login, validate]);
 
   const goToRegister = useCallback(() => {
     router.replace('/(auth)/register' as any);
-  }, []);
-
-  const handleForgotPassword = useCallback(() => {
-    router.push('/(auth)/forgot-password' as any);
   }, []);
 
   const goToForgotPassword = useCallback(() => {
@@ -301,52 +298,49 @@ const handleLogin = useCallback(async () => {
   const isLoginLoading = isAuthenticating;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View className="flex-1 bg-white">
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* Header with Food Image */}
       <ImageBackground
         source={{
           uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
         }}
-        className="w-full h-[280px]"
-        imageStyle={{
-          borderBottomLeftRadius: 30,
-          borderBottomRightRadius: 30,
+        style={{
+          width: '100%',
+          height: imageHeight,
+          paddingTop: insets.top,
         }}
         resizeMode="cover"
       >
-        <View className="items-center justify-center flex-1 px-6 bg-black/30">
+        <View className="items-center justify-center flex-1 px-6 bg-black/35">
           <Logo />
         </View>
       </ImageBackground>
 
-      {/* Form Section */}
+      {/* Fixed Non-Scrolling Form Card */}
       <KeyboardAvoidingView
-        className="flex-1 -mt-8"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        className="flex-1 -mt-7"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          className="flex-1 px-6"
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
+        <View
+          className="flex-1 bg-white rounded-t-[32px] px-6 pt-6 shadow-2xl shadow-black/20 items-center justify-between"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) + 4 }}
         >
-          <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[560px]">
-            {/* Header */}
-            <View className="mb-6">
-              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black">
-                Welcome Back
-              </Text>
-              <Text className="text-sm tracking-wide text-gray-500">
-                Sign in to continue exploring delicious food
-              </Text>
-            </View>
+          <View className="w-full max-w-sm flex-1 justify-between">
+            {/* Upper Form Section */}
+            <View>
+              {/* Header - Centered */}
+              <View className="mb-3.5 items-center">
+                <Text className="mb-1 text-2xl font-black tracking-tight text-black text-center">
+                  Welcome Back
+                </Text>
+                <Text className="text-xs tracking-wide text-gray-500 text-center">
+                  Sign in to continue exploring delicious food
+                </Text>
+              </View>
 
-            {/* Form Fields */}
-            <View className="gap-1 mb-2">
+              {/* Form Fields */}
               <InputField
                 label="Email Address"
                 placeholder="Enter your email"
@@ -359,7 +353,7 @@ const handleLogin = useCallback(async () => {
                 autoComplete="email"
                 textContentType="emailAddress"
                 returnKeyType="next"
-                leftIcon={<Feather name="mail" size={20} color="#666" />}
+                leftIcon={<Feather name="mail" size={18} color="#6B7280" />}
               />
 
               <InputField
@@ -376,75 +370,79 @@ const handleLogin = useCallback(async () => {
                 textContentType="password"
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
-                leftIcon={<Feather name="lock" size={20} color="#666" />}
+                leftIcon={<Feather name="lock" size={18} color="#6B7280" />}
               />
 
-              <View className="flex-row items-center justify-end mt-1 mb-2">
+              {/* Forgot Password Link */}
+              <View className="flex-row items-center justify-end -mt-0.5 mb-2.5">
                 <TouchableOpacity
                   onPress={goToForgotPassword}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   disabled={isLoginLoading}
                 >
-                  <Text className="text-sm font-semibold tracking-wide text-primary">
+                  <Text className="text-xs font-bold tracking-wide text-primary">
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
 
-            {/* General Error */}
-            {generalError ? (
-              <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
-                <Feather name="alert-triangle" size={16} color="#EF4444" />
-                <Text className="flex-1 text-sm font-medium text-center text-red-500">
-                  {generalError}
-                </Text>
-              </View>
-            ) : null}
+              {/* General Error */}
+              {generalError ? (
+                <View className="flex-row items-center justify-center gap-1.5 mb-2 px-2.5 py-1.5 bg-red-50 rounded-xl border border-red-100">
+                  <Feather name="alert-triangle" size={14} color="#EF4444" />
+                  <Text className="flex-1 text-xs font-medium text-red-600">
+                    {generalError}
+                  </Text>
+                </View>
+              ) : null}
 
-            {/* Login Button */}
-            <TouchableOpacity
-              className={`bg-primary rounded-xl py-4 mt-3 mb-5 ${
-                isLoginLoading ? 'opacity-70' : ''
-              } shadow-lg shadow-primary/25`}
-              onPress={handleLogin}
-              disabled={isLoginLoading}
-              activeOpacity={0.8}
-            >
-              <Text className="text-base font-bold tracking-wide text-center text-white">
-                {isLoginLoading ? 'Signing in...' : 'Sign In'}
-              </Text>
-            </TouchableOpacity>
-
-            <Divider />
-
-            {/* Social Login */}
-            <View className="flex-row gap-3 mb-6">
-              <GoogleLoginButton
-                onPress={signInWithGoogle}
-                isLoading={isGoogleLoading}
-                disabled={!request}
-              />
-            </View>
-
-            {/* Sign Up Link */}
-            <View className="flex-row items-center justify-center">
-              <Text className="text-sm text-gray-500">
-                Don't have an account?
-              </Text>
+              {/* Login Button */}
               <TouchableOpacity
-                onPress={goToRegister}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                className={`bg-primary rounded-xl py-3.5 mt-0.5 ${
+                  isLoginLoading ? 'opacity-70' : ''
+                } shadow-lg shadow-primary/25`}
+                onPress={handleLogin}
                 disabled={isLoginLoading}
+                activeOpacity={0.8}
               >
-                <Text className="ml-1 text-sm font-bold text-primary">
-                  Sign Up
+                <Text className="text-base font-bold tracking-wide text-center text-white">
+                  {isLoginLoading ? 'Signing in...' : 'Sign In'}
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Lower Section (Divider, Google Login, Sign Up) */}
+            <View className="pt-2">
+              <Divider />
+
+              {/* Social Login */}
+              <View className="mb-3.5">
+                <GoogleLoginButton
+                  onPress={signInWithGoogle}
+                  isLoading={isGoogleLoading}
+                  disabled={!request}
+                />
+              </View>
+
+              {/* Sign Up Link */}
+              <View className="flex-row items-center justify-center">
+                <Text className="text-sm text-gray-500">
+                  Don't have an account?
+                </Text>
+                <TouchableOpacity
+                  onPress={goToRegister}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  disabled={isLoginLoading}
+                >
+                  <Text className="ml-1.5 text-sm font-bold text-primary">
+                    Sign Up
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

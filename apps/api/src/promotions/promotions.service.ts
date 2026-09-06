@@ -82,7 +82,7 @@ export class PromotionsService {
     const cached = await this.cache.get(this.key(code));
     let promotion: any;
     if (cached) {
-      promotion = JSON.parse(String(cached));
+      promotion = typeof cached === 'string' ? JSON.parse(cached) : cached;
     } else {
       promotion = await this.db.query.promotionsTable.findFirst({
         where: eq(promotionsTable.code, code),

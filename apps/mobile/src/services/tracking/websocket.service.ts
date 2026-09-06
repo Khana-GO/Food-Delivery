@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import { Platform } from 'react-native';
 import { getAccessToken } from '../../../lib/secure-storage';
+import { getBaseUrl } from '../../../lib/axios';
 
 type Listener = (data: any) => void;
 
@@ -14,12 +14,8 @@ class WebSocketService {
   private connectionPromise: Promise<void> | null = null;
 
   private getBaseURL(): string {
-    const base =
-      Platform.OS === 'web'
-        ? process.env.EXPO_PUBLIC_API_URL_WEB
-        : process.env.EXPO_PUBLIC_API_URL_MOBILE;
+    const raw = getBaseUrl();
     // Strip trailing /api
-    const raw = base || 'http://localhost:3000/api';
     return raw.replace(/\/api\/?$/, '');
   }
 

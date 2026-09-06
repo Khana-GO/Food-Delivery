@@ -1,15 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AiService } from './ai.service';
+import { AIService } from './ai.service';
+import { KhanaGoAgent } from '../agents/khana-go.agent';
+import { DATABASE } from '../db/database.constants';
 
-describe('AiService', () => {
-  let service: AiService;
+describe('AIService', () => {
+  let service: AIService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AiService],
+      providers: [
+        AIService,
+        {
+          provide: KhanaGoAgent,
+          useValue: {},
+        },
+        {
+          provide: DATABASE,
+          useValue: {},
+        },
+      ],
     }).compile();
 
-    service = module.get<AiService>(AiService);
+    service = module.get<AIService>(AIService);
   });
 
   it('should be defined', () => {

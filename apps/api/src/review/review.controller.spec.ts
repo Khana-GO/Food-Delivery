@@ -1,17 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReviewController } from './review.controller';
-import { ReviewService } from './review.service';
+import { ReviewsController } from './review.controller';
+import { ReviewsService } from './review.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
-describe('ReviewController', () => {
-  let controller: ReviewController;
+describe('ReviewsController', () => {
+  let controller: ReviewsController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ReviewController],
-      providers: [ReviewService],
-    }).compile();
+      controllers: [ReviewsController],
+      providers: [
+        {
+          provide: ReviewsService,
+          useValue: {},
+        },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
-    controller = module.get<ReviewController>(ReviewController);
+    controller = module.get<ReviewsController>(ReviewsController);
   });
 
   it('should be defined', () => {

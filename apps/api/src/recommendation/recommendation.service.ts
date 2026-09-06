@@ -36,7 +36,11 @@ export class RecommendationsService {
     if (restaurants.length === 0) return restaurants;
     const ids = restaurants.map((r) => r.id);
     const rows = await this.db
-      .select({ id: schema.menuCategoriesTable.id, name: schema.menuCategoriesTable.name, restaurantId: schema.menuCategoriesTable.restaurantId })
+      .select({
+        id: schema.menuCategoriesTable.id,
+        name: schema.menuCategoriesTable.name,
+        restaurantId: schema.menuCategoriesTable.restaurantId,
+      })
       .from(schema.menuCategoriesTable)
       .where(inArray(schema.menuCategoriesTable.restaurantId, ids));
 

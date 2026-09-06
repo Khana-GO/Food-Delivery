@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import {
   getAccessToken,
   getRefreshToken,
@@ -8,17 +9,32 @@ import {
   deleteTokens, // add this if not already
 } from "./secure-storage";
 
-const getBaseUrl = () => {
+export const getBaseUrl = (): string => {
   const webUrl = process.env.EXPO_PUBLIC_API_URL_WEB;
   const mobileUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE;
-  // Fallback to localhost for web and LAN IP for mobile if env not set (common dev mistake)
+
   if (Platform.OS === "web") {
     return webUrl || "http://localhost:3000/api";
   }
-  return mobileUrl || "http://192.168.18.192:3000/api";
+
+  if (mobileUrl) {
+    return mobileUrl;
+  }
+
+  // Auto-detect development machine host from Expo Metro bundler
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const hostIp = hostUri.split(":")[0];
+    if (hostIp) {
+      return `http://${hostIp}:3000/api`;
+    }
+  }
+
+  // Fallback to current local Wi-Fi IP
+  return "http://192.168.1.4:3000/api";
 };
 
-const BASE_URL = getBaseUrl();
+export const BASE_URL = getBaseUrl();
 
 if (!BASE_URL) {
   console.warn("[axios] BASE_URL is not defined. Check EXPO_PUBLIC_API_URL_* in apps/mobile/.env");

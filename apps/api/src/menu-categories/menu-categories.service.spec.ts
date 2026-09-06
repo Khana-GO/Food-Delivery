@@ -1,15 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MenuCategoriesService } from './menu-categories.service';
+import { CategoriesService } from './menu-categories.service';
+import { DATABASE } from '../db/database.constants';
+import { NotificationsService } from '../notification/notification.service';
+import { CacheService } from '../redis/cache.service';
 
-describe('MenuCategoriesService', () => {
-  let service: MenuCategoriesService;
+describe('CategoriesService', () => {
+  let service: CategoriesService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MenuCategoriesService],
+      providers: [
+        CategoriesService,
+        { provide: DATABASE, useValue: {} },
+        { provide: NotificationsService, useValue: {} },
+        { provide: CacheService, useValue: {} },
+      ],
     }).compile();
 
-    service = module.get<MenuCategoriesService>(MenuCategoriesService);
+    service = module.get<CategoriesService>(CategoriesService);
   });
 
   it('should be defined', () => {

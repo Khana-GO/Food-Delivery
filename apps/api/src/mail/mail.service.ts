@@ -49,16 +49,30 @@ export class MailService {
     action: string,
   ) {
     const from = this.configService.get<string>('MAIL_FROM');
-    if (!from) {
-      this.logger.error('Email is not configured');
-      throw new InternalServerErrorException('Email service is unavailable');
+    const user = this.configService.get<string>('MAIL_USER');
+
+    if (!from || !user) {
+      this.logger.warn(
+        `[DEV MODE - EMAIL NOT CONFIGURED] ${subject} to <${email}>: CODE = [${code}] (Action: ${action})`,
+      );
+      return;
     }
-    await this.transporter.sendMail({
-      from,
-      to: email,
-      subject,
-      text: `Your code to ${action} is: ${code}\nThis code expires in 10 minutes.`,
-      html: `<p>Your code to ${action} is:</p><h2 style="letter-spacing:4px">${code}</h2><p>This code expires in 10 minutes.</p>`,
-    });
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to: email,
+        subject,
+        text: `Your code to ${action} is: ${code}\nThis code expires in 10 minutes.`,
+        html: `<p>Your code to ${action} is:</p><h2 style="letter-spacing:4px">${code}</h2><p>This code expires in 10 minutes.</p>`,
+      });
+    } catch (err: any) {
+      this.logger.warn(
+        `[MAIL FAILED] SMTP delivery failed (${err.message}). [DEV CODE for ${email}]: ${code}`,
+      );
+      if (process.env.NODE_ENV === 'production') {
+        throw new InternalServerErrorException('Failed to deliver email');
+      }
+    }
   }
 }

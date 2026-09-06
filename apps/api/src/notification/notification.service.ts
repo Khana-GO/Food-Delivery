@@ -158,7 +158,9 @@ export class NotificationsService {
         ),
       });
       if (!existing) {
-        this.logger.warn(`[markAsRead] not found ${id} for user ${userId} - idempotent skip`);
+        this.logger.warn(
+          `[markAsRead] not found ${id} for user ${userId} - idempotent skip`,
+        );
         // Return a lightweight success DTO instead of throwing 404 to avoid log spam on double-tap / stale cache
         return new NotificationResponseDto({
           id,
@@ -171,7 +173,7 @@ export class NotificationsService {
           createdAt: new Date(),
           readAt: new Date(),
           data: null,
-        } as any);
+        });
       }
       if (existing.isRead) {
         return new NotificationResponseDto(existing);
@@ -240,7 +242,9 @@ export class NotificationsService {
         .returning();
 
       if (result.length === 0) {
-        this.logger.warn(`[delete] Notification ${id} already deleted or not found for user ${userId} - idempotent success`);
+        this.logger.warn(
+          `[delete] Notification ${id} already deleted or not found for user ${userId} - idempotent success`,
+        );
         return { message: 'Notification already deleted' };
       }
 

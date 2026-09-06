@@ -10,6 +10,7 @@ import { DATABASE } from '../db/database.constants';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notification/notification.service';
+import { CacheService } from '../redis/cache.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -30,6 +31,17 @@ describe('UsersController', () => {
         {
           provide: NotificationsService,
           useValue: { create: jest.fn().mockResolvedValue(null) },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+            delByPattern: jest.fn(),
+            wrap: jest.fn(),
+            hashOptions: jest.fn(() => 'hash'),
+          },
         },
       ],
     })

@@ -9,7 +9,7 @@ import { DATABASE } from './database.constants';
 import ws from 'ws';
 
 // Required for Node.js — Neon serverless uses WebSocket; without this the pool crashes with unhandled ErrorEvent on idle/timeout
-neonConfig.webSocketConstructor = ws as any;
+neonConfig.webSocketConstructor = ws;
 // Reduce aggressive pipelining that can cause idleListener errors on serverless
 neonConfig.pipelineConnect = false;
 neonConfig.useSecureWebSocket = true;
@@ -32,14 +32,18 @@ neonConfig.useSecureWebSocket = true;
         const pool = new Pool({ connectionString });
         // Prevent unhandled 'error' events from crashing Node (Neon idle WebSocket error)
         pool.on('error', (err: any) => {
-          logger.warn(`[Neon pool] idle error suppressed: ${err?.message || err}`);
+          logger.warn(
+            `[Neon pool] idle error suppressed: ${err?.message || err}`,
+          );
         });
         // Also catch WebSocket errors at process level as last resort
         if (!(global as any).__neonWsErrorBound) {
           (global as any).__neonWsErrorBound = true;
           process.on('uncaughtException', (err: any) => {
             if (err?.context?.client || err?.message?.includes('WebSocket')) {
-              logger.warn(`[Neon] suppressed uncaught WebSocket error: ${err?.message}`);
+              logger.warn(
+                `[Neon] suppressed uncaught WebSocket error: ${err?.message}`,
+              );
               return;
             }
             // rethrow non-neon errors

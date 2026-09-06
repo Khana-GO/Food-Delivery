@@ -78,6 +78,11 @@ export const googleAuthService = {
   // Returns an ID token minted against the web client ID. The backend always
   // verifies it server-side, so we never trust client-supplied profile fields.
   signInWithGoogleNative: async (): Promise<string> => {
+    if (!WEB_CLIENT_ID) {
+      throw new Error(
+        'Google Sign-In is not configured for this build. Please log in with your email and password.'
+      );
+    }
     const mod = await loadGoogleSignin();
 
     try {

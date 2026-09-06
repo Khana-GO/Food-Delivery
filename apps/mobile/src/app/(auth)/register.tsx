@@ -339,37 +339,36 @@ export default function RegisterScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header with Food Image */}
-      <ImageBackground
-        source={{
-          uri: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
-        }}
-        className="w-full h-[240px]"
-        imageStyle={{
-          borderBottomLeftRadius: 30,
-          borderBottomRightRadius: 30,
-        }}
-        resizeMode="cover"
-      >
-        <View className="items-center justify-center flex-1 px-6 bg-black/30">
-          <Logo />
-        </View>
-      </ImageBackground>
-
-      {/* Form Section */}
+      {/* Form Section with Unified Scrolling */}
       <KeyboardAvoidingView
-        className="flex-1 -mt-8"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          className="flex-1 px-6"
+          className="flex-1"
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[620px]">
+          {/* Header with Food Image */}
+          <ImageBackground
+            source={{
+              uri: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
+            }}
+            className="w-full h-[220px]"
+            imageStyle={{
+              borderBottomLeftRadius: 30,
+              borderBottomRightRadius: 30,
+            }}
+            resizeMode="cover"
+          >
+            <View className="items-center justify-center flex-1 px-6 bg-black/30">
+              <Logo />
+            </View>
+          </ImageBackground>
+
+          <View className="flex-1 bg-white rounded-t-3xl -mt-6 px-6 pt-6 pb-8 shadow-lg shadow-black/5">
             {/* Header */}
             <View className="mb-6">
               <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black">

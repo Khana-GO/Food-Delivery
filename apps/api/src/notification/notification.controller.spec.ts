@@ -1,17 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationController } from './notification.controller';
-import { NotificationService } from './notification.service';
+import { NotificationsController } from './notification.controller';
+import { NotificationsService } from './notification.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
-describe('NotificationController', () => {
-  let controller: NotificationController;
+describe('NotificationsController', () => {
+  let controller: NotificationsController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [NotificationController],
-      providers: [NotificationService],
-    }).compile();
+      controllers: [NotificationsController],
+      providers: [
+        {
+          provide: NotificationsService,
+          useValue: {},
+        },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
-    controller = module.get<NotificationController>(NotificationController);
+    controller = module.get<NotificationsController>(NotificationsController);
   });
 
   it('should be defined', () => {

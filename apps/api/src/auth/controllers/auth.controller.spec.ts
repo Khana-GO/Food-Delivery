@@ -11,7 +11,8 @@ describe('AuthController', () => {
       }),
     );
     const authService = { logout } as unknown as AuthService;
-    const controller = new AuthController(authService);
+    const usersService = {} as any;
+    const controller = new AuthController(authService, usersService);
 
     const result = await controller.logout(
       {},

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ActivityIndicator, Alert, Text, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, Alert, Text, TouchableOpacity, BackHandler } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -16,7 +16,29 @@ export default function EsewaWebView() {
 
   useEffect(() => {
     initializePayment();
+
+    const onBackPress = () => {
+      confirmCancel();
+      return true;
+    };
+    const backSub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSub.remove();
   }, []);
+
+  const confirmCancel = () => {
+    Alert.alert(
+      'Cancel Payment?',
+      'Are you sure you want to cancel? You can retry payment anytime from your orders.',
+      [
+        { text: 'Continue Payment', style: 'cancel' },
+        {
+          text: 'Cancel Payment',
+          style: 'destructive',
+          onPress: () => router.replace('/(customer)/cart' as any),
+        },
+      ],
+    );
+  };
 
   const initializePayment = async () => {
     try {
@@ -164,6 +186,58 @@ export default function EsewaWebView() {
 
   return (
     <View className="flex-1 bg-white">
+      {/* Top Header Bar with Cancel Action */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 48,
+          paddingBottom: 12,
+          paddingHorizontal: 16,
+          backgroundColor: '#FFFFFF',
+          borderBottomWidth: 1,
+          borderBottomColor: '#F1F5F9',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: '#16A34A',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Feather name="shield" size={15} color="#FFFFFF" />
+          </View>
+          <View>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A' }}>
+              eSewa Payment
+            </Text>
+            <Text style={{ fontSize: 11, color: '#64748B' }}>
+              Order #{orderId ? orderId.slice(0, 8).toUpperCase() : ''}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          onPress={confirmCancel}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+            backgroundColor: '#FEE2E2',
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#DC2626' }}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <WebView
         source={{ html }}
         originWhitelist={['*']}

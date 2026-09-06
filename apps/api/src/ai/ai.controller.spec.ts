@@ -1,17 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AiController } from './ai.controller';
-import { AiService } from './ai.service';
+import { AIController } from './ai.controller';
+import { AIService } from './ai.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
-describe('AiController', () => {
-  let controller: AiController;
+describe('AIController', () => {
+  let controller: AIController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [AiController],
-      providers: [AiService],
-    }).compile();
+      controllers: [AIController],
+      providers: [
+        {
+          provide: AIService,
+          useValue: {},
+        },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
-    controller = module.get<AiController>(AiController);
+    controller = module.get<AIController>(AIController);
   });
 
   it('should be defined', () => {

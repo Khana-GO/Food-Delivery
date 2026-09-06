@@ -9,6 +9,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { CacheService } from './cache.service';
 
+import { InMemoryRedisClient } from './in-memory-redis.client';
+
 @Global()
 @Module({
   imports: [ConfigModule],
@@ -23,12 +25,13 @@ import { CacheService } from './cache.service';
           configService.get<string>('REDIS_PASSWORD') || undefined;
         const db = Number(configService.get<string>('REDIS_DB', '0'));
         const enabled =
-          configService.get<string>('REDIS_ENABLED', 'true') !== 'false';
+          configService.get<string>('REDIS_ENABLED', 'false') === 'true';
 
         if (!enabled) {
-          logger.warn(
-            'Redis disabled via REDIS_ENABLED=false — using no-op client',
+          logger.log(
+            'Redis disabled (REDIS_ENABLED=false) — using in-memory cache & rate limiter',
           );
+          return new InMemoryRedisClient();
         }
 
         const client = new Redis({
@@ -36,17 +39,18 @@ import { CacheService } from './cache.service';
           port,
           password,
           db: Number.isNaN(db) ? 0 : db,
-          // Don't block app boot if Redis is down
           lazyConnect: false,
           enableReadyCheck: true,
-          maxRetriesPerRequest: 2,
+          maxRetriesPerRequest: 1,
           enableAutoPipelining: true,
           retryStrategy: (times) => {
-            if (times > 10) {
-              logger.error('Redis retry exhausted after 10 attempts');
+            if (times > 2) {
+              logger.warn(
+                'Redis unreachable — falling back to fail-open behavior',
+              );
               return null; // stop retrying
             }
-            return Math.min(times * 100, 2000);
+            return 1000;
           },
           reconnectOnError: (err) => {
             const target = err.message.includes('READONLY');
@@ -60,10 +64,11 @@ import { CacheService } from './cache.service';
         );
         client.on('ready', () => logger.log('Redis ready'));
         client.on('error', (err) =>
-          logger.error(`Redis error: ${err.message}`),
+          logger.warn(
+            `Redis connection error: ${err.message || 'connection failed'}`,
+          ),
         );
         client.on('close', () => logger.warn('Redis connection closed'));
-        client.on('reconnecting', () => logger.warn('Redis reconnecting...'));
 
         return client;
       },
