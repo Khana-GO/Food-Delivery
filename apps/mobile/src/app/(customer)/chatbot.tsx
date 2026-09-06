@@ -108,9 +108,18 @@ export default function ChatbotScreen() {
             <Text style={styles.emptyTitle}>Ask me anything!</Text>
             <Text style={styles.emptyDesc}>I can help you find restaurants, check menus, track orders, and more.</Text>
             <View style={styles.emptyChips}>
-              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('Show popular restaurants')}><Text style={styles.emptyChipText}>Popular restaurants</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('Find momo near me')}><Text style={styles.emptyChipText}>Find momo</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('Track my order')}><Text style={styles.emptyChipText}>Track order</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('Find momo')}>
+                <Text style={styles.emptyChipText}>Find momo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('What restaurants are open?')}>
+                <Text style={styles.emptyChipText}>Open restaurants</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('I am hungry, suggest something')}>
+                <Text style={styles.emptyChipText}>What to eat?</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.emptyChip} onPress={() => sendMessage('Track my order')}>
+                <Text style={styles.emptyChipText}>Track order</Text>
+              </TouchableOpacity>
             </View>
           </View>
         }

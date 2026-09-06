@@ -18,13 +18,32 @@ export class OrderTools {
     return new DynamicTool({
       name: 'get_order_status',
       description:
-        'Get the current status of an order by order ID. Requires order ID as a UUID string. Example input: "550e8400-e29b-41d4-a716-446655440000". If you do not know the exact order ID, call get_order_history first to list the user\'s orders, then use a real ID from that list.',
+        'Get the current status of an order by order ID. If no order ID is provided or user says "latest", it checks the user\'s most recent order.',
       func: async (input: string) => {
         try {
           const currentUserId = orderContext.getStore()?.userId;
-          const orderId = this.extractId(input);
-          if (!orderId || !this.isUUID(orderId))
-            return JSON.stringify({ error: 'Invalid order ID format' });
+          let orderId = this.extractId(input);
+
+          // If no order ID given, look up user's most recent order
+          if (!orderId || !this.isUUID(orderId)) {
+            if (currentUserId) {
+              const recent = await this.ordersService.getOrders(
+                currentUserId,
+                'CUSTOMER',
+                { limit: 1 },
+              );
+              if (recent.data.length > 0) {
+                orderId = recent.data[0].id;
+              }
+            }
+          }
+
+          if (!orderId || !this.isUUID(orderId)) {
+            return JSON.stringify({
+              error: 'Please provide an order ID or check your order history.',
+            });
+          }
+
           const order = await this.ordersService.getOrderById(orderId);
           if (currentUserId && order.customerId !== currentUserId) {
             return JSON.stringify({ error: 'Order not found or not yours' });
@@ -34,6 +53,7 @@ export class OrderTools {
             status: order.orderStatus,
             estimatedDelivery: order.estimatedDeliveryTime,
             totalAmount: order.totalAmount,
+            restaurantName: order.restaurantName || 'Restaurant',
           });
         } catch {
           return JSON.stringify({

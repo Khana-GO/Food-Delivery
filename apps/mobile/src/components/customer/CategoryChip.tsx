@@ -8,7 +8,7 @@ interface Props {
   onPress?: () => void;
 }
 
-export const CategoryChip = ({ label, isSelected = false, onPress }: Props) => {
+const CategoryChipComponent = ({ label, isSelected = false, onPress }: Props) => {
   const scale = useRef(new Animated.Value(1)).current;
   const handleIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 50, bounciness: 8 }).start();
   const handleOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 10 }).start();
@@ -26,6 +26,8 @@ export const CategoryChip = ({ label, isSelected = false, onPress }: Props) => {
     </Animated.View>
   );
 };
+
+export const CategoryChip = React.memo(CategoryChipComponent);
 
 const styles = StyleSheet.create({
   base: {

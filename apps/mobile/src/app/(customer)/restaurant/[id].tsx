@@ -45,13 +45,16 @@ export default function RestaurantDetailScreen() {
   }, [activeCategoryId, menuData]);
 
   const filteredItems = useMemo(() => {
-    if (!currentCategory) return [];
-    if (!searchQuery.trim()) return currentCategory.items;
-    const q = searchQuery.toLowerCase();
-    return currentCategory.items.filter(
+    if (!menuData || !menuData.length) return [];
+    if (!searchQuery.trim()) {
+      return currentCategory ? currentCategory.items : [];
+    }
+    const q = searchQuery.toLowerCase().trim();
+    const allItems = menuData.flatMap((g) => g.items || []);
+    return allItems.filter(
       (i) => i.name.toLowerCase().includes(q) || (i.description || '').toLowerCase().includes(q)
     );
-  }, [currentCategory, searchQuery]);
+  }, [menuData, currentCategory, searchQuery]);
 
   const getItemQuantity = (itemId: string) => cartItems.find((i) => i.menuItemId === itemId)?.quantity || 0;
 

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Animated, useWindowDimensions, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, useWindowDimensions, ActivityIndicator, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -23,10 +23,18 @@ import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 export default function HomeScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const searchFocus = useRef(new Animated.Value(0)).current;
   const { width } = useWindowDimensions();
   const isVeryCompact = width < 360;
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const { refetch: refetchDashboard, isRefetching: isDashboardRefetching } = useDashboard();
   const { refetch: refetchFavorites, isRefetching: isFavoritesRefetching } = useFavorites();
@@ -66,7 +74,7 @@ export default function HomeScreen() {
     return categories.find((c) => c.id === selectedCategory)?.name.toLowerCase().trim() || null;
   }, [selectedCategory, categories]);
 
-  const q = searchQuery.trim().toLowerCase();
+  const q = debouncedQuery.trim().toLowerCase();
   const matchesSearch = useCallback(
     (r: any) => {
       if (!q) return true;
@@ -148,6 +156,7 @@ export default function HomeScreen() {
   const clearFilters = () => {
     setSelectedCategory(null);
     setSearchQuery('');
+    setDebouncedQuery('');
   };
 
   if (isLoading && !popularRestaurants.length) {
@@ -222,32 +231,48 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Search — responsive */}
-            <Animated.View
+            {/* Search — responsive & optimized */}
+            <View
               style={[
                 styles.searchWrap,
                 isVeryCompact && ({ height: 44, paddingHorizontal: 12 } as any),
-                { borderColor: searchFocus.interpolate({ inputRange: [0, 1], outputRange: ['#E2E8F0', Colors.primary] }) } as any,
+                { borderColor: isSearchFocused ? Colors.primary : '#E2E8F0' },
               ]}
             >
-              <Feather name="search" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
-              <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
+              <Feather name="search" size={isVeryCompact ? 16 : 18} color={isSearchFocused ? Colors.primary : '#94A3B8'} />
+              <TextInput
+                selectionColor="rgba(15,23,42,0.16)"
+                cursorColor="#334155"
                 style={[styles.searchInput, isVeryCompact && ({ fontSize: 13 } as any)]}
                 placeholder={isVeryCompact ? 'Search...' : 'Search restaurants, dishes…'}
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                onFocus={() => Animated.timing(searchFocus, { toValue: 1, duration: 160, useNativeDriver: false }).start()}
-                onBlur={() => Animated.timing(searchFocus, { toValue: 0, duration: 160, useNativeDriver: false }).start()}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                onSubmitEditing={() => {
+                  if (searchQuery.trim()) {
+                    router.push({
+                      pathname: '/(customer)/(tabs)/explore' as any,
+                      params: { q: searchQuery.trim() },
+                    });
+                  }
+                }}
                 allowFontScaling={false}
                 returnKeyType="search"
               />
               {searchQuery.length > 0 ? (
-                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchQuery('');
+                    setDebouncedQuery('');
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Feather name="x-circle" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
                 </TouchableOpacity>
               ) : null}
-            </Animated.View>
+            </View>
 
             {/* Active filter pill */}
             {activeFilterLabel || q ? (

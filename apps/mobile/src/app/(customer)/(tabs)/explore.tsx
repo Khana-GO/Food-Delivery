@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { RestaurantCard } from '@/components/customer/RestaurantCard';
@@ -12,60 +12,116 @@ import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import { useAddFavorite } from '@/hooks/customer/useAddFavorite';
 import { useRemoveFavorite } from '@/hooks/customer/useRemoveFavorite';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { api } from '@/lib/axios';
 
 const FILTERS = ['Fast Delivery', 'Top Rated', 'Free Delivery'];
 
 export default function Explore() {
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
   const [cat, setCat] = useState<string | null>(null);
+
   const { refetch, isRefetching } = useDashboard();
   const { popularRestaurants, recommendations, categories, isLoading } = useDashboardStore();
   const { favoriteIds } = useFavoritesStore();
   const { mutate: addFav } = useAddFavorite() as any;
   const { mutate: remFav } = useRemoveFavorite() as any;
 
-  const all = [...popularRestaurants, ...recommendations].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i);
+  // Debounce search input to eliminate typing stutter/lag
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQ(q.trim());
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [q]);
 
-  // Selected category meta (all menu categories a restaurant serves come via r.categories)
-  const catMeta = categories.find((c) => c.id === cat);
+  // Query backend search endpoint when search query is entered
+  useEffect(() => {
+    if (!debouncedQ) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsSearching(true);
+    api
+      .get('/restaurants', { params: { search: debouncedQ, limit: 30 } })
+      .then((res) => {
+        if (isMounted) {
+          setSearchResults(res.data?.data || []);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setSearchResults([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsSearching(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedQ]);
+
+  const all = useMemo(() => {
+    if (searchResults !== null) return searchResults;
+    return [...popularRestaurants, ...recommendations].filter(
+      (v, i, a) => a.findIndex((x) => x.id === v.id) === i
+    );
+  }, [searchResults, popularRestaurants, recommendations]);
+
+  // Selected category meta
+  const catMeta = useMemo(() => categories.find((c) => c.id === cat), [categories, cat]);
   const catNameLower = catMeta?.name.toLowerCase().trim() || null;
 
-  const toggleFilter = (f: string) => {
+  const toggleFilter = useCallback((f: string) => {
     setSelectedFilters((prev) => {
       const next = new Set(prev);
       if (next.has(f)) next.delete(f);
       else next.add(f);
       return next;
     });
-  };
+  }, []);
 
-  const filtered = all.filter((r) => {
-    if (q && !r.name.toLowerCase().includes(q.toLowerCase()) && !r.cuisineType?.toLowerCase().includes(q.toLowerCase()) && !r.address?.toLowerCase().includes(q.toLowerCase())) return false;
-
-    // Category filter must match (r.categories contains ALL menu categories)
-    if (cat && catNameLower) {
-      const hasCategory = (r.categories || []).some(
-        (c: any) => c.name.toLowerCase().trim() === catNameLower,
-      );
-      const cuisineMatch = r.cuisineType
-        ?.toLowerCase()
-        .includes(catNameLower);
-      if (!hasCategory && !cuisineMatch) return false;
-    }
-
-    // Multi-select filters: ALL selected filters must match (AND)
-    for (const f of selectedFilters) {
-      if (f === 'Fast Delivery' && (r.estimatedDeliveryTime ?? 99) > 30) return false;
-      if (f === 'Top Rated') {
-        const rating = Number(r.averageRating ?? 0) || 0;
-        if (rating < 3.5) return false;
+  const filtered = useMemo(() => {
+    return all.filter((r) => {
+      // If local search fallback needed
+      if (
+        debouncedQ &&
+        searchResults === null &&
+        !r.name.toLowerCase().includes(debouncedQ.toLowerCase()) &&
+        !r.cuisineType?.toLowerCase().includes(debouncedQ.toLowerCase()) &&
+        !r.address?.toLowerCase().includes(debouncedQ.toLowerCase())
+      ) {
+        return false;
       }
-      if (f === 'Free Delivery' && Number(r.deliveryFee ?? 1) !== 0) return false;
-    }
 
-    return true;
-  });
+      // Category filter match
+      if (cat && catNameLower) {
+        const hasCategory = (r.categories || []).some(
+          (c: any) => c.name.toLowerCase().trim() === catNameLower
+        );
+        const cuisineMatch = r.cuisineType?.toLowerCase().includes(catNameLower);
+        if (!hasCategory && !cuisineMatch) return false;
+      }
+
+      // Multi-select filters
+      for (const f of selectedFilters) {
+        if (f === 'Fast Delivery' && (r.estimatedDeliveryTime ?? 99) > 30) return false;
+        if (f === 'Top Rated') {
+          const rating = Number(r.averageRating ?? 0) || 0;
+          if (rating < 3.5) return false;
+        }
+        if (f === 'Free Delivery' && Number(r.deliveryFee ?? 1) !== 0) return false;
+      }
+
+      return true;
+    });
+  }, [all, debouncedQ, searchResults, cat, catNameLower, selectedFilters]);
 
   const toggle = useCallback(
     (id: string) => {
@@ -75,17 +131,37 @@ export default function Explore() {
     [favoriteIds, addFav, remFav]
   );
 
+  const clearAllFilters = useCallback(() => {
+    setQ('');
+    setDebouncedQ('');
+    setSearchResults(null);
+    setCat(null);
+    setSelectedFilters(new Set());
+  }, []);
+
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <View style={styles.header}>
         <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
           <Text style={styles.title}>Explore</Text>
-          <Text style={styles.subtitle}>Find your next favourite meal</Text>
+          <Text style={styles.subtitle}>Find your next favourite meal in Butwal</Text>
           <View style={styles.search}>
             <Feather name="search" size={18} color="#94A3B8" />
-            <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155" value={q} onChangeText={setQ} placeholder="Search restaurants, cuisines..." placeholderTextColor="#94A3B8" style={styles.input} />
-            {q.length ? (
-              <TouchableOpacity onPress={() => setQ('')}>
+            <TextInput
+              selectionColor="rgba(15,23,42,0.16)"
+              cursorColor="#334155"
+              value={q}
+              onChangeText={setQ}
+              placeholder="Search restaurants, cafes, cuisines..."
+              placeholderTextColor="#94A3B8"
+              style={styles.input}
+              allowFontScaling={false}
+              returnKeyType="search"
+            />
+            {isSearching ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : q.length ? (
+              <TouchableOpacity onPress={() => { setQ(''); setDebouncedQ(''); setSearchResults(null); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x-circle" size={18} color="#94A3B8" />
               </TouchableOpacity>
             ) : null}
@@ -114,11 +190,18 @@ export default function Explore() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 10 }}
+        removeClippedSubviews={true}
         refreshControl={<RefreshControl refreshing={!!isRefetching} onRefresh={() => refetch()} tintColor={Colors.primary} />}
       >
-        {isLoading && !all.length ? <CardSkeleton count={4} variant="list" /> : null}
-        {!isLoading && filtered.length === 0 ? (
-          <EmptyState icon="search" title="No matches found" description="Try adjusting filters or search terms." actionLabel="Clear filters" onAction={() => { setQ(''); setCat(null); setSelectedFilters(new Set()); }} />
+        {(isLoading && !all.length) || isSearching ? <CardSkeleton count={4} variant="list" /> : null}
+        {!isLoading && !isSearching && filtered.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title="No matches found"
+            description={debouncedQ ? `No restaurants found for "${debouncedQ}". Try searching for another dish or cuisine.` : "Try adjusting filters or search terms."}
+            actionLabel="Clear filters"
+            onAction={clearAllFilters}
+          />
         ) : null}
         {filtered.map((r) => (
           <RestaurantCard key={r.id} restaurant={r as any} isFavorite={favoriteIds.has(r.id)} onToggleFavorite={toggle} variant="list" />

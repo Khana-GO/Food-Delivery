@@ -17,7 +17,7 @@ interface Props {
   showDistance?: boolean;
 }
 
-export const RestaurantCard = ({ restaurant, isFavorite = false, onToggleFavorite, variant = 'grid', showDistance = false }: Props) => {
+const RestaurantCardComponent = ({ restaurant, isFavorite = false, onToggleFavorite, variant = 'grid', showDistance = false }: Props) => {
   const scale = useRef(new Animated.Value(1)).current;
   const onPressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 6 }).start();
   const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 8 }).start();
@@ -224,3 +224,5 @@ const styles = StyleSheet.create({
   gridBody: { padding: 12, paddingTop: 10 },
   gridTitle: { fontSize: 14, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.2 },
 });
+
+export const RestaurantCard = React.memo(RestaurantCardComponent);

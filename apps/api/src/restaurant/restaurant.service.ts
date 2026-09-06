@@ -293,6 +293,7 @@ export class RestaurantsService {
           conditions.push(
             or(
               ilike(restaurantsTable.name, term),
+              ilike(restaurantsTable.cuisineType, term),
               ilike(restaurantsTable.description, term),
               ilike(restaurantsTable.address, term),
               ilike(restaurantsTable.slug, term),
