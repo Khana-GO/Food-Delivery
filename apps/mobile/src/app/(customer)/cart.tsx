@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function CartScreen() {
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart, restaurantId } = useCartStore();
@@ -27,7 +28,7 @@ export default function CartScreen() {
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
         <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={styles.backBtn}>
               <Feather name="arrow-left" size={18} color={Colors.textDark} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Your Cart</Text>
@@ -49,7 +50,7 @@ export default function CartScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={styles.backBtn}>
             <Feather name="arrow-left" size={18} color={Colors.textDark} />
           </TouchableOpacity>
           <View style={{ flex: 1, alignItems: 'center' }}>

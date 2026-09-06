@@ -7,6 +7,7 @@ import PremiumCard from '@/components/ui/PremiumCard';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { goBack } from '@/lib/navigation';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -18,7 +19,7 @@ export default function Settings() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/profile')} style={styles.backBtn}>
             <Feather name="arrow-left" size={18} color={Colors.textDark} />
           </TouchableOpacity>
           <Text style={styles.title}>Settings</Text>

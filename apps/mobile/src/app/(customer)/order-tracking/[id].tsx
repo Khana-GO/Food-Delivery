@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useOrderTracking } from '@/hooks/tracking/useOrderTracking';
 import { useETA } from '@/hooks/tracking/useETA';
 import { useAuth } from '@/contexts/AuthContext';
@@ -104,7 +105,7 @@ export default function OrderTrackingScreen() {
       <View className="items-center justify-center flex-1 px-6 bg-white">
         <Feather name="shopping-bag" size={64} color="#D1D5DB" />
         <Text className="mt-4 text-lg font-medium text-gray-400">Order Not Found</Text>
-        <TouchableOpacity className="px-6 py-3 mt-6 bg-primary rounded-xl" onPress={() => router.back()}>
+        <TouchableOpacity className="px-6 py-3 mt-6 bg-primary rounded-xl" onPress={() => goBack('/(customer)/(tabs)/orders')}>
           <Text className="font-semibold text-white">Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -117,7 +118,7 @@ export default function OrderTrackingScreen() {
       <View className="px-6 pt-12 pb-4 border-b border-gray-100" style={{ backgroundColor: '#B5122A' }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1" style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/orders')} className="p-1" style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
               <Feather name="arrow-left" size={18} color="#FFFFFF" />
             </TouchableOpacity>
             <View>

@@ -16,6 +16,7 @@ import { ChatMessage } from '@/components/customer/ChatMessage';
 import { ChatInput } from '@/components/customer/ChatInput';
 import { QuickReplies } from '@/components/customer/QuickReplies';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function ChatbotScreen() {
   const { restaurantId, orderId } = useLocalSearchParams<{
@@ -85,7 +86,7 @@ export default function ChatbotScreen() {
       {/* ─── Header – premium dark/white matching app design ─── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.85}>
+          <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={styles.backBtn} activeOpacity={0.85}>
             <Feather name="arrow-left" size={18} color={Colors.textDark} />
           </TouchableOpacity>
           <View>

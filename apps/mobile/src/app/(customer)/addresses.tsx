@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useAddresses } from '@/hooks/customer/useAddresses';
 import { useAddressStore } from '@/stores/customer/addressStore';
 import { AddressCard } from '@/components/customer/AddressCard';
@@ -25,7 +26,7 @@ export default function AddressesScreen() {
       <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/profile')} className="p-1">
               <Feather name="arrow-left" size={24} color="#1A1A1A" />
             </TouchableOpacity>
             <Text className="text-xl font-bold text-black">Addresses</Text>

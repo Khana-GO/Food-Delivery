@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
 import { useOrder } from '@/hooks/customer/useOrder';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   PENDING: { label: 'Pending', color: '#F59E0B', bg: '#FEF3C7', icon: 'clock' },
@@ -48,7 +49,7 @@ export default function OrderDetailsScreen() {
       <SafeAreaView edges={['top']} style={{ backgroundColor: Colors.primary }}>
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/orders')} activeOpacity={0.8} style={styles.backBtn}>
               <Feather name="arrow-left" size={18} color={Colors.primary} />
             </TouchableOpacity>
             <View style={{ flex: 1 }}>

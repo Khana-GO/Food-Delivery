@@ -9,6 +9,7 @@ import { CategoryChip } from '@/components/customer/CategoryChip';
 import { MenuItem } from '@food_delivery/types';
 import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { ReviewCard } from '@/components/review/ReviewCard';
 import { ReviewStatsView } from '@/components/review/ReviewStats';
@@ -95,7 +96,7 @@ export default function RestaurantDetailScreen() {
         </View>
         <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: Colors.textDark }}>Failed to load restaurant</Text>
         <Text style={{ marginTop: 6, fontSize: 13, color: Colors.textSecondary, textAlign: 'center' }}>This restaurant may be unavailable or pending approval.</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20, backgroundColor: Colors.textDark, paddingHorizontal: 20, paddingVertical: 12, borderRadius: Radius.full }}>
+        <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={{ marginTop: 20, backgroundColor: Colors.textDark, paddingHorizontal: 20, paddingVertical: 12, borderRadius: Radius.full }}>
           <Text style={{ color: '#FFF', fontWeight: '700' }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -114,7 +115,7 @@ export default function RestaurantDetailScreen() {
           </View>
         )}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)' } as any]} />
-        <TouchableOpacity onPress={() => router.back()} style={styles.heroBtnLeft}>
+        <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={styles.heroBtnLeft}>
           <Feather name="arrow-left" size={18} color={Colors.textDark} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.heroBtnRight2}>
