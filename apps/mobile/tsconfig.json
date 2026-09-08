@@ -4,7 +4,7 @@
     "module": "ESNext",
     "strict": true,
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": [
         "./src/*"
@@ -17,7 +17,6 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "C:\\Users\\HI SPEED INFOSYS\\Desktop\\Projects\\food_delivery\\apps\\mobile\\nativewind-env.d.ts",
-    "/home/shushil/Projects/food_delivery/apps/mobile/nativewind-env.d.ts"
+    "nativewind-env.d.ts"
   ]
 }
