@@ -9,6 +9,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { saveAccessToken, saveRefreshToken } from '@/lib/secure-storage';
 
+import { getHomeRoute } from 'lib/roles';
+
 export const useGoogleAuth = () => {
   const { setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -29,8 +31,9 @@ export const useGoogleAuth = () => {
       // ─── Update AuthContext ───
       setUser(authResult.user);
 
-      // ─── Navigate to home ───
-      router.replace('/(customer)');
+      // ─── Navigate to role-based home route ───
+      const homeRoute = getHomeRoute(authResult.user.role);
+      router.replace(homeRoute as any);
     },
     [setUser]
   );
@@ -107,7 +110,7 @@ export const useGoogleAuth = () => {
   // ─── Handle response when it changes (web flow) ───
   useEffect(() => {
     handleGoogleResponse();
-  }, [response]);
+  }, [handleGoogleResponse]);
 
   return {
     signInWithGoogle,

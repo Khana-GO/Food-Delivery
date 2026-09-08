@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRoute } from "lib/roles";
@@ -322,9 +322,7 @@ export default function RegisterScreen() {
     }
   }, [register, validate]);
 
-  const handleSocialLogin = useCallback((provider: "google" | "apple") => {
-    console.log(`Social login requested: ${provider}`);
-  }, []);
+
 
     const { signInWithGoogle, isLoading: isGoogleLoading, request } = useGoogleAuth();
   
@@ -429,7 +427,7 @@ export default function RegisterScreen() {
 
               <InputField
                 label="Phone Number"
-                placeholder="Enter your  number"
+                placeholder="Enter your phone number"
                 value={form.phone}
                 onChangeText={(text) => updateField("phone", text)}
                 error={fieldErrors.phone}
@@ -536,8 +534,8 @@ export default function RegisterScreen() {
             <View className="flex-row gap-3 mb-6">
               <GoogleLoginButton
                 onPress={signInWithGoogle}
-                isLoading={isLoginLoading}
-                disabled={isLoginLoading}
+                isLoading={isGoogleLoading}
+                disabled={isGoogleLoading || isLoginLoading}
               />
             </View>
 

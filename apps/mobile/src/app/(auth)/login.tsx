@@ -412,7 +412,7 @@ export default function LoginScreen() {
               <GoogleLoginButton
                 onPress={signInWithGoogle}
                 isLoading={isGoogleLoading}
-                disabled={!request}
+                disabled={isGoogleLoading}
               />
             </View>
 
