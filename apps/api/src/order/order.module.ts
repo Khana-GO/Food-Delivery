@@ -7,6 +7,7 @@ import { AuthModule } from '../auth/auth.module';
 import { SessionsModule } from '../sessions/session.module';
 import { TrackingModule } from '../tracking/tracking.module';
 import { OrderGateway } from './order.gateway';
+import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { OrderGateway } from './order.gateway';
     AddressesModule,
     SessionsModule,
     NotificationsModule,
+    InvoicesModule,
     forwardRef(() => TrackingModule),
   ],
   controllers: [OrdersController],

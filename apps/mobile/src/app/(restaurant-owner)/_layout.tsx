@@ -50,6 +50,7 @@ export default function RestaurantLayout() {
       <Tabs.Screen name="earnings" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="reviews" options={{ href: null }} />
+      <Tabs.Screen name="invoices/index" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -17,6 +17,7 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "nativewind-env.d.ts"
+    "nativewind-env.d.ts",
+    "/home/shushil/Projects/food_delivery/apps/mobile/nativewind-env.d.ts"
   ]
 }

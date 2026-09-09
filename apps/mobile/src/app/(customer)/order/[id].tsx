@@ -231,6 +231,14 @@ export default function OrderDetailsScreen() {
             <Text style={[styles.actionBtnText, { color: Colors.textDark }]}>Live Tracking</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          onPress={() => router.push(`/(customer)/invoices` as any)}
+          activeOpacity={0.85}
+          style={[styles.actionBtn, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', marginTop: 10 }]}
+        >
+          <Feather name="file-text" size={16} color={Colors.textDark} />
+          <Text style={[styles.actionBtnText, { color: Colors.textDark }]}>View Invoices</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

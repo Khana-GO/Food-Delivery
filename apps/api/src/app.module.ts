@@ -29,6 +29,7 @@ import { AiModule } from './ai/ai.module';
 import { ReviewsModule } from './review/review.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { ExportModule } from './export/export.module';
+import { InvoicesModule } from './invoices/invoices.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { ExportModule } from './export/export.module';
     ReviewsModule,
     PromotionsModule,
     ExportModule,
+    InvoicesModule,
   ],
   controllers: [AppController],
   providers: [

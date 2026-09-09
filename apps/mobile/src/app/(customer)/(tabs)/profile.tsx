@@ -103,6 +103,7 @@ export default function CustomerProfile() {
     { icon: 'heart' as const, label: 'Favorites', onPress: () => router.push('/(customer)/(tabs)/favorites' as any) },
     { icon: 'map-pin' as const, label: 'Saved Addresses', onPress: () => router.push('/(customer)/addresses' as any) },
     { icon: 'credit-card' as const, label: 'Payment Methods', onPress: () => router.push('/(customer)/payment' as any) },
+    { icon: 'file-text' as const, label: 'My Invoices', onPress: () => router.push('/(customer)/invoices' as any) },
     { icon: 'star' as const, label: 'My Reviews & Ratings', onPress: () => router.push('/(customer)/reviews' as any) },
     { icon: 'bell' as const, label: 'Notifications', badge: realUnread > 0 ? realUnread : undefined, onPress: () => router.push('/(customer)/notifications' as any) },
     { icon: 'settings' as const, label: 'Settings', onPress: () => router.push('/(customer)/settings' as any) },

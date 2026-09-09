@@ -38,6 +38,7 @@ import { NotificationsService } from '../notification/notification.service';
 import type { TrackingGateway } from '../tracking/tracking.gateway';
 import type { OrderGateway } from './order.gateway';
 import { AdminOrderPaginationDto } from './dto/admin-order-pagination.dto';
+import { InvoicesService } from '../invoices/invoices.service';
 
 @Injectable()
 export class OrdersService {
@@ -50,6 +51,7 @@ export class OrdersService {
     private readonly db: NeonDatabase<typeof schema>,
     private readonly cache: CacheService,
     private readonly notificationsService: NotificationsService,
+    private readonly invoicesService: InvoicesService,
     @Optional()
     @Inject(
       forwardRef(() => require('../tracking/tracking.gateway').TrackingGateway),
@@ -387,6 +389,15 @@ export class OrdersService {
       createdItems.forEach((c: any, idx: number) => {
         if (itemsResponse[idx]) itemsResponse[idx].id = c.id;
       });
+
+      // Invoice creation (fail-open: order is committed, invoice failure shouldn't block it)
+      await this.invoicesService
+        .createInvoiceFromOrder(order.id)
+        .catch((err: any) =>
+          this.logger.error(
+            `Invoice creation failed for order ${order.id}: ${err?.message}`,
+          ),
+        );
 
       // 5. Notifications (fail-open)
       await this.notificationsService
@@ -1703,6 +1714,13 @@ export class OrdersService {
         throw new InternalServerErrorException(
           'Failed to update payment status',
         );
+      // Sync invoice payment status
+      await this.invoicesService
+        .updatePaymentStatus(orderId, target)
+        .catch((err: any) =>
+          this.logger.warn(`Invoice payment sync failed: ${err?.message}`),
+        );
+
       await this.cache.del(this.keyId(orderId));
       await this.cache.delByPattern('order:list:*');
       await this.cache.del(`tracking:snapshot:${orderId}`);

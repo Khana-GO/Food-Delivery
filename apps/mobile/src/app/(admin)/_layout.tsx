@@ -38,6 +38,8 @@ export default function AdminStackLayout() {
       <Stack.Screen name="users/create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="users/[id]/index" />
       <Stack.Screen name="users/[id]/edit" />
+      <Stack.Screen name="invoices/index" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="invoices/[id]" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }

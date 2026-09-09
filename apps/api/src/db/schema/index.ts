@@ -15,3 +15,4 @@ export * from './sessions.schema';
 export * from './driver-tracking.schema';
 export * from './promotions.schema';
 export * from './promotion-usage.schema';
+export * from './invoice.schema';
