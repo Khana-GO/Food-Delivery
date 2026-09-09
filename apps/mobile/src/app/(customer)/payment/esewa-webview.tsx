@@ -12,7 +12,21 @@ export default function EsewaWebView() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isError, setIsError] = useState(false);
   const verifiedRef = useRef(false);
+  // App routes returned by the backend – single source of truth for where the
+  // user lands on success/failure. No hardcoded frontend success/failure pages.
+  const successRouteRef = useRef<{ pathname: string; params: Record<string, string | number> } | null>(null);
+  const failureRouteRef = useRef<{ pathname: string; params: Record<string, string | number> } | null>(null);
   const { clearCart } = useCartStore();
+
+  // Navigate to the backend-provided app route (falls back to a known route if
+  // the backend didn't send one).
+  const goTo = (route: { pathname: string; params?: Record<string, string | number> } | null, fallback: string) => {
+    if (route && route.pathname) {
+      router.replace({ pathname: route.pathname, params: route.params } as any);
+      return;
+    }
+    router.replace(fallback as any);
+  };
 
   useEffect(() => {
     initializePayment();
@@ -57,10 +71,13 @@ export default function EsewaWebView() {
         orderId,
         amount: amtNum,
       });
-      // Backend returns { formUrl, fields, url, params } – support both v2 and legacy
+      // Backend returns { formUrl, fields, url, params, successRoute, failureRoute }
+      // – support both v2 and legacy shapes.
       const formUrl: string = res.data.formUrl || res.data.url;
       const fields: Record<string, string> = res.data.fields || res.data.params;
       if (!formUrl || !fields) throw new Error('Invalid payment init response');
+      successRouteRef.current = res.data.successRoute || null;
+      failureRouteRef.current = res.data.failureRoute || null;
 
       // Build auto-submitting HTML form
       const inputs = Object.entries(fields)
@@ -75,26 +92,47 @@ export default function EsewaWebView() {
     }
   };
 
-  const handleNav = async (navState: any) => {
-    const url: string = navState.url || '';
+  const handleReturnUrl = (url: string) => {
     if (verifiedRef.current || isVerifying) return;
-    // eSewa will redirect to our SUCCESS_URL / FAILURE_URL which contain /payment/success or /payment/failure with ?data=...
-    if (url.includes('/payment/success')) {
-      verifiedRef.current = true;
-      const dataParam = extractData(url);
-      if (!dataParam) {
-        // Fallback: try to verify via status API using orderId + amount
-        await verifyWithStatus();
-      } else {
-        await verifyPayment(dataParam);
-      }
-      return;
+    // eSewa returns to our SUCCESS_URL or FAILURE_URL with ?data=... in both
+    // cases. The URL path alone is NOT a reliable indicator of payment status
+    // (eSewa can redirect to failure_url even after a successful charge).
+    // Always verify with the backend using the signed callback `data`.
+    const isReturn =
+      url.includes('/payment/success') ||
+      url.includes('/payment/failure') ||
+      url.includes('/payment/cancel');
+    if (!isReturn) return;
+    verifiedRef.current = true;
+    const dataParam = extractData(url);
+    if (dataParam) {
+      verifyPayment(dataParam);
+    } else {
+      verifyWithStatus();
     }
-    if (url.includes('/payment/failure') || url.includes('/payment/cancel')) {
-      verifiedRef.current = true;
-      Alert.alert('Payment Canceled', 'You canceled the payment or it failed.');
-      router.replace('/(customer)/cart' as any);
+  };
+
+  // Fired on every navigation state change (eSewa redirects).
+  const handleNav = (navState: any) => {
+    handleReturnUrl(navState?.url || '');
+  };
+
+  // Fired synchronously BEFORE the WebView attempts each request. In Expo Go
+  // the callback host (e.g. http://192.168.x.x:8081) may be unreachable/dead,
+  // so `onNavigationStateChange` alone is unreliable on a phone. Catching it
+  // here guarantees we never miss the redirect, and returning false stops the
+  // WebView from loading the dead callback URL.
+  const handleShouldStart = (request: any) => {
+    const url: string = request?.url || '';
+    if (
+      url.includes('/payment/success') ||
+      url.includes('/payment/failure') ||
+      url.includes('/payment/cancel')
+    ) {
+      handleReturnUrl(url);
+      return false;
     }
+    return true;
   };
 
   const extractData = (url: string): string | null => {
@@ -115,20 +153,23 @@ export default function EsewaWebView() {
       const res = await api.post('/payment/esewa/verify', { data: dataB64, orderId });
       const status = res.data?.status || res.data?.raw?.status;
       if (status === 'success' || status === 'COMPLETE') {
-        try { await clearCart(); } catch {}
-        Alert.alert('Payment Success', 'Your payment was verified. Order is now paid.');
-        router.replace({ pathname: '/(customer)/order-confirmation' as any, params: { id: orderId } } as any);
+        await clearCart();
+        Alert.alert('Payment Successful', 'Your payment was verified. Your order is now paid.');
+        goTo(successRouteRef.current, `/(customer)/order-confirmation?id=${orderId}`);
       } else if (status === 'pending' || status === 'PENDING') {
-        Alert.alert('Payment Pending', 'Payment is pending. We will confirm shortly.');
-        router.replace(`/(customer)/order/${orderId}` as any);
+        Alert.alert('Payment Pending', 'Payment could not be confirmed yet. Check your order for the latest status.');
+        goTo(successRouteRef.current, `/(customer)/order/${orderId}`);
       } else {
-        Alert.alert('Verification Failed', res.data?.message || 'Payment could not be verified');
-        router.replace('/(customer)/cart' as any);
+        // Could not confirm success from the verified result. Since eSewa RC
+        // can be inconclusive, land the user on their order (which reflects the
+        // backend's authoritative status) instead of dumping them to the cart.
+        Alert.alert('Payment Pending', 'Your payment could not be confirmed yet. Check your order for the latest status.');
+        goTo(successRouteRef.current, `/(customer)/order/${orderId}`);
       }
     } catch (e: any) {
       console.error('[eSewa] verify failed', e?.response?.data || e.message);
       Alert.alert('Verification Error', e?.response?.data?.message || 'Failed to verify payment. Contact support with order ID.');
-      router.replace('/(customer)/cart' as any);
+      goTo(successRouteRef.current, `/(customer)/order/${orderId}`);
     } finally {
       setIsVerifying(false);
     }
@@ -140,13 +181,20 @@ export default function EsewaWebView() {
       const res = await api.post('/payment/esewa/verify', { transactionUuid: orderId, totalAmount: String(amount), orderId });
       const s = res.data?.status || res.data?.raw?.status;
       if (s === 'success' || s === 'COMPLETE') {
-        try { await clearCart(); } catch {}
-        router.replace({ pathname: '/(customer)/order-confirmation' as any, params: { id: orderId } } as any);
+        await clearCart();
+        Alert.alert('Payment Successful', 'Your payment was verified. Your order is now paid.');
+        goTo(successRouteRef.current, `/(customer)/order-confirmation?id=${orderId}`);
+      } else if (s === 'pending' || s === 'PENDING') {
+        Alert.alert('Payment Pending', 'Payment could not be confirmed yet. Check your order for the latest status.');
+        goTo(successRouteRef.current, `/(customer)/order/${orderId}`);
       } else {
-        verifyPayment(null);
+        Alert.alert('Payment Pending', 'Your payment could not be confirmed yet. Check your order for the latest status.');
+        goTo(successRouteRef.current, `/(customer)/order/${orderId}`);
       }
-    } catch {
-      verifyPayment(null);
+    } catch (e: any) {
+      console.error('[eSewa] verifyWithStatus failed', e?.response?.data || e.message);
+      Alert.alert('Verification Error', 'Failed to verify payment. Please contact support with your order ID.');
+      goTo(successRouteRef.current, `/(customer)/order/${orderId}`);
     } finally {
       setIsVerifying(false);
     }
@@ -242,7 +290,7 @@ export default function EsewaWebView() {
         source={{ html }}
         originWhitelist={['*']}
         onNavigationStateChange={handleNav}
-        onShouldStartLoadWithRequest={() => true}
+        onShouldStartLoadWithRequest={handleShouldStart}
         javaScriptEnabled
         domStorageEnabled
         startInLoadingState

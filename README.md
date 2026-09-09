@@ -28,7 +28,7 @@ Food-Delivery/
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Mobile Client** | React Native, Expo SDK 52, Expo Router v4, TypeScript, NativeWind / TailwindCSS, TanStack React Query, Axios |
+| **Mobile Client** | React Native, Expo SDK 52, Expo Router v4, TypeScript, NativeWind / TailwindCSS, TanStack React Query, Axios, Zustand |
 | **Backend API** | NestJS, TypeScript, Passport.js, JWT, LangChain/LangGraph, Socket.IO WebSockets, Swagger |
 | **Database & ORM** | Neon PostgreSQL (Serverless), Drizzle ORM, Drizzle Kit Studio |
 | **Storage & Media** | Cloudinary |

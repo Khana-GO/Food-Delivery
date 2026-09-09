@@ -9,5 +9,6 @@ import { SessionsModule } from '../sessions/session.module';
   imports: [SessionsModule],
   controllers: [CartController],
   providers: [CartService],
+  exports: [CartService],
 })
 export class CartModule {}

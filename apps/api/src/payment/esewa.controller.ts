@@ -7,6 +7,8 @@ import {
   UseGuards,
   Get,
   Query,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EsewaService } from './esewa.service';
@@ -16,6 +18,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { EsewaInitDto } from './dto/esewa-init.dto';
 import { EsewaVerifyDto } from './dto/esewa-verify.dto';
+import { CartService } from '../cart/cart.service';
 
 @ApiTags('Payment - eSewa v2')
 @Controller('payment/esewa')
@@ -23,17 +26,29 @@ export class EsewaController {
   constructor(
     private readonly esewaService: EsewaService,
     private readonly ordersService: OrdersService,
+    private readonly cartService: CartService,
   ) {}
 
   @Post('initialize')
   @ApiOperation({ summary: 'Initialize eSewa payment (v2 form)' })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async initialize(@Body() dto: EsewaInitDto) {
+  async initialize(@CurrentUser() user: JwtPayload, @Body() dto: EsewaInitDto) {
+    // Load the order server-side: the amount charged is ALWAYS the order's
+    // authoritative total (never the client-supplied one) and only the
+    // customer who owns the order (or an admin) may pay for it.
+    const order = await this.ordersService.getOrderById(dto.orderId);
+    if (!order) throw new BadRequestException('Order not found');
+    if (user.role !== 'ADMIN' && order.customerId !== user.sub) {
+      throw new ForbiddenException('Not authorized for this order');
+    }
+    if (order.paymentStatus === 'PAID') {
+      throw new BadRequestException('Order is already paid');
+    }
     return this.esewaService.initializePayment({
-      orderId: dto.orderId,
-      amount: dto.amount,
-      productName: dto.productName || 'KhanaGo Order',
+      orderId: order.id,
+      amount: Number(order.totalAmount),
+      productName: 'KhanaGo Order',
     });
   }
 
@@ -95,13 +110,22 @@ export class EsewaController {
       } catch (_e) {
         // Order may not exist yet if verification called before order creation (race) – log but still return success for payment
       }
-    } else if (result.status === 'CANCELED' && txUuid) {
+      // Paying customer's cart is consumed – clear it server-side so
+      // duplicated/stale items never ship even if the client fails to call.
       try {
-        await this.ordersService.updatePaymentStatus(txUuid, 'FAILED');
+        const order = await this.ordersService.getOrderById(txUuid);
+        if (order && (user.role === 'ADMIN' || order.customerId === user.sub)) {
+          await this.cartService.clearCart(order.customerId);
+        }
       } catch (_e) {
-        // ignore – will be retried by client
+        // ignore – client also clears; failure here is non-fatal
       }
     }
+    // NOTE: We deliberately do NOT auto-mark an order FAILED from client-side
+    // eSewa verification. The callback/redirect status (CANCELED) is unreliable
+    // in the RC sandbox and a canceled report must never overwrite a payment
+    // that may have actually succeeded. Confirmed cancellations stay PENDING
+    // until reconciled manually/admin.
 
     // Normalize to legacy shape for frontend compat
     if (isComplete)
@@ -147,10 +171,18 @@ export class EsewaController {
       }
       const r = await this.esewaService.verifyByStatus(tx, amt);
       const isComplete = r.status === 'COMPLETE';
-      if (isComplete)
+      if (isComplete) {
         await this.ordersService
           .updatePaymentStatus(tx, 'PAID')
           .catch(() => {});
+        try {
+          const order = await this.ordersService.getOrderById(tx);
+          if (order && (user.role === 'ADMIN' || order.customerId === user.sub))
+            await this.cartService.clearCart(order.customerId);
+        } catch (_e) {
+          // ignore
+        }
+      }
       return r;
     }
     return { status: 'failure', message: 'Missing data' };

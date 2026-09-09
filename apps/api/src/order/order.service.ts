@@ -1678,24 +1678,22 @@ export class OrdersService {
       });
       if (!order)
         throw new NotFoundException(`Order with ID ${orderId} not found`);
-      // Allow only PENDING -> PAID/FAILED transition for ONLINE orders, or manual override by admin
-      const allowed = ['PENDING', 'FAILED'];
-      if (order.paymentStatus === 'PAID' && status === 'PAID') {
+
+      // Idempotent: already PAID stays PAID.
+      if (order.paymentStatus === 'PAID') {
         return { message: 'Already paid', paymentStatus: 'PAID' };
       }
-      if (
-        order.paymentStatus !== 'PENDING' &&
-        status === 'FAILED' &&
-        order.paymentStatus !== 'PAID'
-      ) {
-        // allow FAILED only if not already PAID
-      }
+
+      // Normalize target state.
+      const target =
+        status === 'PAID' ? 'PAID' : status === 'FAILED' ? 'FAILED' : status;
+
       const [updated] = await this.db
         .update(ordersTable)
         .set({
-          paymentStatus: status as any,
+          paymentStatus: target as any,
           updatedAt: new Date(),
-          ...(status === 'PAID'
+          ...(target === 'PAID'
             ? { paymentId: order.paymentId || `esewa-${Date.now()}` }
             : {}),
         })
@@ -1709,11 +1707,11 @@ export class OrdersService {
       await this.cache.delByPattern('order:list:*');
       await this.cache.del(`tracking:snapshot:${orderId}`);
       this.logger.log(
-        `Payment status for order ${orderId} updated to ${status}`,
+        `Payment status for order ${orderId} updated to ${target}`,
       );
       return {
-        message: `Payment status updated to ${status}`,
-        paymentStatus: status,
+        message: `Payment status updated to ${target}`,
+        paymentStatus: target,
       };
     }, 'updatePaymentStatus');
   }

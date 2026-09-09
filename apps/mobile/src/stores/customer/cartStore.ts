@@ -198,12 +198,14 @@ export const useCartStore = create<CartState>()(
 
       clearCart: async () => {
         const prev = { items: get().items, restaurantId: get().restaurantId };
-        set({ items: [], restaurantId: null, totalItems: 0, totalPrice: 0, isSynced: true });
+        set({ items: [], restaurantId: null, totalItems: 0, totalPrice: 0, isSynced: false });
         try {
           await cartService.clearCart();
+          set({ isSynced: true });
         } catch (e) {
           console.warn('[cart] clearCart failed', e);
-          // rollback if clear failed due to network? keep cleared locally but mark unsynced
+          // Keep local state cleared but mark unsynced so syncWithBackend
+          // will re-evaluate rather than blindly restoring stale items
           set({ isSynced: false });
         }
       },

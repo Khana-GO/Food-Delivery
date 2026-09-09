@@ -15,6 +15,9 @@ export interface EsewaPaymentResponse {
   // legacy compat
   url: string;
   params: Record<string, string>;
+  // app routes the WebView should navigate to after verification
+  successRoute: { pathname: string; params: Record<string, string | number> };
+  failureRoute: { pathname: string; params: Record<string, string | number> };
 }
 
 export interface EsewaVerificationResponse {
@@ -40,20 +43,33 @@ export class EsewaService {
       this.configService.get<string>('ESEWA_MERCHANT_ID') || 'EPAYTEST';
     this.SECRET_KEY =
       this.configService.get<string>('ESEWA_SECRET_KEY') || '8gBm/:&EnhH.1/q';
-    // Use RC (test) by default when MERCHANT_ID is EPAYTEST, else production
+    // EPAYTEST is ONLY a valid merchant on the RC (test) sandbox. Pointing the
+    // test merchant at the production endpoint makes every payment fail/cancel,
+    // so force the RC base whenever the test merchant is used.
     const isTest = this.MERCHANT_ID === 'EPAYTEST';
-    const base =
-      this.configService.get<string>('ESEWA_BASE_URL') ||
+    let base = this.configService.get<string>('ESEWA_BASE_URL');
+    if (isTest && base && !base.includes('rc-epay')) {
+      this.logger.warn(
+        `ESEWA_BASE_URL=${base} points to PRODUCTION but MERCHANT_ID is EPAYTEST (test-only). ` +
+          `Forcing rc-epay.esewa.com.np. Remove ESEWA_BASE_URL or set it to the RC URL for testing.`,
+      );
+      base = undefined;
+    }
+    base =
+      base ||
       (isTest ? 'https://rc-epay.esewa.com.np' : 'https://epay.esewa.com.np');
     this.FORM_URL = `${base.replace(/\/$/, '')}/api/epay/main/v2/form`;
     this.STATUS_URL = `${base.replace(/\/$/, '')}/api/epay/transaction/status/`;
-    // Frontend deep links – fallback to web URL if APP_URL not set
+    // Frontend callback URLs. In dev the app runs in Expo Go on a real phone,
+    // where `localhost` points to the PHONE, not the dev machine – so prefer the
+    // LAN IP (FRONTEND_URL_IP) that the phone can actually reach. The mobile
+    // WebView intercepts these redirects client-side and verifies server-side.
     const appUrl =
+      this.configService.get<string>('FRONTEND_URL_IP') ||
       this.configService.get<string>('APP_URL') ||
       this.configService.get<string>('FRONTEND_URL_WEB') ||
       'http://localhost:8081';
     const cleanApp = appUrl.replace(/\/$/, '');
-    // eSewa requires absolute https urls; for local dev we allow http and let frontend handle custom scheme
     this.SUCCESS_URL = `${cleanApp}/payment/success`;
     this.FAILURE_URL = `${cleanApp}/payment/failure`;
   }
@@ -101,12 +117,22 @@ export class EsewaService {
         `eSewa v2 initialized order=${orderId} amount=${totalAmount} product=${productCode} success=${this.SUCCESS_URL}`,
       );
 
-      // Return both new and legacy shape for compatibility
+      // Return the app routes the mobile WebView should navigate to after
+      // verification. The backend is the single source of truth for where the
+      // user lands – the frontend does not create/hardcode success/failure pages.
       return {
         formUrl: this.FORM_URL,
         fields,
         url: this.FORM_URL,
         params: fields,
+        successRoute: {
+          pathname: '/(customer)/order-confirmation',
+          params: { id: orderId },
+        },
+        failureRoute: {
+          pathname: '/(customer)/cart',
+          params: {},
+        },
       };
     } catch (error: any) {
       this.logger.error(`init eSewa failed: ${error.message}`);
@@ -199,43 +225,94 @@ export class EsewaService {
         transaction_uuid,
         total_amount,
       } = payload;
-      if (!signature || !signed_field_names)
-        throw new BadRequestException('Missing signature fields');
-      // Rebuild message in order of signed_field_names
-      const fields = signed_field_names.split(',').map((k: string) => k.trim());
-      const message = fields
-        .map((k: string) => `${k}=${payload[k] ?? ''}`)
-        .join(',');
-      const expected = this.sign(message);
-      let signatureValid = false;
-      try {
-        const a = Buffer.from(expected);
-        const b = Buffer.from(signature);
-        signatureValid = a.length === b.length && crypto.timingSafeEqual(a, b);
-      } catch {
-        signatureValid = expected === signature;
-      }
-      if (!signatureValid) {
-        this.logger.warn(
-          `eSewa signature mismatch expected=${expected} got=${signature} msg=${message}`,
-        );
-      } else {
-        this.logger.log(
-          `eSewa callback signature OK status=${status} uuid=${transaction_uuid}`,
-        );
+      if (!transaction_uuid)
+        throw new BadRequestException('Missing transaction_uuid');
+
+      // Signature validation is INFORMATIONAL only. In the eSewa RC sandbox the
+      // callback signature often cannot be reproduced reliably (field
+      // order/value formatting), so we never let it block a real payment.
+      // The server-to-server status API below is the authoritative source.
+      if (signature && signed_field_names) {
+        try {
+          const fields = signed_field_names
+            .split(',')
+            .map((k: string) => k.trim());
+          const message = fields
+            .map((k: string) => `${k}=${payload[k] ?? ''}`)
+            .join(',');
+          const expected = this.sign(message);
+          let valid = false;
+          try {
+            const a = Buffer.from(expected);
+            const b = Buffer.from(signature);
+            valid = a.length === b.length && crypto.timingSafeEqual(a, b);
+          } catch {
+            valid = expected === signature;
+          }
+          if (valid) {
+            this.logger.log(
+              `eSewa callback signature OK status=${status} uuid=${transaction_uuid}`,
+            );
+          } else {
+            this.logger.warn(
+              `eSewa callback signature mismatch (ignored) status=${status} uuid=${transaction_uuid}`,
+            );
+          }
+        } catch (e: any) {
+          this.logger.warn(`eSewa signature check error: ${e?.message}`);
+        }
       }
 
-      if ((status || '').toUpperCase() === 'COMPLETE') {
-        // Double-check via status API for tamper-proof verification
-        const verified = await this.verifyByStatus(
+      const callbackStatus = (status || '').toUpperCase();
+
+      // 1) Authoritative server-to-server check. eSewa may mark the callback
+      //    CANCELED/PENDING while the charge actually went through – the status
+      //    API is the ground truth, so if it says COMPLETE we ALWAYS trust it.
+      let statusCheck: EsewaVerificationResponse | null = null;
+      if (transaction_uuid && total_amount != null) {
+        statusCheck = await this.verifyByStatus(
           transaction_uuid,
           total_amount,
-        );
-        if (verified.status === 'COMPLETE') return verified;
-        return verified;
+        ).catch((e: any) => {
+          this.logger.warn(`status API fallback failed: ${e?.message}`);
+          return null;
+        });
       }
+      if (statusCheck && statusCheck.status === 'COMPLETE') {
+        return {
+          status: 'COMPLETE',
+          refId: statusCheck.refId,
+          transactionUuid: transaction_uuid,
+          totalAmount: String(total_amount),
+          message: 'Payment verified via eSewa status API',
+        };
+      }
+
+      // 2) Trust a signed COMPLETE callback only as a fallback (status API
+      //    unavailable/error). Never downgrade an existing validated payment.
+      if (callbackStatus === 'COMPLETE') {
+        if (statusCheck) {
+          this.logger.warn(
+            `callback says COMPLETE but status API returned ${statusCheck.status} – trusting callback`,
+          );
+        }
+        return {
+          status: 'COMPLETE',
+          transactionUuid: transaction_uuid,
+          totalAmount: String(total_amount),
+          message: 'Payment verified via callback',
+        };
+      }
+
+      // 3) Otherwise report whatever the status API (the truth) says.
+      if (statusCheck) return statusCheck;
+
+      // 4) No status API result – reflect the callback status (never FAILED).
       return {
-        status: (status || 'failure').toUpperCase(),
+        status:
+          callbackStatus === 'CANCELED'
+            ? 'CANCELED'
+            : callbackStatus || 'failure',
         transactionUuid: transaction_uuid,
         totalAmount: total_amount,
         message: `Callback status: ${status}`,

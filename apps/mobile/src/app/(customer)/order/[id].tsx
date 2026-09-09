@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, useWindowDimensions, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,8 @@ import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
 import { useOrder } from '@/hooks/customer/useOrder';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { goBack } from '@/lib/navigation';
+import { api } from '@/lib/axios';
+import { useCartStore } from '@/stores/customer/cartStore';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   PENDING: { label: 'Pending', color: '#F59E0B', bg: '#FEF3C7', icon: 'clock' },
@@ -20,9 +22,39 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; i
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: order, isLoading } = useOrder(id);
+  const { data: order, isLoading, refetch } = useOrder(id);
   const { width } = useWindowDimensions();
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const { clearCart } = useCartStore();
   const isCompact = width < 360;
+
+  const checkPaymentStatus = async () => {
+    if (!order || isCheckingPayment) return;
+    setIsCheckingPayment(true);
+    try {
+      // Ask the backend to query eSewa's transaction status API directly using
+      // the known transaction_uuid (= order id) and the authoritative amount.
+      const res = await api.post('/payment/esewa/verify', {
+        transactionUuid: order.id,
+        totalAmount: String(order.totalAmount),
+      });
+      const s = res.data?.status || res.data?.raw?.status;
+      if (s === 'success' || s === 'COMPLETE') {
+        await clearCart().catch(() => {});
+        await refetch();
+        Alert.alert('Payment Confirmed', 'eSewa confirmed your payment. Your order is now paid.');
+      } else if (s === 'pending' || s === 'PENDING') {
+        Alert.alert('Payment Pending', res.data?.message || 'eSewa has not confirmed the payment yet. Please check again in a moment.');
+      } else {
+        Alert.alert('Payment Not Found', res.data?.message || 'eSewa has no record of this payment. If you were charged, contact support with your order ID.');
+      }
+    } catch (e: any) {
+      console.error('[order] payment status check failed', e?.response?.data || e.message);
+      Alert.alert('Check Failed', e?.response?.data?.message || 'Could not check the payment status. Please try again.');
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  };
 
   if (isLoading || !order) {
     return (
