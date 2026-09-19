@@ -10,7 +10,17 @@ import {
   Optional,
   forwardRef,
 } from '@nestjs/common';
-import { eq, and, sql, desc, asc, count, inArray, isNull } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  sql,
+  desc,
+  asc,
+  count,
+  inArray,
+  isNull,
+  sum,
+} from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { ordersTable, type NewOrder } from '../db/schema/order.schema';
@@ -92,6 +102,10 @@ export class OrdersService {
       this.cache.del(this.keyStats()),
       this.cache.delByPattern('admin:orders:*'),
       this.cache.del('admin:order-stats'),
+      // Analytics depend on order data — invalidate so dashboards stay fresh
+      this.cache.del('analytics:platform-metrics'),
+      this.cache.delByPattern('analytics:restaurants:*'),
+      this.cache.delByPattern('analytics:drivers:*'),
     ];
     if (opts.id) ops.push(this.cache.del(this.keyId(opts.id)));
     if (opts.customerId)
@@ -136,6 +150,27 @@ export class OrdersService {
       address.postalCode,
     ].filter(Boolean);
     return parts.join(', ');
+  }
+
+  /** Great-circle distance in km between two coordinates. */
+  static haversineKm(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number,
+  ): number {
+    const R = 6371;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   private toResponse(
@@ -419,18 +454,202 @@ export class OrdersService {
 
       this.logger.log(`Order created: ${order.id} by ${customerId}`);
 
-      const customer = await this.db.query.usersTable.findFirst({
-        where: eq(usersTable.id, customerId),
-      });
       return this.toResponse(
         order,
-        customer,
+        orderingCustomer,
         restaurant,
         address,
         null,
         itemsResponse,
       );
     }, 'create');
+  }
+
+  // ─── CREATE ORDER ALREADY MARKED AS PAID (eSewa post-payment flow) ───
+  // This is called AFTER eSewa payment is verified – the order is created
+  // directly in PAID status so the customer never sees a PENDING/confirmed
+  // order for a failed payment.
+  async createPaidOrder(
+    customerId: string,
+    dto: CreateOrderDto,
+    paymentRef: string,
+  ): Promise<OrderResponseDto> {
+    return this.handleDbOperation(async () => {
+      const orderingCustomer = await this.db.query.usersTable.findFirst({
+        where: eq(usersTable.id, customerId),
+      });
+      const customerPhone = orderingCustomer?.phone?.trim();
+      if (!customerPhone) {
+        throw new BadRequestException(
+          'A phone number is required to place an order.',
+        );
+      }
+
+      const restaurant = await this.db.query.restaurantsTable.findFirst({
+        where: and(
+          eq(restaurantsTable.id, dto.restaurantId),
+          sql`${restaurantsTable.deletedAt} IS NULL`,
+        ),
+      });
+      if (!restaurant) throw new NotFoundException('Restaurant not found');
+      if (!restaurant.isOpen || !restaurant.isActive)
+        throw new BadRequestException(
+          'Restaurant is currently not accepting orders',
+        );
+      if (!restaurant.isVerified)
+        throw new BadRequestException('Restaurant is not verified yet');
+
+      const address = await this.db.query.addressesTable.findFirst({
+        where: and(
+          eq(addressesTable.id, dto.addressId),
+          eq(addressesTable.userId, customerId),
+        ),
+      });
+      if (!address) throw new NotFoundException('Address not found');
+
+      const menuItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
+      const menuItems = await this.db
+        .select()
+        .from(menuItemsTable)
+        .where(inArray(menuItemsTable.id, menuItemIds));
+      if (menuItems.length !== menuItemIds.length)
+        throw new BadRequestException('Some menu items are invalid');
+
+      for (const m of menuItems) {
+        if (m.restaurantId !== dto.restaurantId)
+          throw new BadRequestException(
+            `Menu item "${m.name}" does not belong to this restaurant`,
+          );
+        if (!m.isAvailable)
+          throw new BadRequestException(
+            `Menu item "${m.name}" is not available`,
+          );
+      }
+
+      let subtotal = 0;
+      const orderItemsPrep: Array<Omit<NewOrderItem, 'orderId'>> = [];
+      const itemsResponse: OrderItemResponseDto[] = [];
+
+      for (const reqItem of dto.items) {
+        const menuItem = menuItems.find((m) => m.id === reqItem.menuItemId)!;
+        const dbPrice = parseFloat(menuItem.price);
+        if (Number.isNaN(dbPrice))
+          throw new InternalServerErrorException(
+            `Invalid price for ${menuItem.name}`,
+          );
+        const qty = Math.floor(reqItem.quantity);
+        if (qty < 1 || qty > 100)
+          throw new BadRequestException(
+            `Quantity for ${menuItem.name} must be 1-100`,
+          );
+        const totalPrice = +(dbPrice * qty).toFixed(2);
+        subtotal = +(subtotal + totalPrice).toFixed(2);
+
+        orderItemsPrep.push({
+          menuItemId: menuItem.id,
+          itemNameSnapshot: menuItem.name,
+          quantity: qty,
+          unitPrice: dbPrice.toFixed(2),
+          totalPrice: totalPrice.toFixed(2),
+          createdAt: new Date(),
+        });
+
+        itemsResponse.push({
+          id: '',
+          menuItemId: menuItem.id,
+          name: menuItem.name,
+          quantity: qty,
+          unitPrice: dbPrice,
+          totalPrice,
+        });
+      }
+
+      const minAmount = parseFloat(restaurant.minimumOrderAmount) || 0;
+      if (subtotal < minAmount) {
+        throw new BadRequestException(
+          `Minimum order amount is Rs. ${minAmount.toFixed(2)}`,
+        );
+      }
+
+      const deliveryFee = parseFloat(restaurant.deliveryFee) || 0;
+      const totalAmount = +(subtotal + deliveryFee).toFixed(2);
+      const deliverySnapshot = this.buildFullAddress(address);
+
+      const { order, createdItems } = await (this.db as any).transaction(
+        async (tx: any) => {
+          const [ord] = await tx
+            .insert(ordersTable)
+            .values({
+              customerId,
+              restaurantId: dto.restaurantId,
+              addressId: dto.addressId,
+              deliveryAddressSnapshot: deliverySnapshot,
+              subtotal: subtotal.toFixed(2),
+              deliveryFee: deliveryFee.toFixed(2),
+              totalAmount: totalAmount.toFixed(2),
+              notes: dto.notes,
+              paymentMethod: 'ONLINE',
+              paymentStatus: 'PAID',
+              orderStatus: 'CONFIRMED',
+              paymentId: paymentRef,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .returning();
+          if (!ord)
+            throw new InternalServerErrorException('Failed to create order');
+          const itemsWithOrderId = orderItemsPrep.map((it) => ({
+            ...it,
+            orderId: ord.id,
+          }));
+          const cItems = await tx
+            .insert(orderItemsTable)
+            .values(itemsWithOrderId)
+            .returning();
+          return { order: ord, createdItems: cItems };
+        },
+      );
+
+      createdItems.forEach((c: any, idx: number) => {
+        if (itemsResponse[idx]) itemsResponse[idx].id = c.id;
+      });
+
+      await this.invoicesService
+        .createInvoiceFromOrder(order.id)
+        .catch((err: any) =>
+          this.logger.error(
+            `Invoice creation failed for order ${order.id}: ${err?.message}`,
+          ),
+        );
+
+      await this.notificationsService
+        .create({
+          userId: restaurant.ownerId,
+          type: 'order',
+          title: 'New Order!',
+          body: `Order #${order.id.slice(0, 8)} received. Total: Rs. ${totalAmount}`,
+          data: { orderId: order.id, restaurantId: restaurant.id },
+        })
+        .catch((err: any) =>
+          this.logger.warn(`Failed owner notify: ${err?.message}`),
+        );
+
+      await this.invalidateOrder({
+        customerId,
+        restaurantId: dto.restaurantId,
+      });
+
+      this.logger.log(`Paid order created: ${order.id} by ${customerId}`);
+
+      return this.toResponse(
+        order,
+        orderingCustomer,
+        restaurant,
+        address,
+        null,
+        itemsResponse,
+      );
+    }, 'createPaidOrder');
   }
 
   // ─── GET ORDERS (optimized) ───
@@ -1053,13 +1272,20 @@ export class OrdersService {
       const totalPages = Math.ceil(total / limit);
       const offset = (page - 1) * limit;
 
+      const allowedSort: Record<string, any> = {
+        createdAt: ordersTable.createdAt,
+        updatedAt: ordersTable.updatedAt,
+        totalAmount: ordersTable.totalAmount,
+        orderStatus: ordersTable.orderStatus,
+      };
+      const sortCol = allowedSort[sortBy] ?? ordersTable.createdAt;
+      const orderFn = sortOrder === 'ASC' ? asc(sortCol) : desc(sortCol);
+
       const orders = await this.db
         .select()
         .from(ordersTable)
         .where(whereClause)
-        .orderBy(
-          sql`${ordersTable[sortBy as keyof typeof ordersTable]} ${sql.raw(sortOrder)}`,
-        )
+        .orderBy(orderFn)
         .limit(limit)
         .offset(offset);
 
@@ -1081,99 +1307,149 @@ export class OrdersService {
     });
   }
 
-  // ─── ADMIN: GET ORDER STATS (cached) ───
+  // ─── ADMIN: GET ORDER STATS (SQL aggregation — no full table scan) ───
   async adminGetOrderStats(): Promise<AdminOrderStatsDto> {
     return this.cache.wrap('admin:order-stats', 30, async () => {
-      const allOrders = await this.db.select().from(ordersTable);
-
-      const totalOrders = allOrders.length;
-      const totalRevenue = allOrders.reduce(
-        (sum, o) => sum + parseFloat(o.totalAmount),
-        0,
-      );
-
-      const stats = {
-        totalOrders,
-        totalRevenue,
-        pendingOrders: allOrders.filter((o) => o.orderStatus === 'PENDING')
-          .length,
-        confirmedOrders: allOrders.filter((o) => o.orderStatus === 'CONFIRMED')
-          .length,
-        preparingOrders: allOrders.filter((o) => o.orderStatus === 'PREPARING')
-          .length,
-        readyOrders: allOrders.filter((o) => o.orderStatus === 'READY').length,
-        pickedUpOrders: allOrders.filter((o) => o.orderStatus === 'PICKED_UP')
-          .length,
-        deliveredOrders: allOrders.filter((o) => o.orderStatus === 'DELIVERED')
-          .length,
-        cancelledOrders: allOrders.filter((o) => o.orderStatus === 'CANCELLED')
-          .length,
-      };
-
-      // Today's stats
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayOrders = allOrders.filter(
-        (o) => new Date(o.createdAt) >= today,
-      );
-      const todayRevenue = todayOrders.reduce(
-        (sum, o) => sum + parseFloat(o.totalAmount),
-        0,
-      );
-
-      // This week
-      const weekAgo = new Date();
+      const now = new Date();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekOrders = allOrders.filter(
-        (o) => new Date(o.createdAt) >= weekAgo,
-      );
-      const weekRevenue = weekOrders.reduce(
-        (sum, o) => sum + parseFloat(o.totalAmount),
-        0,
-      );
-
-      // This month
-      const monthAgo = new Date();
+      const monthAgo = new Date(now);
       monthAgo.setMonth(monthAgo.getMonth() - 1);
-      const monthOrders = allOrders.filter(
-        (o) => new Date(o.createdAt) >= monthAgo,
-      );
-      const monthRevenue = monthOrders.reduce(
-        (sum, o) => sum + parseFloat(o.totalAmount),
-        0,
-      );
 
-      // Daily trend (last 7 days)
-      const dailyTrend: any[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-
-        const dayOrders = allOrders.filter(
-          (o) =>
-            new Date(o.createdAt) >= date && new Date(o.createdAt) < nextDate,
-        );
-        dailyTrend.push({
-          date: date.toISOString().split('T')[0],
-          orders: dayOrders.length,
-          revenue: dayOrders.reduce(
-            (sum, o) => sum + parseFloat(o.totalAmount),
-            0,
+      const [
+        [totalResult],
+        [pendingResult],
+        [confirmedResult],
+        [preparingResult],
+        [readyResult],
+        [pickedUpResult],
+        [deliveredResult],
+        [cancelledResult],
+        [revenueResult],
+        [todayResult],
+        [todayRevenueResult],
+        [weekResult],
+        [weekRevenueResult],
+        [monthResult],
+        [monthRevenueResult],
+      ] = await Promise.all([
+        this.db.select({ c: count() }).from(ordersTable),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'PENDING')),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'CONFIRMED')),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'PREPARING')),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'READY')),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'PICKED_UP')),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'DELIVERED')),
+        this.db
+          .select({ c: count() })
+          .from(ordersTable)
+          .where(eq(ordersTable.orderStatus, 'CANCELLED')),
+        this.db
+          .select({ total: sum(ordersTable.totalAmount) })
+          .from(ordersTable),
+        this.db
+          .select({ c: count(), total: sum(ordersTable.totalAmount) })
+          .from(ordersTable)
+          .where(
+            sql`${ordersTable.createdAt} >= ${todayStart.toISOString()}::timestamp`,
           ),
-        });
-      }
+        this.db
+          .select({ c: count(), total: sum(ordersTable.totalAmount) })
+          .from(ordersTable)
+          .where(
+            sql`${ordersTable.createdAt} >= ${todayStart.toISOString()}::timestamp`,
+          ),
+        this.db
+          .select({ c: count(), total: sum(ordersTable.totalAmount) })
+          .from(ordersTable)
+          .where(
+            sql`${ordersTable.createdAt} >= ${weekAgo.toISOString()}::timestamp`,
+          ),
+        this.db
+          .select({ c: count(), total: sum(ordersTable.totalAmount) })
+          .from(ordersTable)
+          .where(
+            sql`${ordersTable.createdAt} >= ${weekAgo.toISOString()}::timestamp`,
+          ),
+        this.db
+          .select({ c: count(), total: sum(ordersTable.totalAmount) })
+          .from(ordersTable)
+          .where(
+            sql`${ordersTable.createdAt} >= ${monthAgo.toISOString()}::timestamp`,
+          ),
+        this.db
+          .select({ c: count(), total: sum(ordersTable.totalAmount) })
+          .from(ordersTable)
+          .where(
+            sql`${ordersTable.createdAt} >= ${monthAgo.toISOString()}::timestamp`,
+          ),
+      ]);
+
+      // Daily trend (last 7 days) — single query with date bucketing
+      const dailyTrendRows = await this.db
+        .select({
+          date: sql<string>`DATE(${ordersTable.createdAt})`.as('date'),
+          orders: count(),
+          revenue: sum(ordersTable.totalAmount),
+        })
+        .from(ordersTable)
+        .where(
+          sql`${ordersTable.createdAt} >= ${new Date(now.getTime() - 6 * 86400000).toISOString()}::timestamp`,
+        )
+        .groupBy(sql`DATE(${ordersTable.createdAt})`)
+        .orderBy(sql`DATE(${ordersTable.createdAt})`);
+
+      const trendMap = new Map(dailyTrendRows.map((r) => [String(r.date), r]));
+      const dailyTrend = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - (6 - i));
+        const key = d.toISOString().split('T')[0];
+        const row = trendMap.get(key);
+        return {
+          date: key,
+          orders: Number(row?.orders ?? 0),
+          revenue: parseFloat(String(row?.revenue ?? '0')) || 0,
+        };
+      });
 
       return {
-        ...stats,
-        todayOrders: todayOrders.length,
-        todayRevenue,
-        thisWeekOrders: weekOrders.length,
-        thisWeekRevenue: weekRevenue,
-        thisMonthOrders: monthOrders.length,
-        thisMonthRevenue: monthRevenue,
+        totalOrders: totalResult?.c ?? 0,
+        totalRevenue: parseFloat(String(revenueResult?.total ?? '0')) || 0,
+        pendingOrders: pendingResult?.c ?? 0,
+        confirmedOrders: confirmedResult?.c ?? 0,
+        preparingOrders: preparingResult?.c ?? 0,
+        readyOrders: readyResult?.c ?? 0,
+        pickedUpOrders: pickedUpResult?.c ?? 0,
+        deliveredOrders: deliveredResult?.c ?? 0,
+        cancelledOrders: cancelledResult?.c ?? 0,
+        todayOrders: todayResult?.c ?? 0,
+        todayRevenue: parseFloat(String(todayRevenueResult?.total ?? '0')) || 0,
+        thisWeekOrders: weekResult?.c ?? 0,
+        thisWeekRevenue:
+          parseFloat(String(weekRevenueResult?.total ?? '0')) || 0,
+        thisMonthOrders: monthResult?.c ?? 0,
+        thisMonthRevenue:
+          parseFloat(String(monthRevenueResult?.total ?? '0')) || 0,
         dailyTrend,
         revenueTrend: dailyTrend,
       };
@@ -1275,7 +1551,10 @@ export class OrdersService {
       // Batch fetch restaurants & customers to avoid N+1
       const restaurantIds = [...new Set(orders.map((o) => o.restaurantId))];
       const customerIds = [...new Set(orders.map((o) => o.customerId))];
-      const [restaurants, customers] = await Promise.all([
+      const addressIds = [
+        ...new Set(orders.map((o) => o.addressId).filter(Boolean)),
+      ];
+      const [restaurants, customers, addresses] = await Promise.all([
         restaurantIds.length
           ? this.db
               .select()
@@ -1288,13 +1567,33 @@ export class OrdersService {
               .from(usersTable)
               .where(inArray(usersTable.id, customerIds))
           : Promise.resolve([] as any[]),
+        addressIds.length
+          ? this.db
+              .select()
+              .from(addressesTable)
+              .where(inArray(addressesTable.id, addressIds))
+          : Promise.resolve([] as any[]),
       ]);
       const restaurantMap = new Map(restaurants.map((r: any) => [r.id, r]));
       const customerMap = new Map(customers.map((c: any) => [c.id, c]));
+      const addressMap = new Map(addresses.map((a: any) => [a.id, a]));
 
       const enriched = orders.map((order) => {
         const restaurant: any = restaurantMap.get(order.restaurantId);
         const customer: any = customerMap.get(order.customerId);
+        const address: any = addressMap.get(order.addressId);
+        const distance =
+          restaurant?.latitude &&
+          restaurant?.longitude &&
+          address?.latitude &&
+          address?.longitude
+            ? OrdersService.haversineKm(
+                Number(restaurant.latitude),
+                Number(restaurant.longitude),
+                Number(address.latitude),
+                Number(address.longitude),
+              )
+            : undefined;
         return {
           ...order,
           restaurantName: restaurant?.name,
@@ -1305,9 +1604,12 @@ export class OrdersService {
             ? `${customer.firstName} ${customer.lastName}`
             : 'Unknown',
           customerPhone: customer?.phone,
+          deliveryLng: address?.longitude,
+          deliveryLat: address?.latitude,
           deliveryAddress:
             (order as any).deliveryAddressSnapshot ||
-            this.buildFullAddress(undefined),
+            this.buildFullAddress(address),
+          distance,
         };
       });
 
@@ -1358,8 +1660,11 @@ export class OrdersService {
   private async enrichOrdersBatch(orders: any[]): Promise<any[]> {
     const customerIds = [...new Set(orders.map((o) => o.customerId))];
     const restaurantIds = [...new Set(orders.map((o) => o.restaurantId))];
+    const addressIds = [
+      ...new Set(orders.map((o) => o.addressId).filter(Boolean) as string[]),
+    ];
     const orderIds = orders.map((o) => o.id);
-    const [customers, restaurants, allItems] = await Promise.all([
+    const [customers, restaurants, allItems, addresses] = await Promise.all([
       customerIds.length
         ? this.db
             .select()
@@ -1376,9 +1681,16 @@ export class OrdersService {
         .select()
         .from(orderItemsTable)
         .where(inArray(orderItemsTable.orderId, orderIds)),
+      addressIds.length
+        ? this.db
+            .select()
+            .from(addressesTable)
+            .where(inArray(addressesTable.id, addressIds))
+        : Promise.resolve([] as any[]),
     ]);
     const customerMap = new Map(customers.map((c: any) => [c.id, c]));
     const restaurantMap = new Map(restaurants.map((r: any) => [r.id, r]));
+    const addressMap = new Map(addresses.map((a: any) => [a.id, a]));
     const menuIds = [...new Set(allItems.map((i) => i.menuItemId))];
     const menus = menuIds.length
       ? await this.db
@@ -1399,12 +1711,21 @@ export class OrdersService {
     return orders.map((o) => {
       const c: any = customerMap.get(o.customerId);
       const r: any = restaurantMap.get(o.restaurantId);
+      const a: any = addressMap.get(o.addressId);
       return {
         ...o,
         customerName: c ? `${c.firstName} ${c.lastName}` : 'Unknown',
         customerPhone: c?.phone,
         restaurantName: r?.name,
         restaurantAddress: r?.address,
+        restaurantLat: r?.latitude,
+        restaurantLng: r?.longitude,
+        deliveryLat: a?.latitude,
+        deliveryLng: a?.longitude,
+        deliveryAddress:
+          (o.deliveryAddressSnapshot as string) ||
+          this.buildFullAddress(a) ||
+          '',
         items: itemsByOrder.get(o.id) || [],
       };
     });
@@ -1461,6 +1782,11 @@ export class OrdersService {
     const restaurant = await this.db.query.restaurantsTable.findFirst({
       where: eq(restaurantsTable.id, order.restaurantId),
     });
+    const address = order.addressId
+      ? await this.db.query.addressesTable.findFirst({
+          where: eq(addressesTable.id, order.addressId),
+        })
+      : null;
     const items = await this.db
       .select()
       .from(orderItemsTable)
@@ -1486,6 +1812,14 @@ export class OrdersService {
       customerPhone: customer?.phone,
       restaurantName: restaurant?.name,
       restaurantAddress: restaurant?.address,
+      restaurantLat: restaurant?.latitude,
+      restaurantLng: restaurant?.longitude,
+      deliveryLat: address?.latitude,
+      deliveryLng: address?.longitude,
+      deliveryAddress:
+        (order.deliveryAddressSnapshot as string) ||
+        this.buildFullAddress(address ?? undefined) ||
+        '',
       items: itemsWithNames,
     };
   }

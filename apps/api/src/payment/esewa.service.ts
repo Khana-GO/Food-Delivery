@@ -4,9 +4,10 @@ import * as crypto from 'crypto';
 import axios from 'axios';
 
 export interface EsewaPaymentData {
-  orderId: string;
+  orderId?: string; // order id IF it already exists (legacy flow); null for pre-payment flow
   amount: number; // total_amount in NPR, e.g. 650
   productName?: string; // not used in v2 signature but kept for logs
+  transactionUuid?: string; // unique transaction id (defaults to orderId)
 }
 
 export interface EsewaPaymentResponse {
@@ -15,6 +16,8 @@ export interface EsewaPaymentResponse {
   // legacy compat
   url: string;
   params: Record<string, string>;
+  // unique transaction uuid used for this payment session (orderId or generated)
+  transactionUuid: string;
   // app routes the WebView should navigate to after verification
   successRoute: { pathname: string; params: Record<string, string | number> };
   failureRoute: { pathname: string; params: Record<string, string | number> };
@@ -59,7 +62,13 @@ export class EsewaService {
       base ||
       (isTest ? 'https://rc-epay.esewa.com.np' : 'https://epay.esewa.com.np');
     this.FORM_URL = `${base.replace(/\/$/, '')}/api/epay/main/v2/form`;
-    this.STATUS_URL = `${base.replace(/\/$/, '')}/api/epay/transaction/status/`;
+    // Status check uses a DIFFERENT host than the form endpoint per eSewa docs:
+    // Form:   https://rc-epay.esewa.com.np/api/epay/main/v2/form
+    // Status: https://rc.esewa.com.np/api/epay/transaction/status/
+    const statusBase = isTest
+      ? 'https://rc.esewa.com.np'
+      : 'https://esewa.com.np';
+    this.STATUS_URL = `${statusBase}/api/epay/transaction/status/`;
     // Frontend callback URLs. In dev the app runs in Expo Go on a real phone,
     // where `localhost` points to the PHONE, not the dev machine – so prefer the
     // LAN IP (FRONTEND_URL_IP) that the phone can actually reach. The mobile
@@ -86,24 +95,31 @@ export class EsewaService {
     data: EsewaPaymentData,
   ): Promise<EsewaPaymentResponse> {
     try {
-      const { orderId, amount } = data;
-      if (!orderId || !amount || amount <= 0)
+      const { orderId, amount, productName, transactionUuid } = data;
+      if (!amount || amount <= 0)
         throw new BadRequestException('Invalid orderId or amount');
 
-      // eSewa v2 expects total_amount with 2 decimals; keep consistent with verifyByStatus formatting.
+      // eSewa v2: total_amount = amount + tax_amount + product_service_charge + product_delivery_charge
+      // `amount` = product/service amount only (subtotal)
+      // `product_delivery_charge` = delivery fee
+      // We keep tax and service charge at 0 since we don't use them.
       const totalAmount = Number(amount).toFixed(2);
-      const transactionUuid = orderId; // must be unique per transaction; we use orderId
+      // transaction_uuid must be unique per transaction. In the pre-payment
+      // flow (order NOT yet created) callers pass their own UUID; otherwise we
+      // default to the order id.
+      const txUuid = transactionUuid || orderId;
+      if (!txUuid) throw new BadRequestException('Missing transactionUuid');
       const productCode = this.MERCHANT_ID;
       const signedFieldNames = 'total_amount,transaction_uuid,product_code';
 
-      const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
+      const message = `total_amount=${totalAmount},transaction_uuid=${txUuid},product_code=${productCode}`;
       const signature = this.sign(message);
 
       const fields: Record<string, string> = {
         amount: totalAmount,
         tax_amount: '0',
         total_amount: totalAmount,
-        transaction_uuid: transactionUuid,
+        transaction_uuid: txUuid,
         product_code: productCode,
         product_service_charge: '0',
         product_delivery_charge: '0',
@@ -114,7 +130,7 @@ export class EsewaService {
       };
 
       this.logger.log(
-        `eSewa v2 initialized order=${orderId} amount=${totalAmount} product=${productCode} success=${this.SUCCESS_URL}`,
+        `eSewa v2 initialized order=${orderId || txUuid} amount=${totalAmount} product=${productCode} success=${this.SUCCESS_URL}`,
       );
 
       // Return the app routes the mobile WebView should navigate to after
@@ -125,12 +141,18 @@ export class EsewaService {
         fields,
         url: this.FORM_URL,
         params: fields,
-        successRoute: {
-          pathname: '/(customer)/order-confirmation',
-          params: { id: orderId },
-        },
+        transactionUuid: txUuid,
+        successRoute: orderId
+          ? {
+              pathname: '/(customer)/order-confirmation',
+              params: { id: orderId },
+            }
+          : {
+              pathname: '/(customer)/checkout/success',
+              params: {},
+            },
         failureRoute: {
-          pathname: '/(customer)/cart',
+          pathname: '/(customer)/checkout/failure',
           params: {},
         },
       };

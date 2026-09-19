@@ -1,0 +1,61 @@
+# ============================================================================
+# Build context is the MONOREPO ROOT (docker-compose uses context: ".",
+# dockerfile: apps/api/Dockerfile). This file lives next to the Dockerfile
+# and its patterns are evaluated against the repo root.
+# ============================================================================
+
+# Node / package manager
+node_modules
+**/node_modules
+npm-debug.log
+pnpm-debug.log
+yarn-error.log
+.npmrc
+
+# pnpm store (huge local cache — NEVER send to the daemon)
+.pnpm-store
+
+# Build artifacts
+dist
+build
+.next
+.expo
+**/dist
+**/build
+*.tsbuildinfo
+*.tsbuildinfo.*
+
+# The mobile app is NOT part of the API image
+apps/mobile
+
+# Environment files (NEVER copy .env into an image)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Git
+.git
+.gitignore
+
+# IDE / editors
+.vscode
+.idea
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Test
+coverage
+.nyc_output
+
+# Docker files (avoid sending the compose file / this file itself)
+docker-compose*.yml
+apps/api/docker-compose*.yml
+apps/api/.dockerignore

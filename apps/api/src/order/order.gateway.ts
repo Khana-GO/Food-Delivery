@@ -84,8 +84,9 @@ export class OrderGateway
 
   async handleConnection(client: Socket) {
     try {
-      if (!client.data.user) await this.authenticateSocket(client);
+      // Already authenticated via server.use() middleware
       const user = client.data.user;
+      if (!user) throw new UnauthorizedException('Not authenticated');
       if (!this.userSockets.has(user.sub))
         this.userSockets.set(user.sub, new Set());
       this.userSockets.get(user.sub)?.add(client.id);
@@ -184,7 +185,6 @@ export class OrderGateway
   // ─── EMIT NEW AVAILABLE ORDER TO ALL DRIVERS ───
   emitNewAvailableOrder(order: any) {
     this.server.to('drivers:available').emit('new-available-order', order);
-    this.server.to('drivers:available').emit('order-available', order);
     this.logger.log(
       `Broadcast new available order ${order.id} to drivers:available`,
     );

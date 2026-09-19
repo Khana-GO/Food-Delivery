@@ -28,7 +28,10 @@ export const DeliveryCard = ({
   const paymentMethod = (order as any).paymentMethod || 'OFFLINE';
   const paymentStatus = (order as any).paymentStatus || 'PENDING';
   const deliveryAddress = (order as any).deliveryAddress || '';
-  const totalAmount = (order as any).totalAmount ?? (order as any).total ?? 0;
+  const totalAmount = Number((order as any).totalAmount ?? (order as any).total ?? 0);
+  const deliveryFee = Number((order as any).deliveryFee ?? 50);
+  const subtotal = Math.max(0, totalAmount - deliveryFee);
+  const distance = (order as any).distance as number | undefined;
 
   return (
     <View
@@ -114,22 +117,55 @@ export const DeliveryCard = ({
         ) : null}
       </View>
 
+      {/* Trip summary — restaurant → delivery */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.backgroundAlt, borderRadius: Radius.lg, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 10, borderWidth: 1, borderColor: Colors.borderLight }}>
+        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 9, fontWeight: '800', color: Colors.primary }}>A</Text>
+        </View>
+        <View style={{ flex: 1, marginHorizontal: 8 }}>
+          <View style={{ height: 2, backgroundColor: Colors.borderLight, borderRadius: 1 }} />
+        </View>
+        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
+          <Text style={{ fontSize: 9, fontWeight: '800', color: '#2563EB' }}>B</Text>
+        </View>
+        <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '800', color: Colors.textDark }}>
+          {formatDistance(distance)}
+        </Text>
+        <Text style={{ fontSize: 11, color: Colors.textTertiary, marginLeft: 4 }}>trip</Text>
+      </View>
+
+      {/* Cost breakdown */}
+      <View style={{ backgroundColor: Colors.backgroundAlt, borderRadius: Radius.lg, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: Colors.borderLight }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Item total</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Rs. {subtotal}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Delivery fee</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Rs. {deliveryFee}</Text>
+        </View>
+        <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderLight, marginVertical: 6 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>Customer pays</Text>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.primary }}>Rs. {totalAmount}</Text>
+        </View>
+      </View>
+
       {/* Payment */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: paymentMethod === 'ONLINE' ? '#FEF3C7' : Colors.backgroundAlt, borderRadius: Radius.lg, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: paymentMethod === 'ONLINE' ? '#FDE68A' : Colors.borderLight }}>
         <Feather name="credit-card" size={14} color={paymentMethod === 'ONLINE' ? '#D97706' : Colors.textSecondary} />
         <Text style={{ fontSize: 12, fontWeight: '800', color: paymentMethod === 'ONLINE' ? '#92400E' : Colors.textSecondary }}>
-          {paymentMethod === 'ONLINE' ? 'Online Paid' : 'Cash on Delivery'}
+          {paymentMethod === 'ONLINE' ? `Online Paid • ${paymentStatus}` : 'Cash on Delivery'}
         </Text>
-        <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={{ fontSize: 11, color: Colors.textTertiary, fontWeight: '600' }}>{paymentStatus}</Text>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.primary }}>Rs. {totalAmount}</Text>
+        <View style={{ marginLeft: 'auto' }}>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.primary }}>Rs. {totalAmount}</Text>
         </View>
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textTertiary }}>Fee</Text>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.primary }}>Rs. {order.deliveryFee || 50}</Text>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textTertiary }}>Earnings</Text>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.success }}>Rs. {order.deliveryFee || 50}</Text>
         </View>
 
         {showAccept && onAccept && (

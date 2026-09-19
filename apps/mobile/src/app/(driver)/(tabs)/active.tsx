@@ -34,16 +34,52 @@ export default function ActiveDeliveryScreen() {
     if (trackingData) return trackingData;
     if (!order) return null;
     const o: any = order;
+    const haversineKm = (a: number, b: number, c: number, d: number) => {
+      const toRad = (x: number) => (x * Math.PI) / 180;
+      const dLat = toRad(c - a);
+      const dLng = toRad(d - b);
+      const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(a)) * Math.cos(toRad(c)) * Math.sin(dLng / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    };
     // Try to extract coords if backend sent them directly on order
     const rLat = o.restaurantLatitude ?? o.restaurantLat ?? o.restaurant?.latitude;
     const rLng = o.restaurantLongitude ?? o.restaurantLng ?? o.restaurant?.longitude;
     const dLat = o.deliveryLatitude ?? o.deliveryLat ?? o.addressLatitude ?? o.customerLatitude;
     const dLng = o.deliveryLongitude ?? o.deliveryLng ?? o.addressLongitude ?? o.customerLongitude;
+    // Straight-line fallback geometry so a route is always visible even offline.
+    let fallbackGeometry: number[][] | null = null;
+    let fallbackKm = 0;
+    const dLoc = location;
+    if (rLat && rLng && dLat && dLng) {
+      if (dLoc && order.orderStatus === 'PICKED_UP') {
+        fallbackGeometry = [
+          [dLoc.coords.latitude, dLoc.coords.longitude],
+          [Number(dLat), Number(dLng)],
+        ];
+        fallbackKm = haversineKm(dLoc.coords.latitude, dLoc.coords.longitude, Number(dLat), Number(dLng));
+      } else if (dLoc) {
+        fallbackGeometry = [
+          [Number(rLat), Number(rLng)],
+          [dLoc.coords.latitude, dLoc.coords.longitude],
+        ];
+        fallbackKm = haversineKm(Number(rLat), Number(rLng), dLoc.coords.latitude, dLoc.coords.longitude);
+      } else {
+        fallbackGeometry = [
+          [Number(rLat), Number(rLng)],
+          [Number(dLat), Number(dLng)],
+        ];
+        fallbackKm = haversineKm(Number(rLat), Number(rLng), Number(dLat), Number(dLng));
+      }
+    }
     return {
       orderId: order.id,
       driver: location ? { latitude: location.coords.latitude, longitude: location.coords.longitude, lastUpdatedAt: new Date().toISOString(), isOnline: true, speed: (location.coords as any)?.speed, heading: (location.coords as any)?.heading } : null,
-      route: null,
-      restaurant: rLat && rLng ? { lat: Number(rLat), lng: Number(rLng) } : null,
+      route: fallbackGeometry && fallbackGeometry.length > 1
+        ? { distance: Math.round(fallbackKm * 1000), duration: Math.round((fallbackKm / 30) * 3600), geometry: fallbackGeometry }
+        : null,
+      restaurant: rLat && rLng ? { lat: Number(rLat), lng: Number(rLng), address: order.restaurantAddress || '' } : null,
       delivery: dLat && dLng ? { lat: Number(dLat), lng: Number(dLng), address: order.deliveryAddress } : { lat: 27.7172, lng: 85.324, address: order.deliveryAddress },
       orderStatus: order.orderStatus,
       estimatedDistance: null,
@@ -55,6 +91,7 @@ export default function ActiveDeliveryScreen() {
     } as any;
   })();
   const mapReadyData = mapData as any;
+  const hasCoords = !!(order as any).restaurantLat && !!(order as any).restaurantLng;
 
   if (isLoading) {
     return (
@@ -130,7 +167,7 @@ export default function ActiveDeliveryScreen() {
               </View>
             ) : null}
           </View>
-          <OrderTrackingMap key={`${order.id}-${trackingData ? 'tracked' : 'fallback'}-${location ? 'live' : 'static'}`} data={mapReadyData} isLoading={false} />
+          <OrderTrackingMap key={`${order.id}-${trackingData ? 'tracked' : 'fallback'}`} data={mapReadyData} isLoading={false} />
         </View>
 
         {/* ── Detailed Customer Location ── */}

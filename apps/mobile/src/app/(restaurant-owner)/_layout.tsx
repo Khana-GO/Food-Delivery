@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
+import { NoHoverTabButton, TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/theme';
@@ -27,7 +27,8 @@ export default function RestaurantLayout() {
         tabBarStyle,
         tabBarItemStyle,
         tabBarHideOnKeyboard: true,
-        sceneStyle: { backgroundColor: '#FAFAFB' },
+        tabBarButton: (props) => <NoHoverTabButton {...props} />,
+        sceneStyle: { backgroundColor: 'transparent' },
         animation: 'fade',
       }}
     >

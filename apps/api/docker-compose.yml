@@ -1,0 +1,131 @@
+# ============================================================================
+# KhanaGo API — local development stack
+# PostgreSQL + Redis + NestJS API
+#
+# Usage:
+#   cp .env .env.docker   # then fill in secrets (JWT, Cloudinary, eSewa, google...)
+#   docker compose --env-file .env.docker up --build
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database (local development)
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: khanago-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: khanago
+      POSTGRES_PASSWORD: khanago_secret
+      POSTGRES_DB: khanago_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khanago"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - khanago-net
+
+  # ==========================================================================
+  # Redis (for caching + rate limiting)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: khanago-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - khanago-net
+
+  # ==========================================================================
+  # NestJS API
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: khanago-api:latest
+    container_name: khanago-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Local DB — swap DATABASE_URL for your Neon URL to run against Neon
+      DATABASE_URL: postgresql://khanago:khanago_secret@postgres:5432/khanago_db
+      # Redis (must be enabled or the app falls back to in-memory cache)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      REDIS_ENABLED: "true"
+      # CORS / eSewa callbacks
+      FRONTEND_URL_WEB: ${FRONTEND_URL_WEB:-http://localhost:8081}
+      FRONTEND_URL_IP: ${FRONTEND_URL_IP:-http://localhost:8081}
+      APP_URL: ${APP_URL:-http://localhost:8081}
+      # JWT / auth
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-15d}
+      SALT_ROUNDS: ${SALT_ROUNDS:-10}
+      # Mail (Gmail SMTP)
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Cloudinary — secrets come from your .env file, never committed
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:?required}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:?required}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:?required}
+      # eSewa
+      ESEWA_MERCHANT_ID: ${ESEWA_MERCHANT_ID:-EPAYTEST}
+      ESEWA_SECRET_KEY: ${ESEWA_SECRET_KEY:-8gBm/:&EnhH.1/q}
+      ESEWA_BASE_URL: ${ESEWA_BASE_URL:-https://rc-epay.esewa.com.np}
+      # AI agent (OpenRouter) — optional, agent has a rule-based fallback
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-minimax/minimax-m3}
+      OPENROUTER_SITE_URL: ${OPENROUTER_SITE_URL:-}
+      AI_TEMPERATURE: ${AI_TEMPERATURE:-0.4}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-500}
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - khanago-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# ==========================================================================
+# Named volumes (persist data across container restarts)
+# ==========================================================================
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  khanago-net:
+    driver: bridge

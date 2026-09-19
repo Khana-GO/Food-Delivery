@@ -4,7 +4,6 @@ import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { invoicesTable } from '../db/schema/invoice.schema';
 import { ordersTable } from '../db/schema/order.schema';
-import { orderItemsTable } from '../db/schema/order.items.schema';
 import { usersTable } from '../db/schema/user.schema';
 import { restaurantsTable } from '../db/schema/restaurant.schema';
 import { eq, and, desc, count, gte, lte, sql, inArray } from 'drizzle-orm';
@@ -37,21 +36,6 @@ export class InvoicesService {
     });
     if (!order) throw new NotFoundException('Order not found');
 
-    const items = await this.db
-      .select()
-      .from(orderItemsTable)
-      .where(eq(orderItemsTable.orderId, orderId));
-
-    const subtotal = items.reduce(
-      (sum, i) => sum + parseFloat(i.totalPrice),
-      0,
-    );
-    const deliveryFee = parseFloat(order.deliveryFee);
-    const discount = 0;
-    const taxRate = 0.13;
-    const tax = subtotal * taxRate;
-    const total = subtotal + deliveryFee + tax - discount;
-
     const now = new Date();
 
     // Retry on unique constraint violation (invoice number collision)
@@ -63,27 +47,7 @@ export class InvoicesService {
     ) {
       const invoiceNumber = this.generateInvoiceNumber();
       try {
-        const [created] = await this.db
-          .insert(invoicesTable)
-          .values({
-            orderId: order.id,
-            customerId: order.customerId,
-            restaurantId: order.restaurantId,
-            invoiceNumber,
-            subtotal: subtotal.toString(),
-            tax: tax.toString(),
-            deliveryFee: deliveryFee.toString(),
-            discount: discount.toString(),
-            total: total.toString(),
-            paymentMethod: order.paymentMethod,
-            paymentStatus: order.paymentStatus,
-            issuedAt: now,
-            paidAt: order.paymentStatus === 'PAID' ? now : null,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .returning();
-        invoice = created;
+        invoice = await this.insertInvoice(order, invoiceNumber, now);
         break;
       } catch (err: any) {
         const isUniqueViolation =
@@ -101,30 +65,6 @@ export class InvoicesService {
       }
     }
 
-    if (!invoice) {
-      this.logger.error(
-        `Failed to create invoice for order ${orderId} after ${InvoicesService.MAX_INVOICE_RETRIES} retries`,
-      );
-      return this.enrichInvoice({
-        id: '',
-        orderId: order.id,
-        customerId: order.customerId,
-        restaurantId: order.restaurantId,
-        invoiceNumber: '',
-        subtotal: subtotal.toString(),
-        tax: tax.toString(),
-        deliveryFee: deliveryFee.toString(),
-        discount: discount.toString(),
-        total: total.toString(),
-        paymentMethod: order.paymentMethod,
-        paymentStatus: order.paymentStatus,
-        issuedAt: now,
-        paidAt: order.paymentStatus === 'PAID' ? now : null,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
     this.logger.log(
       `Invoice created: ${invoice.invoiceNumber} for order ${orderId}`,
     );
@@ -132,6 +72,40 @@ export class InvoicesService {
     await this.invalidateInvoiceCaches();
 
     return this.enrichInvoice(invoice);
+  }
+
+  private async insertInvoice(
+    order: typeof ordersTable.$inferSelect,
+    invoiceNumber: string,
+    now: Date,
+  ) {
+    // Derive all amounts from the order snapshot — no need to re-query items.
+    const subtotal = parseFloat(order.subtotal);
+    const deliveryFee = parseFloat(order.deliveryFee);
+    const tax = subtotal * 0.13;
+    const total = subtotal + deliveryFee + tax;
+
+    const [created] = await this.db
+      .insert(invoicesTable)
+      .values({
+        orderId: order.id,
+        customerId: order.customerId,
+        restaurantId: order.restaurantId,
+        invoiceNumber,
+        subtotal: subtotal.toFixed(2),
+        tax: tax.toFixed(2),
+        deliveryFee: deliveryFee.toFixed(2),
+        discount: '0.00',
+        total: total.toFixed(2),
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        issuedAt: now,
+        paidAt: order.paymentStatus === 'PAID' ? now : null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return created;
   }
 
   private async enrichInvoice(invoice: any): Promise<InvoiceResponseDto> {

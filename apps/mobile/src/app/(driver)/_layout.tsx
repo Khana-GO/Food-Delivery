@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, ActivityIndicator } from 'react-native';
-import { TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
+import { NoHoverTabButton, TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/theme';
@@ -77,8 +77,10 @@ export default function DriverLayout() {
 
         tabBarHideOnKeyboard: true,
 
+        tabBarButton: (props) => <NoHoverTabButton {...props} />,
+
         sceneStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: 'transparent',
         },
 
         animation: 'fade',
@@ -120,7 +122,7 @@ export default function DriverLayout() {
                 style={{
                   fontSize: iconSize - 2,
                   fontWeight: '800',
-                  color: focused ? '#FFFFFF' : '#94A3B8',
+                  color: focused ? Colors.primary : '#94A3B8',
                 }}
               >
                 ₹

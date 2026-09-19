@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import PremiumCard from '@/components/ui/PremiumCard';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import AnimatedPage from '@/components/ui/AnimatedPage';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { goBack } from '@/lib/navigation';
 
@@ -15,13 +16,9 @@ export default function CartScreen() {
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart, restaurantId } = useCartStore();
   const deliveryFee = 50;
   const grandTotal = totalPrice + deliveryFee;
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  const handleClear = () => {
-    Alert.alert('Clear cart?', 'Remove all items from your cart?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: () => clearCart() },
-    ]);
-  };
+  const handleClear = () => setConfirmClear(true);
 
   if (items.length === 0) {
     return (
@@ -146,6 +143,17 @@ export default function CartScreen() {
         </View>
         <Button label="Checkout" onPress={() => router.push('/(customer)/checkout' as any)} style={{ paddingHorizontal: 28, borderRadius: Radius.full }} />
       </View>
+
+      <ConfirmDialog
+        visible={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() => { setConfirmClear(false); clearCart(); }}
+        title="Clear cart?"
+        message="Remove all items from your cart?"
+        confirmLabel="Clear"
+        icon="trash-2"
+        tone="danger"
+      />
     </View>
   );
 }

@@ -17,16 +17,22 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
 
   // Generate initial HTML once - uses data at mount for centering
   const initialHTML = useMemo(() => {
+    const isValid = (v: any) => typeof v === 'number' && isFinite(v) && v !== 0;
+    const restLat = isValid(data?.restaurant?.lat) ? data!.restaurant!.lat : null;
+    const restLng = isValid(data?.restaurant?.lng) ? data!.restaurant!.lng : null;
+    const delLat = isValid(data?.delivery?.lat) ? data!.delivery!.lat : null;
+    const delLng = isValid(data?.delivery?.lng) ? data!.delivery!.lng : null;
+
     const center: [number, number] =
-      data?.restaurant?.lat && data?.restaurant?.lng
-        ? [data.restaurant.lat, data.restaurant.lng]
-        : data?.delivery?.lat && data?.delivery?.lng
-          ? [data.delivery.lat, data.delivery.lng]
+      restLat && restLng
+        ? [restLat, restLng]
+        : delLat && delLng
+          ? [delLat, delLng]
           : [27.7172, 85.324]; // Kathmandu
 
     // Only initial markers: restaurant + delivery; driver added dynamically
-    const restaurant = data?.restaurant;
-    const delivery = data?.delivery;
+    const restaurant = restLat && restLng ? { lat: restLat, lng: restLng, name: data?.restaurant?.name } : null;
+    const delivery = delLat && delLng ? { lat: delLat, lng: delLng, address: data?.delivery?.address } : null;
 
     return `
 <!DOCTYPE html>
@@ -38,9 +44,12 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
 <style>
   body { margin:0; padding:0; }
   #map { width:100vw; height:100vh; }
-  .marker-icon { background:transparent; border:none; font-size:32px; text-align:center; line-height:40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
-  .marker-icon-driver { font-size:42px; animation: pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { transform:scale(1);} 50% { transform:scale(1.15);} }
+  .marker-icon { background:transparent; border:none; font-size:32px; text-align:center; line-height:40px; }
+  .marker-driver { font-size:40px; position:relative; display:block; width:40px; height:40px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35)); }
+  .marker-driver-ring { position:absolute; inset:-6px; border-radius:9999px; border:2.5px solid #B5122A; background:rgba(181,18,42,0.15); animation: ping 1.6s cubic-bezier(0,0,0.2,1) infinite; }
+  @keyframes ping { 0% { transform:scale(0.8); opacity:0.9;} 80%,100% { transform:scale(1.4); opacity:0;} }
+  .marker-driver-label { position:absolute; top:-16px; left:50%; transform:translateX(-50%); background:#B5122A; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .marker-icon { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
   .leaflet-popup-content { font-size:13px; font-weight:600; }
 </style>
 </head>
@@ -48,7 +57,14 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
 <div id="map"></div>
 <script>
   var map = L.map('map', { center:[${center[0]}, ${center[1]}], zoom:13, zoomControl:false });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OSM', maxZoom:19 }).addTo(map);
+  var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OSM', maxZoom:19 }).addTo(map);
+  // Fallback tiles if OSM is unreachable (common in some devices/regions)
+  var cartoAdded = false;
+  tileLayer.on('tileerror', function(){
+    if(cartoAdded) return;
+    cartoAdded = true;
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', { attribution:'&copy; CARTO &copy; OSM', maxZoom:19 }).addTo(map);
+  });
   window.map = map;
 
   var restaurantMarker = null;
@@ -56,15 +72,19 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
   var driverMarker = null;
   var routeLine = null;
   var historyLine = null;
+  var fitOnDriverArrival = true;
 
   // Helpers
-  function makeIcon(html, isDriver){
-    return L.divIcon({ className: isDriver ? 'marker-icon marker-icon-driver' : 'marker-icon', html: html, iconSize:[40,40], iconAnchor:[20,40] });
+  function pinIcon(html){
+    return L.divIcon({ className: 'marker-icon', html: html, iconSize:[40,40], iconAnchor:[20,40] });
+  }
+  function driverIcon(){
+    return L.divIcon({ className: 'marker-icon', html:'<span class="marker-driver"> <span class="marker-driver-ring"></span> <span class="marker-driver-label">You</span> 🏍️</span>', iconSize:[40,48], iconAnchor:[20,44] });
   }
 
   // Initial restaurant + delivery
-  ${restaurant ? `restaurantMarker = L.marker([${restaurant.lat}, ${restaurant.lng}], {icon: makeIcon('📍', false)}).addTo(map).bindPopup('${restaurant.name || 'Restaurant'}');` : ''}
-  ${delivery ? `deliveryMarker = L.marker([${delivery.lat}, ${delivery.lng}], {icon: makeIcon('🏠', false)}).addTo(map).bindPopup('Delivery: ${(delivery.address || 'Customer').replace(/'/g, "\\'")}');` : ''}
+  ${restaurant ? `restaurantMarker = L.marker([${restaurant.lat}, ${restaurant.lng}], {icon: pinIcon('📍')}).addTo(map).bindPopup('${String(restaurant.name || 'Restaurant').replace(/'/g, "\\'")}');` : ''}
+  ${delivery ? `deliveryMarker = L.marker([${delivery.lat}, ${delivery.lng}], {icon: pinIcon('🏠')}).addTo(map).bindPopup('Delivery: ${String(delivery.address || 'Customer').replace(/'/g, "\\'")}');` : ''}
 
   // Fit bounds initially
   (function(){
@@ -77,24 +97,27 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
   window.updateDriverLocation = function(lat,lng, heading, speed, isOnline){
     var pos = [lat,lng];
     if(!driverMarker){
-      driverMarker = L.marker(pos, {icon: makeIcon('🚗', true)}).addTo(map).bindPopup('Driver');
+      driverMarker = L.marker(pos, {icon: driverIcon()}).addTo(map).bindPopup('Driver (You)');
     } else {
       driverMarker.setLatLng(pos);
     }
-    if(heading !== null && heading !== undefined){
-      // rotate visual if needed - use CSS transform on icon
-      var el = driverMarker.getElement();
-      if(el){ el.style.transform = el.style.transform + ' rotate(' + heading + 'deg)'; }
+    // Rotate only the inner emoji so the base transform (Leaflet positioning) stays intact
+    if(heading !== null && heading !== undefined && driverMarker.getElement()){
+      var emoji = driverMarker.getElement().querySelector('.marker-driver');
+      if(emoji){ emoji.style.transform = 'rotate(' + heading + 'deg)'; }
     }
-    // auto follow driver if map is near driver (within ~0.02 deg)
-    // keep manual pan respected - we just ensure driver visible if far
+    // First time driver appears: zoom out so route + destination are visible
+    if(fitOnDriverArrival){
+      fitOnDriverArrival = false;
+      window.fitAll();
+    }
   };
 
   window.updateRoute = function(geometry){
     if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
     if(geometry && geometry.length>1){
       var latlngs = geometry.map(function(p){ return [p[0], p[1]]; });
-      routeLine = L.polyline(latlngs, {color:'#E23744', weight:5, opacity:0.9, lineJoin:'round'}).addTo(map);
+      routeLine = L.polyline(latlngs, {color:'#B5122A', weight:5, opacity:0.9, lineJoin:'round'}).addTo(map);
     }
   };
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAdminRestaurant } from '@/hooks/admin/restaurant/useAdminRestaurant';
@@ -10,6 +10,7 @@ import { useRestoreRestaurant } from '@/hooks/admin/restaurant/useRestoreRestaur
 import { useHardDeleteRestaurant } from '@/hooks/admin/restaurant/useHardDeleteRestaurant';
 import { useToggleOpen } from '@/hooks/admin/restaurant/useToggleOpen';
 import { RestaurantDetails } from '@/components/admin/restaurants/RestaurantDetails';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function RestaurantDetailsScreenLegacy() {
@@ -24,24 +25,11 @@ export default function RestaurantDetailsScreenLegacy() {
 
   const isPending = isVerifying || isTogglingActive || isTogglingOpen || isDeleting || isRestoring || isHardDeleting;
 
-  const handleDelete = () => {
-    Alert.alert('Delete Restaurant', 'Soft delete this restaurant?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteRestaurant(id as string) },
-    ]);
-  };
-  const handleRestore = () => {
-    Alert.alert('Restore Restaurant', 'Restore this restaurant?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Restore', onPress: () => restoreRestaurant(id as string) },
-    ]);
-  };
-  const handleHardDelete = () => {
-    Alert.alert('Permanently Delete', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => hardDelete(id as string) },
-    ]);
-  };
+  const [confirm, setConfirm] = useState<'delete' | 'restore' | 'permanent' | null>(null);
+
+  const handleDelete = () => setConfirm('delete');
+  const handleRestore = () => setConfirm('restore');
+  const handleHardDelete = () => setConfirm('permanent');
 
   if (isLoading) {
     return (
@@ -113,6 +101,40 @@ export default function RestaurantDetailsScreenLegacy() {
           />
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirm === 'delete'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); deleteRestaurant(id as string); }}
+        title="Delete Restaurant"
+        message="Soft delete this restaurant?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+      />
+      <ConfirmDialog
+        visible={confirm === 'restore'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); restoreRestaurant(id as string); }}
+        title="Restore Restaurant"
+        message="Restore this restaurant?"
+        confirmLabel="Restore"
+        icon="rotate-ccw"
+        tone="info"
+        busy={isRestoring}
+      />
+      <ConfirmDialog
+        visible={confirm === 'permanent'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); hardDelete(id as string); }}
+        title="Permanently Delete"
+        message="This cannot be undone."
+        confirmLabel="Delete Forever"
+        icon="alert-octagon"
+        tone="danger"
+        busy={isHardDeleting}
+      />
     </View>
   );
 }

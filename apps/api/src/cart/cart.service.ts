@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, and, sql, desc, isNull } from 'drizzle-orm';
+import { eq, and, sql, desc, isNull, inArray } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { cartsTable, type NewCart } from '../db/schema/cart.schema';
@@ -258,11 +258,6 @@ export class CartService {
     if (dto.quantity < 0 || dto.quantity > 10) {
       throw new BadRequestException('Quantity must be between 0 and 10');
     }
-    if (dto.quantity > 0 && dto.quantity < 1) {
-      throw new BadRequestException(
-        'Quantity must be at least 1 or 0 to remove',
-      );
-    }
     const cart = await this.db.query.cartsTable.findFirst({
       where: eq(cartsTable.userId, userId),
     });
@@ -377,25 +372,38 @@ export class CartService {
     // Create new cart
     const cartId = await this.getOrCreateCart(userId, restaurantId);
 
-    // Insert each item with validation
-    for (const item of guestItems) {
-      if (!item.quantity || item.quantity < 1 || item.quantity > 10) continue;
-      const menuItem = await this.db.query.menuItemsTable.findFirst({
-        where: eq(menuItemsTable.id, item.menuItemId),
-      });
-      if (!menuItem || !menuItem.isAvailable) continue;
-      if (menuItem.restaurantId !== restaurantId) continue;
+    // Validate all guest items in ONE batched query instead of N queries
+    const validItems = guestItems.filter(
+      (item) => item.quantity && item.quantity >= 1 && item.quantity <= 10,
+    );
+    if (validItems.length) {
+      const ids = [...new Set(validItems.map((i) => i.menuItemId))];
+      const menuItems = await this.db
+        .select()
+        .from(menuItemsTable)
+        .where(inArray(menuItemsTable.id, ids));
+      const menuMap = new Map(menuItems.map((m) => [m.id, m]));
 
-      const newItem: NewCartItem = {
-        cartId,
-        menuItemId: item.menuItemId,
-        quantity: item.quantity,
-        unitPrice: menuItem.price,
-        totalPrice: (item.quantity * parseFloat(menuItem.price)).toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      await this.db.insert(schema.cartItemsTable).values(newItem);
+      const rows = validItems
+        .map((item) => {
+          const menuItem = menuMap.get(item.menuItemId);
+          if (!menuItem || !menuItem.isAvailable) return null;
+          if (menuItem.restaurantId !== restaurantId) return null;
+          return {
+            cartId,
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            unitPrice: menuItem.price,
+            totalPrice: (item.quantity * parseFloat(menuItem.price)).toString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        })
+        .filter((row) => row !== null) as NewCartItem[];
+
+      if (rows.length) {
+        await this.db.insert(schema.cartItemsTable).values(rows);
+      }
     }
 
     return this.getCart(userId);

@@ -6,7 +6,6 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -20,10 +19,13 @@ import { useNotificationStore } from '@/stores/owner/notificationStore';
 import { notificationService } from '@/services/owner/notification/notification.service';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { DriverNotificationItem } from '@/components/driver/DriverNotificationItem';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState(1);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
   const { data, isLoading, refetch, isFetching } = useNotifications({ page, limit: 20 });
   const { data: unreadData } = useUnreadCount();
   const { mutate: markAsRead } = useMarkAsRead();
@@ -45,31 +47,13 @@ export default function NotificationsScreen() {
   }, []);
 
   const handleDelete = useCallback((id: string) => {
-    Alert.alert('Remove notification?', 'This will permanently delete the notification.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteNotification(id) },
-    ]);
-  }, [deleteNotification]);
+    setConfirmDeleteId(id);
+  }, []);
 
   const handleClearAll = useCallback(() => {
     if (notifications.length === 0) return;
-    Alert.alert('Delete all notifications?', 'This will permanently delete all notifications.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete All',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await notificationService.deleteAll();
-            clearAll();
-            refetch();
-          } catch (e: any) {
-            Alert.alert('Error', e?.response?.data?.message || 'Failed to delete notifications');
-          }
-        },
-      },
-    ]);
-  }, [notifications.length, clearAll, refetch]);
+    setConfirmClearAll(true);
+  }, [notifications.length]);
 
   const handleMarkAll = useCallback(() => {
     if (unreadCount === 0) return;
@@ -243,6 +227,33 @@ export default function NotificationsScreen() {
           ) : null
         }
         showsVerticalScrollIndicator={false}
+      />
+
+      <ConfirmDialog
+        visible={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => { if (confirmDeleteId) deleteNotification(confirmDeleteId); setConfirmDeleteId(null); }}
+        title="Remove notification?"
+        message="This will permanently delete the notification."
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+      />
+
+      <ConfirmDialog
+        visible={confirmClearAll}
+        onClose={() => setConfirmClearAll(false)}
+        onConfirm={async () => {
+          setConfirmClearAll(false);
+          await notificationService.deleteAll();
+          clearAll();
+          refetch();
+        }}
+        title="Delete all notifications?"
+        message="This will permanently delete all notifications."
+        confirmLabel="Delete All"
+        icon="trash-2"
+        tone="danger"
       />
     </View>
   );

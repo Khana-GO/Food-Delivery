@@ -35,6 +35,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="checkout/success" options={{ presentation: 'modal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="checkout/failure" options={{ presentation: 'modal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="payment" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="payment/esewa-webview" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="order/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="order-tracking/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="addresses" options={{ animation: 'slide_from_right' }} />

@@ -148,16 +148,21 @@ const [promoError, setPromoError] = useState('');
       return;
     }
 
-    // ONLINE (eSewa) – create pending order first, then pay
+    // ONLINE (eSewa) – do NOT create order yet. Pass the full payload to the
+    // WebView which will create the order ONLY after payment is verified.
     setIsPlacingOnline(true);
     setProcessing(true);
     try {
-      const order = await orderService.create({ ...basePayload, paymentMethod: 'ONLINE' });
-      // Navigate to eSewa webview with orderId and amount from backend (authoritative)
-      const amount = (order as any).totalAmount ?? total;
-      router.push({ pathname: '/(customer)/payment/esewa-webview' as any, params: { orderId: order.id, amount: String(amount) } });
+      const amount = total;
+      router.push({
+        pathname: '/(customer)/payment/esewa-webview' as any,
+        params: {
+          payload: JSON.stringify(basePayload),
+          amount: String(amount),
+        },
+      });
     } catch (e: any) {
-      Alert.alert('Order Failed', getApiErrorMessage(e, 'Failed to place order'));
+      Alert.alert('Error', 'Failed to start eSewa payment');
     } finally {
       setIsPlacingOnline(false);
       setProcessing(false);
@@ -317,7 +322,7 @@ const [promoError, setPromoError] = useState('');
         {paymentMethod === 'ONLINE' && (
           <View className="flex-row gap-2 p-3 mt-3 border border-blue-100 bg-blue-50 rounded-xl">
             <Feather name="info" size={16} color="#2563EB" />
-            <Text className="flex-1 text-xs text-blue-800">You'll be redirected to eSewa to complete payment securely. Order will be created as pending and confirmed after payment.</Text>
+            <Text className="flex-1 text-xs text-blue-800">You'll be redirected to eSewa to complete payment. Your order will be created only after payment is successful.</Text>
           </View>
         )}
 

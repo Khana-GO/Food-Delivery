@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
+import { NoHoverTabButton, TabIcon, useTabBarConstants } from '@/components/bottom-tabs';
 
 export default function TabsLayout() {
   const { iconSize, labelSize, tabBarStyle, tabBarItemStyle } = useTabBarConstants();
@@ -13,8 +13,9 @@ export default function TabsLayout() {
         tabBarStyle,
         tabBarItemStyle,
         tabBarHideOnKeyboard: true,
+        tabBarButton: (props) => <NoHoverTabButton {...props} />,
         animation: 'fade',
-        sceneStyle: { backgroundColor: '#FAFAFB' },
+        sceneStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Tabs.Screen

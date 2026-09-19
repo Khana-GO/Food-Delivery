@@ -1,13 +1,10 @@
 import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 export default function CheckoutFailureScreen() {
-  const params = useLocalSearchParams<{ reason?: string; message?: string }>();
-  const reason = params.reason ?? params.message ?? 'Your payment could not be processed. Please try again.';
-
   const handleRetry = useCallback(() => {
     router.replace('/(customer)/checkout' as any);
   }, []);
@@ -28,13 +25,15 @@ export default function CheckoutFailureScreen() {
         </View>
 
         <Text className="text-2xl font-bold text-center" style={{ color: '#1F2937' }}>Payment Failed</Text>
-        <Text className="text-base text-gray-500 text-center mt-2 leading-6">{reason}</Text>
+        <Text className="text-base text-gray-500 text-center mt-2 leading-6">
+          Your payment could not be processed. No amount was deducted from your account.
+        </Text>
 
         <View className="bg-red-50 rounded-xl p-4 mt-6 border border-red-100 w-full">
           <View className="flex-row gap-2 items-start">
             <Feather name="alert-circle" size={18} color="#EF4444" />
             <Text className="text-sm flex-1 leading-5" style={{ color: '#991B1B' }}>
-              No amount was deducted. You can retry payment or choose a different method.
+              You can safely retry payment or choose cash on delivery instead. Your cart items are still saved.
             </Text>
           </View>
         </View>

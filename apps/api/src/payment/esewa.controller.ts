@@ -18,6 +18,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { EsewaInitDto } from './dto/esewa-init.dto';
 import { EsewaVerifyDto } from './dto/esewa-verify.dto';
+import { EsewaVerifyAndCreateDto } from './dto/esewa-verify-and-create.dto';
+import { CreateOrderDto, PaymentMethod } from '../order/dto/create-order.dto';
 import { CartService } from '../cart/cart.service';
 
 @ApiTags('Payment - eSewa v2')
@@ -34,21 +36,33 @@ export class EsewaController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async initialize(@CurrentUser() user: JwtPayload, @Body() dto: EsewaInitDto) {
-    // Load the order server-side: the amount charged is ALWAYS the order's
-    // authoritative total (never the client-supplied one) and only the
-    // customer who owns the order (or an admin) may pay for it.
-    const order = await this.ordersService.getOrderById(dto.orderId);
-    if (!order) throw new BadRequestException('Order not found');
-    if (user.role !== 'ADMIN' && order.customerId !== user.sub) {
-      throw new ForbiddenException('Not authorized for this order');
+    // Pre-payment flow: no orderId, just amount + transactionUuid.
+    // Legacy flow: orderId + amount (order already exists).
+    if (dto.orderId) {
+      // Legacy flow – load the order server-side for amount + ownership check
+      const order = await this.ordersService.getOrderById(dto.orderId);
+      if (!order) throw new BadRequestException('Order not found');
+      if (user.role !== 'ADMIN' && order.customerId !== user.sub) {
+        throw new ForbiddenException('Not authorized for this order');
+      }
+      if (order.paymentStatus === 'PAID') {
+        throw new BadRequestException('Order is already paid');
+      }
+      return this.esewaService.initializePayment({
+        orderId: order.id,
+        amount: Number(order.totalAmount),
+        productName: 'KhanaGo Order',
+      });
     }
-    if (order.paymentStatus === 'PAID') {
-      throw new BadRequestException('Order is already paid');
+
+    // Pre-payment flow: amount + transactionUuid
+    if (!dto.transactionUuid) {
+      throw new BadRequestException('Provide orderId or transactionUuid');
     }
     return this.esewaService.initializePayment({
-      orderId: order.id,
-      amount: Number(order.totalAmount),
+      amount: dto.amount,
       productName: 'KhanaGo Order',
+      transactionUuid: dto.transactionUuid,
     });
   }
 
@@ -186,5 +200,84 @@ export class EsewaController {
       return r;
     }
     return { status: 'failure', message: 'Missing data' };
+  }
+
+  // ─── NEW: Verify payment AND create order in one step ───
+  // This is the pre-payment flow: order does NOT exist when the user is
+  // redirected to eSewa. After the callback data is received the client
+  // posts here with the original order payload so the backend can verify
+  // the payment and atomically create the order as PAID.
+  @Post('verify-and-create')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary:
+      'Verify eSewa payment and create the order as PAID (pre-payment flow)',
+  })
+  async verifyAndCreate(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: EsewaVerifyAndCreateDto,
+  ) {
+    // 1. Verify payment via callback data (authoritative status check is inside)
+    let result: any;
+    if (dto.data) {
+      result = await this.esewaService.verifyCallbackData(dto.data);
+    } else if (dto.transactionUuid && dto.totalAmount) {
+      // Fallback: no callback data, use status API with transactionUuid + amount
+      result = await this.esewaService.verifyByStatus(
+        dto.transactionUuid,
+        dto.totalAmount,
+      );
+    } else {
+      return {
+        status: 'failure',
+        message: 'Provide callback data or transactionUuid+totalAmount',
+      };
+    }
+
+    const isComplete =
+      result.status === 'COMPLETE' || result.status === 'success';
+    const txUuid = result.transactionUuid || dto.transactionUuid;
+
+    if (!isComplete) {
+      // Payment not successful – do NOT create an order. Return the status
+      // so the frontend can show the appropriate failure/pending page.
+      return {
+        status: result.status === 'PENDING' ? 'pending' : 'failure',
+        message: result.message || 'Payment not completed',
+        transactionUuid: txUuid,
+      };
+    }
+
+    // 2. Payment COMPLETE – create the order as PAID
+    const orderPayload: CreateOrderDto = {
+      restaurantId: dto.restaurantId,
+      addressId: dto.addressId,
+      items: dto.items,
+      notes: dto.notes,
+      paymentMethod: PaymentMethod.ONLINE,
+      paymentId: `esewa-${txUuid}`,
+    };
+
+    const order = await this.ordersService.createPaidOrder(
+      user.sub,
+      orderPayload,
+      `esewa-${txUuid}`,
+    );
+
+    // 3. Clear the customer's cart (payment succeeded)
+    try {
+      await this.cartService.clearCart(user.sub);
+    } catch (_e) {
+      // non-fatal – client also clears
+    }
+
+    return {
+      status: 'success',
+      message: 'Payment verified and order created (PAID)',
+      order,
+      transactionUuid: txUuid,
+    };
   }
 }

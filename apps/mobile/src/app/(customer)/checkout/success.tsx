@@ -31,7 +31,7 @@ export default function CheckoutSuccessScreen() {
 
         <Text className="text-2xl font-bold text-center text-black">Payment Successful!</Text>
         <Text className="mt-2 text-base leading-6 text-center text-gray-500">
-          Your order has been placed successfully. You will receive a confirmation shortly.
+          Your payment has been confirmed. Your order is being processed.
         </Text>
 
         {orderId ? (
@@ -42,15 +42,17 @@ export default function CheckoutSuccessScreen() {
         ) : null}
 
         <View className="w-full gap-3 mt-8">
-          <TouchableOpacity onPress={handleTrackOrder} className="items-center py-4 bg-primary rounded-xl">
-            <Text className="text-base font-bold text-white">Track Order</Text>
-          </TouchableOpacity>
+          {orderId ? (
+            <TouchableOpacity onPress={handleTrackOrder} className="items-center py-4 bg-primary rounded-xl">
+              <Text className="text-base font-bold text-white">Track Order</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             onPress={handleViewOrder}
             className="items-center py-4 bg-white border border-gray-200 rounded-xl"
           >
-            <Text className="text-base font-semibold text-black">View Order Details</Text>
+            <Text className="text-base font-semibold text-black">View Orders</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleGoHome} className="items-center py-3">

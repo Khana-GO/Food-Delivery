@@ -100,11 +100,9 @@ export class TrackingGateway
 
   async handleConnection(client: Socket) {
     try {
-      // already authenticated via server.use; double-check
-      if (!client.data.user) {
-        await this.authenticateSocket(client);
-      }
+      // Already authenticated via server.use() middleware
       const user = client.data.user;
+      if (!user) throw new UnauthorizedException('Not authenticated');
       client.join(`user:${user.sub}`);
       this.logger.log(
         `Client ${client.id} connected as ${user.sub} (${user.role})`,
@@ -261,8 +259,6 @@ export class TrackingGateway
   // ─── BROADCAST HELPERS (called by service/controller) ───
   async broadcastDriverLocation(orderId: string, payload: any) {
     this.server.to(`order:${orderId}`).emit('driver:location', payload);
-    // also legacy event for backwards compat
-    this.server.to(`order:${orderId}`).emit('driver-location-update', payload);
     this.logger.debug(`Broadcast driver:location to order:${orderId}`);
   }
 
@@ -276,9 +272,8 @@ export class TrackingGateway
       estimatedDeliveryTime?: string | null;
     },
   ) {
+    // Single emit per room — 'order:status' is the canonical event
     this.server.to(`order:${orderId}`).emit('order:status', payload);
-    // per-user room fallback (customer / restaurant owner)
-    this.server.to(`order:${orderId}`).emit('order-status-update', payload);
   }
 
   async broadcastEtaUpdate(

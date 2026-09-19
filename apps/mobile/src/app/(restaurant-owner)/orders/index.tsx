@@ -22,8 +22,10 @@ type TabKey = 'all' | OrderStatus;
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
+  { key: 'confirmed', label: 'Confirmed' },
   { key: 'preparing', label: 'Preparing' },
   { key: 'ready', label: 'Ready' },
+  { key: 'picked_up', label: 'Picked Up' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'cancelled', label: 'Cancelled' },
 ];
@@ -72,7 +74,7 @@ export default function OrdersScreen() {
     [orders, search, tab],
   );
 
-  const activeCount = (counts.pending || 0) + (counts.preparing || 0) + (counts.ready || 0);
+  const activeCount = (counts.pending || 0) + (counts.confirmed || 0) + (counts.preparing || 0) + (counts.ready || 0) + (counts.picked_up || 0);
   const revenueToday = orders.filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0);
 
   return (

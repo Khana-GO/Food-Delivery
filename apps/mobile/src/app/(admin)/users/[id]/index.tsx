@@ -17,6 +17,7 @@ import { useRestoreUser } from '@/hooks/admin/user/useRestoreUser';
 import { usePermanentDeleteUser } from '@/hooks/admin/user/usePermanentDeleteUser';
 import { useChangeUserRole } from '@/hooks/admin/user/useChangeUserRole';
 import { UserDetails as UserDetailsComponent } from '@/components/admin/users/UserDetails';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { UserRole } from '@food_delivery/types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
@@ -36,27 +37,13 @@ export default function UserDetailsScreen() {
   const { mutate: changeRole, isPending: isChangingRole } = useChangeUserRole();
 
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [confirm, setConfirm] = useState<
+    'delete' | 'restore' | 'permanent' | null
+  >(null);
 
-  const handleDelete = () => {
-    Alert.alert('Delete User', 'Are you sure you want to soft delete this user?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteUser(id) },
-    ]);
-  };
-
-  const handleRestore = () => {
-    Alert.alert('Restore User', 'Are you sure you want to restore this user?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Restore', onPress: () => restoreUser(id) },
-    ]);
-  };
-
-  const handlePermanentDelete = () => {
-    Alert.alert('Permanently Delete', 'This action cannot be undone. Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => permanentDeleteUser(id) },
-    ]);
-  };
+  const handleDelete = () => setConfirm('delete');
+  const handleRestore = () => setConfirm('restore');
+  const handlePermanentDelete = () => setConfirm('permanent');
 
   const handleRoleSelect = (role: UserRole) => {
     if (user?.role === role) {
@@ -245,6 +232,37 @@ export default function UserDetailsScreen() {
           </View>
         )}
       </Modal>
+
+      <ConfirmDialog
+        visible={confirm === 'delete'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); deleteUser(id); }}
+        title="Delete User"
+        message="Are you sure you want to soft delete this user?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
+      />
+      <ConfirmDialog
+        visible={confirm === 'restore'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); restoreUser(id); }}
+        title="Restore User"
+        message="Are you sure you want to restore this user?"
+        confirmLabel="Restore"
+        icon="rotate-ccw"
+        tone="info"
+      />
+      <ConfirmDialog
+        visible={confirm === 'permanent'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); permanentDeleteUser(id); }}
+        title="Permanently Delete"
+        message="This action cannot be undone. Are you sure?"
+        confirmLabel="Delete Forever"
+        icon="alert-octagon"
+        tone="danger"
+      />
     </View>
   );
 }

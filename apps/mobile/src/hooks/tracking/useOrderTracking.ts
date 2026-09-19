@@ -149,11 +149,9 @@ export const useOrderTracking = ({
       try {
         await webSocketService.connect(userId);
         webSocketService.joinOrder(safeOrderId);
-        // Subscribe to live events
+        // Subscribe to live events (canonical names only — server emits these)
         webSocketService.on('driver:location', handleDriverUpdate);
-        webSocketService.on('driver-location-update', handleDriverUpdate);
         webSocketService.on('order:status', handleStatusUpdate);
-        webSocketService.on('order-status-update', handleStatusUpdate);
         webSocketService.on('order:eta', handleEtaUpdate);
         webSocketService.on('order:snapshot', handleSnapshot);
       } catch (e) {
@@ -166,9 +164,7 @@ export const useOrderTracking = ({
   const disconnectWebSocket = useCallback(() => {
     if (!safeOrderId) return;
     webSocketService.off('driver:location', handleDriverUpdate);
-    webSocketService.off('driver-location-update', handleDriverUpdate);
     webSocketService.off('order:status', handleStatusUpdate);
-    webSocketService.off('order-status-update', handleStatusUpdate);
     webSocketService.off('order:eta', handleEtaUpdate);
     webSocketService.off('order:snapshot', handleSnapshot);
     webSocketService.leaveOrder(safeOrderId);

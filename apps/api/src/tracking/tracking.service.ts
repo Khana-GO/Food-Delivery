@@ -383,11 +383,8 @@ export class TrackingService {
       const custLat = address.latitude;
       const custLng = address.longitude;
 
-      if (
-        driverLocation &&
-        ['PICKED_UP', 'READY'].includes(order.orderStatus)
-      ) {
-        // Driver -> Customer
+      if (driverLocation && ['PICKED_UP'].includes(order.orderStatus)) {
+        // Driver has picked up — route to customer
         route = await this.calculateRoute(
           driverLocation.latitude,
           driverLocation.longitude,
@@ -396,8 +393,9 @@ export class TrackingService {
         );
       } else if (
         driverLocation &&
-        ['CONFIRMED', 'PREPARING'].includes(order.orderStatus)
+        ['CONFIRMED', 'PREPARING', 'READY'].includes(order.orderStatus)
       ) {
+        // Driver en route to pick up or waiting at restaurant — show restaurant -> driver
         // Restaurant -> Driver (if driver en route to pickup)
         route = await this.calculateRoute(
           restaurant.latitude,

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { goBack } from '@/lib/navigation';
@@ -7,18 +7,15 @@ import { useAddresses } from '@/hooks/customer/useAddresses';
 import { useAddressStore } from '@/stores/customer/addressStore';
 import { AddressCard } from '@/components/customer/AddressCard';
 import { useDeleteAddress } from '@/hooks/customer/useDeleteAddress';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function AddressesScreen() {
   const { isLoading, refetch } = useAddresses();
   const { addresses } = useAddressStore();
   const { mutate: deleteAddress } = useDeleteAddress();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete Address', 'Are you sure you want to delete this address?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteAddress(id) },
-    ]);
-  };
+  const handleDelete = (id: string) => setDeleteId(id);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -63,6 +60,17 @@ export default function AddressesScreen() {
             </TouchableOpacity>
           </View>
         }
+      />
+
+      <ConfirmDialog
+        visible={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => { if (deleteId) deleteAddress(deleteId); setDeleteId(null); }}
+        title="Delete Address"
+        message="Are you sure you want to delete this address?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
       />
     </View>
   );

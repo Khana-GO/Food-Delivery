@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAdminRestaurant } from '@/hooks/admin/restaurant/useAdminRestaurant';
@@ -10,6 +10,7 @@ import { useRestoreRestaurant } from '@/hooks/admin/restaurant/useRestoreRestaur
 import { useHardDeleteRestaurant } from '@/hooks/admin/restaurant/useHardDeleteRestaurant';
 import { useToggleOpen } from '@/hooks/admin/restaurant/useToggleOpen';
 import { RestaurantDetails } from '@/components/admin/restaurants/RestaurantDetails';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function RestaurantDetailsScreen() {
@@ -24,26 +25,11 @@ export default function RestaurantDetailsScreen() {
 
   const isPending = isVerifying || isTogglingActive || isTogglingOpen || isDeleting || isRestoring || isHardDeleting;
 
-  const handleDelete = () => {
-    Alert.alert('Delete Restaurant', 'Soft delete this restaurant? It will be hidden.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteRestaurant(id) },
-    ]);
-  };
+  const [confirm, setConfirm] = useState<'delete' | 'restore' | 'permanent' | null>(null);
 
-  const handleRestore = () => {
-    Alert.alert('Restore Restaurant', 'Restore this restaurant?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Restore', onPress: () => restoreRestaurant(id) },
-    ]);
-  };
-
-  const handleHardDelete = () => {
-    Alert.alert('Permanently Delete', 'This cannot be undone. Delete permanently?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => hardDelete(id) },
-    ]);
-  };
+  const handleDelete = () => setConfirm('delete');
+  const handleRestore = () => setConfirm('restore');
+  const handleHardDelete = () => setConfirm('permanent');
 
   if (isLoading) {
     return (

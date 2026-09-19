@@ -201,12 +201,21 @@ export function StatCard({
 // Order status pill (green / amber / red / neutral system)
 // ──────────────────────────────────────────────────────────────────────────
 
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'picked_up'
+  | 'delivered'
+  | 'cancelled';
 
 const STATUS_META: Record<OrderStatus, { label: string; chip: string; text: string; dot: string }> = {
   pending: { label: 'Pending', chip: 'bg-amber-50 border-amber-200', text: 'text-amber-600', dot: 'bg-amber-500' },
+  confirmed: { label: 'Confirmed', chip: 'bg-indigo-50 border-indigo-200', text: 'text-indigo-600', dot: 'bg-indigo-500' },
   preparing: { label: 'Preparing', chip: 'bg-orange-50 border-orange-200', text: 'text-orange-600', dot: 'bg-orange-500' },
   ready: { label: 'Ready', chip: 'bg-blue-50 border-blue-200', text: 'text-blue-600', dot: 'bg-blue-500' },
+  picked_up: { label: 'Picked Up', chip: 'bg-violet-50 border-violet-200', text: 'text-violet-600', dot: 'bg-violet-500' },
   delivered: { label: 'Delivered', chip: 'bg-green-50 border-green-200', text: 'text-green-600', dot: 'bg-green-500' },
   cancelled: { label: 'Cancelled', chip: 'bg-red-50 border-red-200', text: 'text-red-500', dot: 'bg-red-500' },
 };

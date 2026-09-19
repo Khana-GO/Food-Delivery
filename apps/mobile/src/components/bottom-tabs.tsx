@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, useWindowDimensions, StyleProp, ViewStyle, StyleSheet, Platform } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions, StyleProp, ViewStyle, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '@/constants/theme';
@@ -44,16 +44,14 @@ export function TabIcon({ name, label, focused, size, labelSize, customIcon }: T
   const resolvedName = resolveIconName(name);
   return (
     <View style={styles.iconWrap}>
-      <View style={[styles.iconCircle, focused && styles.iconCircleFocused]}>
-        {customIcon || (
-          <Feather
-            name={resolvedName}
-            size={size}
-            color={focused ? '#FFFFFF' : '#94A3B8'}
-            strokeWidth={focused ? 2.4 : 2}
-          />
-        )}
-      </View>
+      {customIcon || (
+        <Feather
+          name={resolvedName}
+          size={size}
+          color={focused ? Colors.primary : '#94A3B8'}
+          strokeWidth={focused ? 2.4 : 2}
+        />
+      )}
       <Text
         style={[
           styles.label,
@@ -74,6 +72,37 @@ export function TabIcon({ name, label, focused, size, labelSize, customIcon }: T
   );
 }
 
+export function NoHoverTabButton({
+  children,
+  onPress,
+  onLongPress,
+  style,
+  accessibilityLabel,
+  accessibilityRole,
+  testID,
+}: {
+  children?: any;
+  onPress?: any;
+  onLongPress?: any;
+  style?: any;
+  accessibilityLabel?: any;
+  accessibilityRole?: any;
+  testID?: any;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      testID={testID}
+      style={[{ backgroundColor: 'transparent' }, style]}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 export function useTabBarConstants() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -85,24 +114,27 @@ export function useTabBarConstants() {
   const iconSize = isTablet ? 22 : isVeryCompact ? 18 : isCompact ? 20 : 21;
   const labelSize = isTablet ? 12 : isVeryCompact ? 9.5 : isCompact ? 10 : 11;
 
-  const baseBarHeight = isTablet ? 82 : isLandscape ? 64 : 72;
+  const baseBarHeight = isTablet ? 72 : isLandscape ? 56 : 60;
+  const borderRadius = isTablet ? 36 : isVeryCompact ? 26 : 28;
+  const hMargin = isTablet ? 20 : isVeryCompact ? 6 : 8;
+  const vPad = isVeryCompact ? 5 : 6;
 
   const tabBarStyle: StyleProp<ViewStyle> = {
-    backgroundColor: Colors.white,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-    height: Platform.OS === 'ios' ? baseBarHeight + insets.bottom : baseBarHeight + Math.max(insets.bottom, 8),
-    minHeight: baseBarHeight + Math.max(insets.bottom, 8),
-    paddingBottom: Math.max(insets.bottom, 6),
-    paddingTop: 8,
-    paddingHorizontal: isTablet ? 12 : 6,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    height: baseBarHeight,
+    minHeight: baseBarHeight,
+    paddingTop: vPad,
+    paddingBottom: vPad,
+    paddingHorizontal: isTablet ? 16 : 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: 28,
-    marginHorizontal: isTablet ? 16 : 8,
-    marginBottom: Math.max(insets.bottom > 0 ? 4 : 8, 6),
+    borderRadius,
     marginTop: 0,
+    marginHorizontal: hMargin,
+    marginBottom: Math.max(insets.bottom + 6, 10),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(151,162,178,0.25)',
     ...Shadow.floating,
   };
 
@@ -112,6 +144,7 @@ export function useTabBarConstants() {
     alignItems: 'center',
     paddingHorizontal: 2,
     paddingVertical: 0,
+    backgroundColor: 'transparent',
   };
 
   return { iconSize, labelSize, tabBarStyle, tabBarItemStyle, isTablet, isVeryCompact, isCompact, insets };
@@ -121,31 +154,17 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 2,
     paddingHorizontal: 2,
-  },
-  iconCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  iconCircleFocused: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.30,
-    shadowRadius: 10,
-    elevation: 6,
+    marginTop: -7,
   },
   label: {
     textAlign: 'center',
-    includeFontPadding: false,
     textAlignVertical: 'center',
+    includeFontPadding: false,
     letterSpacing: 0.15,
     lineHeight: 14,
-    marginTop: 3,
+    alignSelf: 'center',
+    marginTop: 0,
   },
 });

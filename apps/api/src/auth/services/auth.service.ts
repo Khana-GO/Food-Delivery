@@ -313,19 +313,7 @@ export class AuthService {
   }
 
   async logout(refreshToken: string, accessToken?: string) {
-    const revokeToken = async (token: string, userId?: string) => {
-      if (!token) return;
-
-      try {
-        const payload = await this.jwtService.verifyAsync<{ sub?: string }>(
-          token,
-        );
-        this.sessionService.revokeToken?.(token, payload.sub);
-      } catch {
-        this.sessionService.revokeToken?.(token, userId);
-      }
-    };
-
+    // Revoke the refresh token session in the DB (kill active session row)
     if (refreshToken) {
       try {
         const payload = await this.jwtService.verifyAsync<{
@@ -335,36 +323,30 @@ export class AuthService {
         }>(refreshToken);
 
         if (payload.type === 'refresh' && payload.jti) {
-          if (typeof this.sessionService.revoke === 'function') {
-            const removed = await this.sessionService.revoke(payload.jti);
-            if (removed === 0) {
-              await this.sessionService.revokeByToken?.(refreshToken);
-            }
-          } else {
-            await this.sessionService.revokeByToken?.(refreshToken);
+          const removed = await this.sessionService.revoke(payload.jti);
+          if (removed === 0) {
+            await this.sessionService.revokeByToken(refreshToken);
           }
-          this.sessionService.revokeToken?.(refreshToken, payload.sub);
-        } else if (payload.sub) {
-          if (typeof this.sessionService.revokeAllForUser === 'function') {
-            const removed = await this.sessionService.revokeAllForUser(
-              payload.sub,
-            );
-            if (removed === 0) {
-              await this.sessionService.revokeByToken?.(refreshToken);
-            }
-          } else {
-            await this.sessionService.revokeByToken?.(refreshToken);
-          }
-          this.sessionService.revokeToken?.(refreshToken, payload.sub);
+          this.sessionService.revokeToken(refreshToken, payload.sub);
         }
       } catch {
-        await this.sessionService.revokeByToken?.(refreshToken);
-        this.sessionService.revokeToken?.(refreshToken);
+        // Token unverifiable/expired — revoke server-side by hash so any
+        // copies still in the wild are rejected.
+        await this.sessionService.revokeByToken(refreshToken);
+        this.sessionService.revokeToken(refreshToken);
       }
     }
 
+    // Blacklist the access token too (short-lived, best-effort)
     if (accessToken) {
-      await revokeToken(accessToken);
+      try {
+        const payload = await this.jwtService.verifyAsync<{ sub?: string }>(
+          accessToken,
+        );
+        this.sessionService.revokeToken(accessToken, payload.sub);
+      } catch {
+        this.sessionService.revokeToken(accessToken);
+      }
     }
 
     return { message: 'Logged out successfully' };

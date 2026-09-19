@@ -28,6 +28,9 @@ export default function OrderDetailsScreen() {
   const { clearCart } = useCartStore();
   const isCompact = width < 360;
 
+  // Live tracking is only available after the driver picks up the order
+  const canTrack = ['PICKED_UP', 'DELIVERED'].includes(order?.orderStatus ?? '');
+
   const checkPaymentStatus = async () => {
     if (!order || isCheckingPayment) return;
     setIsCheckingPayment(true);
@@ -91,10 +94,11 @@ export default function OrderDetailsScreen() {
             <TouchableOpacity
               onPress={() => router.push(`/(customer)/order-tracking/${order.id}` as any)}
               activeOpacity={0.85}
-              style={styles.trackBtn}
+              disabled={!canTrack}
+              style={[styles.trackBtn, !canTrack && styles.trackBtnDisabled]}
             >
-              <Feather name="map-pin" size={15} color="#FFFFFF" />
-              <Text style={styles.trackBtnText}>Track</Text>
+              <Feather name="map-pin" size={15} color={canTrack ? '#FFFFFF' : 'rgba(255,255,255,0.55)'} />
+              <Text style={[styles.trackBtnText, !canTrack && { color: 'rgba(255,255,255,0.55)' }]}>Track</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -225,10 +229,15 @@ export default function OrderDetailsScreen() {
           <TouchableOpacity
             onPress={() => router.push(`/(customer)/order-tracking/${order.id}` as any)}
             activeOpacity={0.85}
-            style={[styles.actionBtn, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]}
+            disabled={!canTrack}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: canTrack ? '#F8FAFC' : '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+              !canTrack && { opacity: 0.55 },
+            ]}
           >
-            <Feather name="navigation" size={16} color={Colors.textDark} />
-            <Text style={[styles.actionBtnText, { color: Colors.textDark }]}>Live Tracking</Text>
+            <Feather name="navigation" size={16} color={canTrack ? Colors.textDark : '#94A3B8'} />
+            <Text style={[styles.actionBtnText, { color: canTrack ? Colors.textDark : '#94A3B8' }]}>Live Tracking</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -276,6 +285,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.25)',
   },
   trackBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  trackBtnDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    opacity: 0.7,
+  },
   card: {
     backgroundColor: Colors.white,
     borderRadius: Radius.xl,
