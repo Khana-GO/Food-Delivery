@@ -1,0 +1,87 @@
+# ============================================================================
+# KhanaGo API — Local development stack
+# Redis + NestJS API
+# Uses Neon DB (cloud PostgreSQL) — no local Postgres needed
+#
+# Usage:
+#   cp apps/api/.env .env          # then fill in secrets
+#   docker compose up --build
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # Redis — caching + rate limiting
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: khanago-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - khanago-net
+
+  # ==========================================================================
+  # NestJS API — connects to Neon DB (remote) + Redis (local container)
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: khanago-api:latest
+    container_name: khanago-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
+      # ─── Redis (internal container) ───
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      REDIS_ENABLED: "true"
+
+      # ─── Optional overrides (defaults used if not in .env) ───
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-15d}
+      SALT_ROUNDS: ${SALT_ROUNDS:-10}
+
+      AI_TEMPERATURE: ${AI_TEMPERATURE:-0.4}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-500}
+
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - khanago-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# ==========================================================================
+# Named volumes — persisted across container restarts
+# ==========================================================================
+volumes:
+  redis_data:
+
+# ==========================================================================
+# Internal network — services reach each other by name
+# ==========================================================================
+networks:
+  khanago-net:
+    driver: bridge

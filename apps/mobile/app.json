@@ -1,15 +1,16 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "KhanaGo",
+    "slug": "khanago",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo/logo.png",
-    "scheme": "mobile",
+    "scheme": "khanago",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.mobile"
+      "bundleIdentifier": "com.khanago.app",
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +20,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mobile"
+      "package": "com.khanago.app"
     },
     "web": {
       "bundler": "metro",
@@ -42,15 +43,15 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_IOS_CLIENT_ID"
+          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID_REVERSED"
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Food Delivery to use your location to track deliveries in real-time.",
-          "locationAlwaysPermission": "Allow Food Delivery to use your location for live order tracking.",
-          "locationWhenInUsePermission": "Allow Food Delivery to use your location for delivery tracking.",
+          "locationAlwaysAndWhenInUsePermission": "Allow KhanaGo to use your location to track deliveries in real-time.",
+          "locationAlwaysPermission": "Allow KhanaGo to use your location for live order tracking.",
+          "locationWhenInUsePermission": "Allow KhanaGo to use your location for delivery tracking.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
