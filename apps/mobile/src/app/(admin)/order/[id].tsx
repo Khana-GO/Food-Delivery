@@ -47,21 +47,21 @@ export default function AdminOrderDetailsScreen() {
       <View
         style={{
           backgroundColor: Colors.primary,
-          paddingTop: 52,
-          paddingBottom: 24,
-          paddingHorizontal: 20,
+          paddingTop: 40,
+          paddingBottom: 16,
+          paddingHorizontal: 16,
           borderBottomLeftRadius: Radius['3xl'],
           borderBottomRightRadius: Radius['3xl'],
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <TouchableOpacity
               onPress={() => goBack('/(admin)/(tabs)/orders')}
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.18)',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -70,25 +70,25 @@ export default function AdminOrderDetailsScreen() {
               }}
               activeOpacity={0.7}
             >
-              <Feather name="arrow-left" size={20} color={Colors.white} />
+              <Feather name="arrow-left" size={16} color={Colors.white} />
             </TouchableOpacity>
             <View>
-              <Text style={{ color: Colors.white, fontSize: 18, fontWeight: '800' }}>Order #{order.id.slice(0, 8)}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>{formatDate(order.createdAt)}</Text>
+              <Text style={{ color: Colors.white, fontSize: 15, fontWeight: '800' }}>Order #{order.id.slice(0, 8)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 1 }}>{formatDate(order.createdAt)}</Text>
             </View>
           </View>
           <TouchableOpacity
             onPress={() => setShowStatusModal(true)}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.white, paddingHorizontal: 14, paddingVertical: 10, borderRadius: Radius.full, ...Shadow.sm }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.white, paddingHorizontal: 11, paddingVertical: 7, borderRadius: Radius.full, ...Shadow.sm }}
             activeOpacity={0.7}
           >
-            <Feather name="edit-2" size={14} color={Colors.primary} />
-            <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>Update</Text>
+            <Feather name="edit-2" size={12} color={Colors.primary} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>Update</Text>
           </TouchableOpacity>
         </View>
-        <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <OrderStatusBadge status={order.orderStatus} />
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>Rs. {order.totalAmount}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>Rs. {order.totalAmount}</Text>
         </View>
       </View>
 

@@ -47,24 +47,24 @@ export const AdminStatusUpdateModal = ({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <Pressable className="flex-1 bg-black/50" onPress={onClose}>
-        <View className="items-center justify-center flex-1 px-6">
-          <View className="w-full max-w-sm p-6 bg-white rounded-2xl">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-xl font-bold text-black">Update Status</Text>
-              <TouchableOpacity onPress={onClose} className="p-1">
-                <Feather name="x" size={24} color="#94A3B8" />
+        <View className="items-center justify-center flex-1 px-5">
+          <View className="w-full max-w-sm p-5 bg-white rounded-2xl" style={{ maxWidth: 300 }}>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-[15px] font-bold text-black">Update Status</Text>
+              <TouchableOpacity onPress={onClose} hitSlop={6} className="p-1">
+                <Feather name="x" size={18} color="#94A3B8" />
               </TouchableOpacity>
             </View>
 
-            <Text className="mb-4 text-sm text-gray-500">
+            <Text className="mb-3 text-xs text-gray-500">
               Current: <Text className="font-semibold text-black">{currentStatus}</Text>
             </Text>
 
-            <View className="gap-2">
+            <View className="gap-1.5">
               {statuses.map((status) => (
                 <TouchableOpacity
                   key={status.value}
-                  className={`flex-row items-center p-3 rounded-xl border ${
+                  className={`flex-row items-center px-3 py-2 rounded-lg border ${
                     selectedStatus === status.value
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-100'
@@ -72,16 +72,16 @@ export const AdminStatusUpdateModal = ({
                   onPress={() => setSelectedStatus(status.value)}
                 >
                   <View
-                    className="items-center justify-center w-4 h-4 mr-3 border-2 rounded-full"
+                    className="items-center justify-center w-3.5 h-3.5 mr-2.5 border-2 rounded-full"
                     style={{
                       borderColor: status.color,
                       backgroundColor: selectedStatus === status.value ? status.color : 'transparent',
                     }}
                   >
-                    {selectedStatus === status.value && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {selectedStatus === status.value && <View className="w-1 h-1 rounded-full bg-white" />}
                   </View>
                   <Text
-                    className={`text-sm font-medium ${
+                    className={`text-[13px] font-medium ${
                       selectedStatus === status.value ? 'text-black' : 'text-gray-600'
                     }`}
                   >
@@ -92,14 +92,14 @@ export const AdminStatusUpdateModal = ({
             </View>
 
             <TouchableOpacity
-              className={`bg-primary rounded-xl py-4 mt-6 ${isPending ? 'opacity-50' : ''}`}
+              className={`bg-primary rounded-xl py-3 mt-4 ${isPending ? 'opacity-50' : ''}`}
               onPress={handleUpdate}
               disabled={isPending}
             >
               {isPending ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text className="text-base font-bold text-center text-white">
+                <Text className="text-[13px] font-bold text-center text-white">
                   Update Status
                 </Text>
               )}

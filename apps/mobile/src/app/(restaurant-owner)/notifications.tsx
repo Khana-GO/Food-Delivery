@@ -67,21 +67,21 @@ export default function NotificationsScreen() {
       <View
         style={{
           backgroundColor: Colors.primary,
-          paddingTop: insets.top + 12,
-          paddingBottom: 20,
-          paddingHorizontal: 20,
+          paddingTop: insets.top + 8,
+          paddingBottom: 16,
+          paddingHorizontal: 16,
           borderBottomLeftRadius: Radius['3xl'],
           borderBottomRightRadius: Radius['3xl'],
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             <TouchableOpacity
               onPress={() => goBack('/(restaurant-owner)')}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.18)',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -90,13 +90,13 @@ export default function NotificationsScreen() {
               }}
               activeOpacity={0.7}
             >
-              <Feather name="arrow-left" size={20} color={Colors.white} />
+              <Feather name="arrow-left" size={16} color={Colors.white} />
             </TouchableOpacity>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.white, letterSpacing: -0.3 }} numberOfLines={1}>Notifications</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: unreadCount > 0 ? '#4ADE80' : 'rgba(255,255,255,0.5)' }} />
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600' }} numberOfLines={1}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.white, letterSpacing: -0.2 }} numberOfLines={1}>Notifications</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: unreadCount > 0 ? '#4ADE80' : 'rgba(255,255,255,0.5)' }} />
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '600' }} numberOfLines={1}>
                   {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'} • {notifications.length} total
                 </Text>
               </View>
@@ -107,9 +107,9 @@ export default function NotificationsScreen() {
             <TouchableOpacity
               onPress={handleClearAll}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
                 backgroundColor: 'rgba(255,255,255,0.18)',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -119,13 +119,13 @@ export default function NotificationsScreen() {
               }}
               activeOpacity={0.7}
             >
-              <Feather name="trash-2" size={16} color={Colors.white} />
+              <Feather name="trash-2" size={14} color={Colors.white} />
             </TouchableOpacity>
           ) : null}
         </View>
 
         {notifications.length > 0 ? (
-          <View style={{ flexDirection: 'row', marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: 12 }}>
             <TouchableOpacity
               onPress={handleMarkAll}
               disabled={unreadCount === 0 || markingAll}
@@ -135,7 +135,7 @@ export default function NotificationsScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                paddingVertical: 11,
+                paddingVertical: 9,
                 borderRadius: Radius.full,
                 backgroundColor: unreadCount > 0 ? Colors.white : 'rgba(255,255,255,0.18)',
                 borderWidth: 1,
@@ -144,8 +144,8 @@ export default function NotificationsScreen() {
               }}
               activeOpacity={0.8}
             >
-              <Feather name="check-circle" size={16} color={unreadCount > 0 ? Colors.primary : Colors.white} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: unreadCount > 0 ? Colors.primary : Colors.white }}>
+              <Feather name="check-circle" size={14} color={unreadCount > 0 ? Colors.primary : Colors.white} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: unreadCount > 0 ? Colors.primary : Colors.white }}>
                 {markingAll ? 'Marking…' : 'Mark all as read'}
               </Text>
             </TouchableOpacity>

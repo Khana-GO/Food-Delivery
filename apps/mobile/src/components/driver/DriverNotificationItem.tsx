@@ -55,7 +55,7 @@ export const DriverNotificationItem = ({
     <View
       style={{
         backgroundColor: notification.isRead ? Colors.white : '#FFF7F7',
-        marginBottom: 10,
+        marginBottom: 8,
         borderRadius: Radius.xl,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: notification.isRead ? Colors.borderLight : '#FECDD3',
@@ -75,15 +75,15 @@ export const DriverNotificationItem = ({
           flex: 1,
           flexDirection: 'row',
           alignItems: 'flex-start',
-          gap: 12,
-          padding: 14,
+          gap: 10,
+          padding: 10,
         }}
       >
         <View
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 21,
+            width: 34,
+            height: 34,
+            borderRadius: 17,
             backgroundColor: bg,
             alignItems: 'center',
             justifyContent: 'center',
@@ -91,13 +91,13 @@ export const DriverNotificationItem = ({
             borderColor: `${color}18`,
           }}
         >
-          <Feather name={icon} size={18} color={color} />
+          <Feather name={icon} size={15} color={color} />
         </View>
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text
               style={{
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: notification.isRead ? '600' : '700',
                 color: notification.isRead ? Colors.textSecondary : Colors.textDark,
                 flex: 1,
@@ -107,18 +107,18 @@ export const DriverNotificationItem = ({
               {notification.title}
             </Text>
             {!notification.isRead && (
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary }} />
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary }} />
             )}
           </View>
           <Text
-            style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 4, lineHeight: 18 }}
+            style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2, lineHeight: 16 }}
             numberOfLines={2}
           >
             {notification.body}
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-            <Feather name="clock" size={11} color={Colors.textTertiary} />
-            <Text style={{ fontSize: 11, color: Colors.textTertiary, fontWeight: '500' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 }}>
+            <Feather name="clock" size={10} color={Colors.textTertiary} />
+            <Text style={{ fontSize: 10, color: Colors.textTertiary, fontWeight: '500' }}>
               {new Date(notification.createdAt).toLocaleDateString(undefined, {
                 month: 'short',
                 day: 'numeric',
@@ -129,16 +129,16 @@ export const DriverNotificationItem = ({
             {!notification.isRead && (
               <View
                 style={{
-                  marginLeft: 6,
+                  marginLeft: 4,
                   backgroundColor: Colors.primaryBg,
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
+                  paddingHorizontal: 6,
+                  paddingVertical: 1,
                   borderRadius: Radius.full,
                   borderWidth: 1,
                   borderColor: '#FECDD3',
                 }}
               >
-                <Text style={{ fontSize: 9, fontWeight: '700', color: Colors.primary, letterSpacing: 0.5 }}>NEW</Text>
+                <Text style={{ fontSize: 8, fontWeight: '700', color: Colors.primary, letterSpacing: 0.5 }}>NEW</Text>
               </View>
             )}
           </View>
@@ -148,22 +148,22 @@ export const DriverNotificationItem = ({
       {onDelete && (
         <TouchableOpacity
           onPress={() => onDelete(notification.id)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            width: 28,
+            height: 28,
+            borderRadius: 14,
             backgroundColor: Colors.backgroundAlt,
             alignItems: 'center',
             justifyContent: 'center',
-            marginTop: 12,
-            marginRight: 12,
+            marginTop: 10,
+            marginRight: 10,
             borderWidth: 1,
             borderColor: Colors.borderLight,
           }}
           activeOpacity={0.7}
         >
-          <Feather name="x" size={14} color={Colors.textTertiary} />
+          <Feather name="x" size={12} color={Colors.textTertiary} />
         </TouchableOpacity>
       )}
     </View>

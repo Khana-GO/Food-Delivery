@@ -58,20 +58,20 @@ export default function AdminNotifications() {
       <View
         style={{
           backgroundColor: Colors.primary,
-          paddingTop: 52,
-          paddingBottom: 20,
-          paddingHorizontal: 20,
+          paddingTop: 40,
+          paddingBottom: 16,
+          paddingHorizontal: 16,
           borderBottomLeftRadius: Radius['3xl'],
           borderBottomRightRadius: Radius['3xl'],
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.18)',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -82,10 +82,10 @@ export default function AdminNotifications() {
               <Feather name="bell" size={14} color={Colors.white} />
             </View>
             <View>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: Colors.white, letterSpacing: -0.3 }}>Notifications</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: unreadCount > 0 ? '#4ADE80' : 'rgba(255,255,255,0.5)' }} />
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.white, letterSpacing: -0.2 }}>Notifications</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: unreadCount > 0 ? '#4ADE80' : 'rgba(255,255,255,0.5)' }} />
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>
                   {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'} • {notifications.length} total
                 </Text>
               </View>
@@ -97,9 +97,9 @@ export default function AdminNotifications() {
               <TouchableOpacity
                 onPress={handleClearAll}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
                   backgroundColor: 'rgba(255,255,255,0.18)',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -108,14 +108,14 @@ export default function AdminNotifications() {
                 }}
                 activeOpacity={0.7}
               >
-                <Feather name="trash-2" size={16} color={Colors.white} />
+                <Feather name="trash-2" size={14} color={Colors.white} />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
         {notifications.length > 0 && (
-          <View style={{ flexDirection: 'row', marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: 12 }}>
             <TouchableOpacity
               onPress={handleMarkAll}
               disabled={unreadCount === 0 || markingAll}
@@ -125,7 +125,7 @@ export default function AdminNotifications() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                paddingVertical: 11,
+                paddingVertical: 9,
                 borderRadius: Radius.full,
                 backgroundColor: unreadCount > 0 ? Colors.white : 'rgba(255,255,255,0.18)',
                 borderWidth: 1,
@@ -134,8 +134,8 @@ export default function AdminNotifications() {
               }}
               activeOpacity={0.8}
             >
-              <Feather name="check-circle" size={16} color={unreadCount > 0 ? Colors.primary : Colors.white} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: unreadCount > 0 ? Colors.primary : Colors.white }}>
+              <Feather name="check-circle" size={14} color={unreadCount > 0 ? Colors.primary : Colors.white} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: unreadCount > 0 ? Colors.primary : Colors.white }}>
                 {markingAll ? 'Marking…' : 'Mark all as read'}
               </Text>
             </TouchableOpacity>
