@@ -7,8 +7,9 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router'; 
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { usePlatformMetrics } from '@/hooks/admin/usePlatformMetrics';
 import { useRestaurantAnalytics } from '@/hooks/admin/useRestaurantAnalytics';
 import { useDriverAnalytics } from '@/hooks/admin/useDriverAnalytics';
@@ -180,7 +181,7 @@ export default function AdminAnalyticsScreen() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(admin)/(tabs)')}
               style={{
                 width: 32,
                 height: 32,

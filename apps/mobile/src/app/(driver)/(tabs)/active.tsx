@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useDriverActiveOrder } from '@/hooks/driver/useDriverActiveOrder';
@@ -9,6 +9,7 @@ import { useOrderTracking } from '@/hooks/tracking/useOrderTracking';
 import { OrderTrackingMap } from '@/components/map/OrderTrackingMap';
 import { useAuth } from '@/contexts/AuthContext';
 import PremiumCard from '@/components/ui/PremiumCard';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
@@ -24,6 +25,8 @@ export default function ActiveDeliveryScreen() {
     pollingInterval: 5000,
   });
   const customerEmail = (order as any)?.customerEmail || (order as any)?.email || '';
+
+  const [confirmKind, setConfirmKind] = useState<'pickup' | 'delivered' | null>(null);
 
   useEffect(() => {
     if (user?.id && order?.id) connectWebSocket(user.id);
@@ -126,16 +129,10 @@ export default function ActiveDeliveryScreen() {
   const canDeliver = order.orderStatus === 'PICKED_UP';
 
   const handlePickUp = () => {
-    Alert.alert('Picked Up?', 'Confirm you have picked up the order from restaurant?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => updateStatus({ orderId: order.id, status: 'PICKED_UP' }) },
-    ]);
+    setConfirmKind('pickup');
   };
   const handleDelivered = () => {
-    Alert.alert('Delivered?', 'Confirm delivery to customer?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => updateStatus({ orderId: order.id, status: 'DELIVERED' }) },
-    ]);
+    setConfirmKind('delivered');
   };
 
   return (
@@ -357,6 +354,36 @@ export default function ActiveDeliveryScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirmKind === 'pickup'}
+        title="Picked Up?"
+        message="Confirm you have picked up the order from the restaurant?"
+        confirmLabel="Confirm"
+        icon="truck"
+        tone="success"
+        busy={isPending}
+        onClose={() => setConfirmKind(null)}
+        onConfirm={() => {
+          setConfirmKind(null);
+          updateStatus({ orderId: order.id, status: 'PICKED_UP' });
+        }}
+      />
+
+      <ConfirmDialog
+        visible={confirmKind === 'delivered'}
+        title="Delivered?"
+        message="Confirm delivery to the customer?"
+        confirmLabel="Confirm"
+        icon="check-circle"
+        tone="success"
+        busy={isPending}
+        onClose={() => setConfirmKind(null)}
+        onConfirm={() => {
+          setConfirmKind(null);
+          updateStatus({ orderId: order.id, status: 'DELIVERED' });
+        }}
+      />
     </AnimatedPage>
   );
 }

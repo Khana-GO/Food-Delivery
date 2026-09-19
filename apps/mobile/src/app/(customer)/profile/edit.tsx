@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
-import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { z } from 'zod';
@@ -10,6 +9,7 @@ import PremiumCard from '@/components/ui/PremiumCard';
 import Button from '@/components/ui/Button';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 const profileSchema = z.object({
   firstName: z.string().trim().min(2, 'At least 2 characters').max(50),
@@ -68,7 +68,7 @@ export default function EditProfileScreen() {
       if (p) payload.phone = p;
     }
     if (Object.keys(payload).length === 0) {
-      router.back();
+      goBack('/(customer)/(tabs)/profile');
       return;
     }
     updateProfile(payload);
@@ -78,7 +78,7 @@ export default function EditProfileScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/profile')} style={styles.backBtn}>
             <Feather name="arrow-left" size={18} color={Colors.textDark} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -106,7 +106,7 @@ export default function EditProfileScreen() {
 
             <View style={{ marginTop: 16 }}>
               <Button label={isPending ? 'Saving...' : 'Save Changes'} onPress={handleSubmit} loading={isPending} fullWidth size="lg" />
-              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.cancelBtn}>
+              <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/profile')} activeOpacity={0.7} style={styles.cancelBtn}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
             </View>

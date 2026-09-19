@@ -28,7 +28,7 @@ export default function CreateRestaurantScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader title="New Restaurant" subtitle="Set up your kitchen in a minute" />
+      <ScreenHeader title="New Restaurant" subtitle="Set up your kitchen in a minute" backFallback="/(restaurant-owner)/restaurant" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

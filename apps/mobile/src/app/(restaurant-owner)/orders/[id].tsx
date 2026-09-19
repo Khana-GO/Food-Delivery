@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/navigation';
 import { Feather } from '@expo/vector-icons';
 import {
   ScreenHeader,
@@ -14,6 +15,7 @@ import {
 } from '@/components/res-owner/owner/kit';
 import { useOrder } from '@/hooks/customer/useOrder';
 import { useUpdateOrderStatus } from '@/hooks/owner/orders/useUpdateOrderStatus';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const FLOW: Array<{ key: OrderStatus; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'pending', label: 'Order Placed', icon: 'inbox' },
@@ -27,6 +29,9 @@ export default function OrderDetailsScreen() {
   const { isTablet } = useResponsive();
   const { data: apiOrder, isLoading } = useOrder(id!);
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
+  const [confirm, setConfirm] = useState<
+    null | { action: 'advance'; to: OrderStatus; label: string } | { action: 'reject' }
+  >(null);
 
   if (isLoading || !apiOrder) {
     return (
@@ -67,17 +72,11 @@ export default function OrderDetailsScreen() {
   })();
 
   const advance = (to: OrderStatus) => {
-    Alert.alert('Update Status', `Move this order to “${to}”?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => updateStatus({ id: id!, status: to.toUpperCase() }) },
-    ]);
+    setConfirm({ action: 'advance', to, label: `Move this order to “${to}”?` });
   };
 
   const reject = () => {
-    Alert.alert('Reject Order', 'Are you sure you want to reject this order?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reject', style: 'destructive', onPress: () => updateStatus({ id: id!, status: 'CANCELLED' }) },
-    ]);
+    setConfirm({ action: 'reject' });
   };
 
   return (
@@ -86,6 +85,7 @@ export default function OrderDetailsScreen() {
         title={`Order #${(id || '').slice(-6).toUpperCase()}`}
         subtitle={isCancelled ? 'This order was cancelled' : `Placed ${order.placedAt}`}
         right={<StatusPill status={order.status} size="md" />}
+        backFallback="/(restaurant-owner)/orders"
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[{ padding: 16 }, ContentWidth(isTablet ? 720 : 9999)]}>
@@ -214,10 +214,42 @@ export default function OrderDetailsScreen() {
               )}
             </>
           ) : (
-            <PrimaryButton label="Back to Orders" variant="outline" icon="arrow-left" onPress={() => router.back()} />
+            <PrimaryButton label="Back to Orders" variant="outline" icon="arrow-left" onPress={() => goBack('/(restaurant-owner)/orders')} />
           )}
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirm?.action === 'advance'}
+        title="Update Status"
+        message={confirm?.action === 'advance' ? confirm.label : ''}
+        confirmLabel="Confirm"
+        icon="check"
+        tone="success"
+        busy={isPending}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => {
+          const c = confirm;
+          setConfirm(null);
+          if (c?.action === 'advance') {
+            updateStatus({ id: id!, status: c.to.toUpperCase() });
+          }
+        }}
+      />
+      <ConfirmDialog
+        visible={confirm?.action === 'reject'}
+        title="Reject Order"
+        message="Are you sure you want to reject this order?"
+        confirmLabel="Reject"
+        icon="x-circle"
+        tone="danger"
+        busy={isPending}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => {
+          setConfirm(null);
+          updateStatus({ id: id!, status: 'CANCELLED' });
+        }}
+      />
     </View>
   );
 }

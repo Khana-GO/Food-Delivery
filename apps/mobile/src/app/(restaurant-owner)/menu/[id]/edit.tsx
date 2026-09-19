@@ -1,17 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/navigation';
 import { Feather } from '@expo/vector-icons';
 import { MenuItemForm } from '@/components/res-owner/menu-item/MenuItemForm';
 import { useMenuItem } from '@/hooks/owner/menu-item/useMenuItem';
 import { useUpdateMenuItem } from '@/hooks/owner/menu-item/useUpdateMenuItem';
 import { useDeleteMenuItem } from '@/hooks/owner/menu-item/useDeleteMenuItem';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { MenuItemFormValues } from '@/components/res-owner/menu-item/MenuItemForm';
 import type { UpdateMenuItemPayload } from '@food_delivery/types';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,16 +22,10 @@ export default function EditMenuItemScreen() {
   const { data: item, isLoading: isLoadingItem } = useMenuItem(id);
   const { mutate: updateMenuItem, isPending: isUpdating } = useUpdateMenuItem();
   const { mutate: deleteMenuItem, isPending: isDeleting } = useDeleteMenuItem();
+  const [showDelete, setShowDelete] = useState(false);
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Item',
-      'Are you sure you want to delete this menu item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteMenuItem(id) },
-      ]
-    );
+    setShowDelete(true);
   };
 
   const handleSubmit = (
@@ -69,7 +64,7 @@ export default function EditMenuItemScreen() {
         <Text className="mt-4 text-lg font-medium text-gray-400">Item Not Found</Text>
         <TouchableOpacity
           className="px-6 py-3 mt-6 bg-primary rounded-xl"
-          onPress={() => router.back()}
+          onPress={() => goBack('/(restaurant-owner)/menu')}
         >
           <Text className="font-semibold text-white">Go Back</Text>
         </TouchableOpacity>
@@ -83,7 +78,7 @@ export default function EditMenuItemScreen() {
       <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
+            <TouchableOpacity onPress={() => goBack('/(restaurant-owner)/menu')} className="p-1">
               <Feather name="arrow-left" size={24} color="#1A1A1A" />
             </TouchableOpacity>
             <Text className="text-xl font-bold text-black">Edit Menu Item</Text>
@@ -105,6 +100,21 @@ export default function EditMenuItemScreen() {
         isLoading={isUpdating || isDeleting}
         submitLabel="Update Menu Item"
         onDelete={handleDelete}
+      />
+
+      <ConfirmDialog
+        visible={showDelete}
+        title="Delete Item"
+        message="Are you sure you want to delete this menu item?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+        onClose={() => setShowDelete(false)}
+        onConfirm={() => {
+          setShowDelete(false);
+          deleteMenuItem(id);
+        }}
       />
     </View>
   );

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '@/lib/navigation';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '@/hooks/owner/notification/useNotifications';
@@ -76,7 +77,7 @@ export default function NotificationsScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(restaurant-owner)')}
               style={{
                 width: 40,
                 height: 40,
@@ -124,7 +125,7 @@ export default function NotificationsScreen() {
         </View>
 
         {notifications.length > 0 ? (
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
             <TouchableOpacity
               onPress={handleMarkAll}
               disabled={unreadCount === 0 || markingAll}
@@ -148,22 +149,6 @@ export default function NotificationsScreen() {
                 {markingAll ? 'Marking…' : 'Mark all as read'}
               </Text>
             </TouchableOpacity>
-            <View
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                paddingHorizontal: 14,
-                paddingVertical: 11,
-                borderRadius: Radius.full,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.2)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' }} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.white }}>Live</Text>
-            </View>
           </View>
         ) : null}
       </View>

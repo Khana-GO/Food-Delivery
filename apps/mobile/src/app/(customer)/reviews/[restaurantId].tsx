@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ReviewCard } from '@/components/review/ReviewCard';
@@ -9,6 +9,7 @@ import { useReviewsForRestaurant } from '@/hooks/review/useReviewsForRestaurant'
 import { useReviewStats } from '@/hooks/review/useReviewStats';
 import EmptyState from '@/components/ui/EmptyState';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function RestaurantReviewsScreen() {
   const { restaurantId } = useLocalSearchParams<{ restaurantId: string }>();
@@ -31,7 +32,7 @@ export default function RestaurantReviewsScreen() {
       <SafeAreaView edges={['top']} style={{ backgroundColor: Colors.primary }}>
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/explore')} activeOpacity={0.8} style={styles.backBtn}>
               <Feather name="arrow-left" size={18} color={Colors.primary} />
             </TouchableOpacity>
             <View>

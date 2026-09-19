@@ -17,6 +17,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useUploadProfileImage } from '@/hooks/owner/user/useUploadProfileImage';
 import { useDeleteProfileImage } from '@/hooks/owner/user/useDeleteProfileImage';
 import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
+import { ProfileActionsMenu } from '@/components/ui/ProfileActionsMenu';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
 import { useRestaurantOrders } from '@/hooks/owner/orders/useRestaurantOrders';
 import { Colors, Radius, Shadow } from '@/constants/theme';
@@ -32,6 +34,7 @@ export default function OwnerProfile() {
   const { data: unreadData } = useUnreadCount();
   const unreadCount = unreadData?.count ?? 0;
   const [showLogout, setShowLogout] = useState(false);
+  const [showRemoveImage, setShowRemoveImage] = useState(false);
   const { data: restaurants } = useMyRestaurants();
   const { data: ordersData } = useRestaurantOrders();
   const raw: any[] = (ordersData as any)?.data ?? (ordersData as any) ?? [];
@@ -78,15 +81,8 @@ export default function OwnerProfile() {
   }, [uploadImage]);
 
   const handleDeleteImage = useCallback(() => {
-    Alert.alert(
-      'Remove Profile Image',
-      'Are you sure you want to remove your profile image?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
-      ]
-    );
-  }, [deleteImage]);
+    setShowRemoveImage(true);
+  }, []);
 
   const sections: Array<{ title: string; rows: Array<{ id: string; icon: any; label: string; sub?: string; badge?: number; onPress: () => void }> }> = [
     {
@@ -166,23 +162,15 @@ export default function OwnerProfile() {
                 <Text style={{ color: Colors.white, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}>RESTAURANT OWNER</Text>
               </View>
             </View>
-
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity
-                onPress={() => router.push('/(restaurant-owner)/profile/edit' as any)}
-                style={{ backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 14, paddingVertical: 7, borderRadius: Radius.full, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
-                activeOpacity={0.7}
-              >
-                <Feather name="edit-2" size={12} color={Colors.white} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.white }}>Edit Profile</Text>
-              </TouchableOpacity>
-              {user.imageUrl ? (
-                <TouchableOpacity onPress={handleDeleteImage} disabled={isDeleting} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }} activeOpacity={0.7}>
-                  <Feather name="trash-2" size={13} color={Colors.white} />
-                </TouchableOpacity>
-              ) : null}
-            </View>
           </View>
+
+          <ProfileActionsMenu
+            onEdit={() => router.push('/(restaurant-owner)/profile/edit' as any)}
+            onRemovePhoto={handleDeleteImage}
+            canRemovePhoto={hasImage}
+            top={insets.top + 8}
+            right={16}
+          />
         </View>
 
         {/* Real stats */}
@@ -233,11 +221,11 @@ export default function OwnerProfile() {
           <TouchableOpacity
             onPress={() => setShowLogout(true)}
             disabled={isAuthenticating}
-            style={{ marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.errorBg, paddingVertical: 16, borderRadius: Radius.xl, borderWidth: 1, borderColor: '#FECDD3' }}
+            style={{ marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: Radius.xl, ...Shadow.primary }}
             activeOpacity={0.7}
           >
-            <Feather name="log-out" size={18} color={Colors.error} />
-            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.error }}>{isAuthenticating ? 'Logging out…' : 'Log Out'}</Text>
+            <Feather name="log-out" size={18} color={Colors.white} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.white }}>{isAuthenticating ? 'Logging out…' : 'Log Out'}</Text>
           </TouchableOpacity>
           <Text style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: Colors.textMuted }}>KhanaGo • v1.0.0</Text>
         </View>
@@ -255,13 +243,28 @@ export default function OwnerProfile() {
               <TouchableOpacity onPress={() => setShowLogout(false)} style={{ flex: 1, backgroundColor: Colors.backgroundAlt, paddingVertical: 12, borderRadius: Radius.full, alignItems: 'center' }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleLogout} style={{ flex: 1, backgroundColor: Colors.error, paddingVertical: 12, borderRadius: Radius.full, alignItems: 'center' }}>
+              <TouchableOpacity onPress={handleLogout} style={{ flex: 1, backgroundColor: Colors.primary, paddingVertical: 12, borderRadius: Radius.full, alignItems: 'center' }}>
                 {isAuthenticating ? <ActivityIndicator size="small" color={Colors.white} /> : <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.white }}>Log Out</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       ) : null}
+
+      <ConfirmDialog
+        visible={showRemoveImage}
+        title="Remove Profile Image"
+        message="Are you sure you want to remove your profile image?"
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+        onClose={() => setShowRemoveImage(false)}
+        onConfirm={() => {
+          setShowRemoveImage(false);
+          deleteImage();
+        }}
+      />
     </View>
   );
 }

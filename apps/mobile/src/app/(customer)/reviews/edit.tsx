@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ReviewForm } from '@/components/review/ReviewForm';
 import { useMyReviews } from '@/hooks/review/useMyReviews';
 import { useUpdateReview } from '@/hooks/review/useUpdateReview';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function EditReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,7 +34,7 @@ export default function EditReviewScreen() {
     updateReview(
       { id: id!, data: { rating, comment } },
       {
-        onSuccess: () => router.back(),
+        onSuccess: () => goBack('/(customer)/reviews'),
       },
     );
   };
@@ -42,7 +43,7 @@ export default function EditReviewScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: Colors.primary }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>
+          <TouchableOpacity onPress={() => goBack('/(customer)/reviews')} activeOpacity={0.8} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>
             <Feather name="arrow-left" size={18} color={Colors.primary} />
           </TouchableOpacity>
           <View>
@@ -59,7 +60,7 @@ export default function EditReviewScreen() {
         onSubmit={handleSubmit}
         isLoading={isPending}
         submitLabel="Update Review"
-        onCancel={() => router.back()}
+        onCancel={() => goBack('/(customer)/reviews')}
       />
     </View>
   );

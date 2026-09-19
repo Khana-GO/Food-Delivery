@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import { ChatInput } from '@/components/customer/ChatInput';
 import { QuickReplies } from '@/components/customer/QuickReplies';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { goBack } from '@/lib/navigation';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function ChatbotScreen() {
   const { restaurantId, orderId } = useLocalSearchParams<{
@@ -27,6 +27,7 @@ export default function ChatbotScreen() {
   const { messages, isTyping, isSending, sendMessage, clearChat } = useChat();
   const flatListRef = useRef<FlatList>(null);
   const hasAutoSent = useRef(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
   // ─── Build context from URL params – send only once ───
   useEffect(() => {
@@ -75,10 +76,7 @@ export default function ChatbotScreen() {
       return;
     }
 
-    Alert.alert('Clear Chat', 'Are you sure you want to clear this conversation?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: () => clearChat() },
-    ]);
+    setShowClearDialog(true);
   };
 
   return (
@@ -173,6 +171,20 @@ export default function ChatbotScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
         <ChatInput onSend={(t) => sendMessage(t, restaurantId || orderId ? { restaurantId, orderId } as any : undefined)} isSending={isSending} />
       </KeyboardAvoidingView>
+
+      <ConfirmDialog
+        visible={showClearDialog}
+        title="Clear Chat"
+        message="Are you sure you want to clear this conversation?"
+        confirmLabel="Clear"
+        icon="trash-2"
+        tone="danger"
+        onClose={() => setShowClearDialog(false)}
+        onConfirm={() => {
+          setShowClearDialog(false);
+          clearChat();
+        }}
+      />
     </View>
   );
 }

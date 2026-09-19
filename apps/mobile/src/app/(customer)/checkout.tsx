@@ -15,6 +15,8 @@ import { cartService } from '@/stores/customer/cart.service';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { api } from 'lib/axios';
 import { useAuth } from '@/contexts/AuthContext';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { goBack } from '@/lib/navigation';
 
 export default function CheckoutScreen() {
   const { user } = useAuth();
@@ -28,6 +30,7 @@ export default function CheckoutScreen() {
   const [isValidating, setIsValidating] = useState(false);
   const [isPlacingOnline, setIsPlacingOnline] = useState(false);
   const [backendCart, setBackendCart] = useState<any>(null);
+  const [deleteAddressId, setDeleteAddressId] = useState<string | null>(null);
 
   // Add this state
 const [promoCode, setPromoCode] = useState('');
@@ -215,7 +218,7 @@ const [promoError, setPromoError] = useState('');
     <View className="flex-1 bg-gray-50">
       <View className="px-6 pt-12 pb-4 border-b border-gray-100" style={{ backgroundColor: '#B5122A', shadowColor: '#7F0D1D', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8 }}>
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
               <Feather name="arrow-left" size={18} color="#FFFFFF" />
             </TouchableOpacity>
             <Text className="text-xl font-bold" style={{ color: '#FFFFFF' }}>Checkout</Text>
@@ -296,22 +299,7 @@ const [promoError, setPromoError] = useState('');
                   setSelectedAddress(found);
                 }}
                 onEdit={(id) => router.push(`/(customer)/address/${id}/edit` as any)}
-                onDelete={(id) => {
-                  Alert.alert('Delete Address', 'Are you sure?', [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          const { addressService } = await import('@/services/customer/address.service');
-                          await addressService.delete(id);
-                          refetchAddresses();
-                        } catch {}
-                      },
-                    },
-                  ]);
-                }}
+                onDelete={(id) => setDeleteAddressId(id)}
               />
             ))
           )}
@@ -365,6 +353,25 @@ const [promoError, setPromoError] = useState('');
         {addresses.length === 0 && <Text className="mt-2 text-xs text-center text-red-500">Please add a delivery address</Text>}
         {belowMinimum && <Text className="mt-2 text-xs text-center text-red-500">Add more items to meet minimum</Text>}
       </View>
+
+      <ConfirmDialog
+        visible={!!deleteAddressId}
+        title="Delete Address"
+        message="Are you sure?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
+        onClose={() => setDeleteAddressId(null)}
+        onConfirm={async () => {
+          if (!deleteAddressId) return;
+          try {
+            const { addressService } = await import('@/services/customer/address.service');
+            await addressService.delete(deleteAddressId);
+            refetchAddresses();
+          } catch {}
+          setDeleteAddressId(null);
+        }}
+      />
     </View>
   );
 }

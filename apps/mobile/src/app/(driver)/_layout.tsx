@@ -57,6 +57,41 @@ export default function DriverLayout() {
     </View>
   );
 
+  const renderEarningsIcon = (focused: boolean) => (
+    <View style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: -7 }}>
+        <Text
+          style={{
+            fontSize: iconSize - 1,
+            fontWeight: '800',
+            color: focused ? Colors.primary : '#94A3B8',
+            includeFontPadding: false,
+            lineHeight: iconSize + 2,
+          }}
+        >
+          ₹
+        </Text>
+        <Text
+          numberOfLines={1}
+          allowFontScaling={false}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          style={{
+            fontSize: labelSize + 3,
+            letterSpacing: 0.15,
+            lineHeight: 13,
+            marginTop: -1,
+            color: focused ? Colors.primary : '#64748B',
+            fontWeight: focused ? '800' : '600',
+            textAlign: 'center',
+          }}
+        >
+          Earnings
+        </Text>
+      </View>
+    </View>
+  );
+
   return (
     <Tabs
       screenOptions={{
@@ -113,21 +148,7 @@ export default function DriverLayout() {
       <Tabs.Screen
         name="(tabs)/earnings"
         options={{
-          tabBarIcon: ({ focused }) =>
-            renderTabIcon(
-              'credit-card',
-              'Earnings',
-              focused,
-              <Text
-                style={{
-                  fontSize: iconSize - 2,
-                  fontWeight: '800',
-                  color: focused ? Colors.primary : '#94A3B8',
-                }}
-              >
-                ₹
-              </Text>,
-            ),
+          tabBarIcon: ({ focused }) => renderEarningsIcon(focused),
         }}
       />
 

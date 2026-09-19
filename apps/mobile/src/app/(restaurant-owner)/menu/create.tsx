@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/navigation';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { MenuItemForm } from '@/components/res-owner/menu-item/MenuItemForm';
@@ -57,7 +58,7 @@ export default function CreateMenuItemScreen() {
       {/* Header */}
       <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-100">
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity onPress={() => router.back()} className="p-1">
+          <TouchableOpacity onPress={() => goBack('/(restaurant-owner)/menu')} className="p-1">
             <Feather name="arrow-left" size={24} color="#1A1A1A" />
           </TouchableOpacity>
           <Text className="text-xl font-bold text-black">Add Menu Item</Text>

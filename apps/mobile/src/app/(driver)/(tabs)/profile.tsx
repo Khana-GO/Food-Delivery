@@ -21,6 +21,7 @@ import { useDriverOrdersHistory } from '@/hooks/driver/useDriverOrdersHistory';
 import { DriverProfileHeader } from '@/components/driver/DriverProfileHeader';
 import { DriverStatsCard } from '@/components/driver/DriverStatsCard';
 import { ProfileMenuItem } from '@/components/customer/ProfileMenuItem';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Colors } from '@/constants/theme';
 import * as ImagePicker from 'expo-image-picker';
 import { useDriverNotificationStore } from '@/stores/driver/driverNotificationStore';
@@ -33,6 +34,7 @@ export default function DriverProfile() {
   const { data: history } = useDriverOrdersHistory();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showRemoveImage, setShowRemoveImage] = useState(false);
 
   const { notifications, unreadCount } = useDriverNotificationStore();
 
@@ -58,11 +60,8 @@ export default function DriverProfile() {
   }, [uploadImage]);
 
   const handleDeleteImage = useCallback(() => {
-    Alert.alert('Remove Profile Image', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
-    ]);
-  }, [deleteImage]);
+    setShowRemoveImage(true);
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setShowLogoutModal(false);
@@ -97,6 +96,7 @@ export default function DriverProfile() {
           user={user}
           onEditPress={handleEditProfile}
           onImagePress={handlePickImage}
+          onRemovePhoto={handleDeleteImage}
           isUploading={isUploading || isDeleting}
         />
 
@@ -115,7 +115,7 @@ export default function DriverProfile() {
 
         <TouchableOpacity
           className="py-4 mx-4 mt-4 rounded-xl"
-          style={{ backgroundColor: '#DC2626' }}
+          style={{ backgroundColor: Colors.primary }}
           onPress={() => setShowLogoutModal(true)}
           disabled={isAuthenticating}
         >
@@ -158,6 +158,21 @@ export default function DriverProfile() {
           </View>
         </Pressable>
       </Modal>
+
+      <ConfirmDialog
+        visible={showRemoveImage}
+        title="Remove Profile Image"
+        message="Are you sure?"
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+        onClose={() => setShowRemoveImage(false)}
+        onConfirm={() => {
+          setShowRemoveImage(false);
+          deleteImage();
+        }}
+      />
     </View>
   );
 }

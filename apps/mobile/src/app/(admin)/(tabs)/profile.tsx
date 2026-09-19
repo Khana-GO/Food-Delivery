@@ -12,7 +12,8 @@ import {
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { ConfirmDialog } from '@/components/res-owner/owner/kit';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ProfileActionsMenu } from '@/components/ui/ProfileActionsMenu';
 import * as ImagePicker from 'expo-image-picker';
 import { useUploadProfileImage } from '@/hooks/owner/user/useUploadProfileImage';
 import { useDeleteProfileImage } from '@/hooks/owner/user/useDeleteProfileImage';
@@ -27,6 +28,7 @@ export default function AdminProfile() {
   const { data: unreadData } = useUnreadCount();
   const unreadCount = unreadData?.count ?? 0;
   const [showLogout, setShowLogout] = useState(false);
+  const [showRemoveImage, setShowRemoveImage] = useState(false);
 
   const handleLogout = useCallback(async () => {
     setShowLogout(false);
@@ -55,11 +57,8 @@ export default function AdminProfile() {
   }, [uploadImage]);
 
   const handleDeleteImage = useCallback(() => {
-    Alert.alert('Remove Photo', 'Remove your profile photo?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
-    ]);
-  }, [deleteImage]);
+    setShowRemoveImage(true);
+  }, []);
 
   const sections: Array<{ title: string; rows: Array<{ id: string; icon: any; label: string; sub?: string; badge?: number; onPress: () => void }> }> = [
     {
@@ -181,33 +180,15 @@ export default function AdminProfile() {
                 <Text style={{ color: Colors.white, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}>ADMINISTRATOR</Text>
               </View>
             </View>
-
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-              <TouchableOpacity
-                onPress={() => router.push('/(admin)/profile/edit' as any)}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: Radius.full,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.25)',
-                }}
-                activeOpacity={0.7}
-              >
-                <Feather name="edit-2" size={11} color={Colors.white} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.white }}>Edit Profile</Text>
-              </TouchableOpacity>
-              {user.imageUrl ? (
-                <TouchableOpacity onPress={handleDeleteImage} disabled={isDeleting} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }} activeOpacity={0.7}>
-                  <Feather name="trash-2" size={13} color={Colors.white} />
-                </TouchableOpacity>
-              ) : null}
-            </View>
           </View>
+
+          <ProfileActionsMenu
+            onEdit={() => router.push('/(admin)/profile/edit' as any)}
+            onRemovePhoto={handleDeleteImage}
+            canRemovePhoto={!!user.imageUrl}
+            top={14}
+            right={12}
+          />
         </View>
 
         {/* Stats cards ultra-compact padding 10 */}
@@ -280,22 +261,36 @@ export default function AdminProfile() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              backgroundColor: Colors.errorBg,
+              backgroundColor: Colors.primary,
               paddingVertical: 16,
               borderRadius: Radius.xl,
-              borderWidth: 1,
-              borderColor: '#FECDD3',
+              ...Shadow.primary,
             }}
             activeOpacity={0.7}
           >
-            <Feather name="log-out" size={18} color={Colors.error} />
-            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.error }}>{isAuthenticating ? 'Logging out…' : 'Log Out'}</Text>
+            <Feather name="log-out" size={18} color={Colors.white} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.white }}>{isAuthenticating ? 'Logging out…' : 'Log Out'}</Text>
           </TouchableOpacity>
           <Text style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: Colors.textMuted }}>KhanaGo Admin · v1.0.0</Text>
         </View>
       </ScrollView>
 
-      <ConfirmDialog visible={showLogout} onClose={() => setShowLogout(false)} onConfirm={handleLogout} title="Log out?" message="You will need to sign in again." confirmLabel="Log Out" icon="log-out" tone="danger" busy={isAuthenticating} />
+      <ConfirmDialog visible={showLogout} onClose={() => setShowLogout(false)} onConfirm={handleLogout} title="Log out?" message="You will need to sign in again." confirmLabel="Log Out" icon="log-out" tone="danger" confirmBg={Colors.primary} busy={isAuthenticating} />
+
+      <ConfirmDialog
+        visible={showRemoveImage}
+        title="Remove Photo"
+        message="Remove your profile photo?"
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+        onClose={() => setShowRemoveImage(false)}
+        onConfirm={() => {
+          setShowRemoveImage(false);
+          deleteImage();
+        }}
+      />
     </View>
   );
 }

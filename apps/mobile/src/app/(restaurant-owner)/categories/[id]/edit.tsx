@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/navigation';
 import { Feather } from '@expo/vector-icons';
 import {
   ScreenHeader,
@@ -28,14 +29,14 @@ export default function EditCategoryScreen() {
   if (!category) {
     return (
       <View className="flex-1 bg-gray-50">
-        <ScreenHeader title="Edit Category" />
+        <ScreenHeader title="Edit Category" backFallback="/(restaurant-owner)/menu" />
         <View className="p-4">
           <EmptyState
             icon="folder"
             title="Category not found"
             message="It may have been deleted. Head back and refresh your categories."
             actionLabel="Go Back"
-            onAction={() => router.back()}
+            onAction={() => goBack('/(restaurant-owner)/menu')}
           />
         </View>
       </View>
@@ -54,7 +55,7 @@ export default function EditCategoryScreen() {
     deleteCategory(id, {
       onSuccess: () => {
         setShowDelete(false);
-        router.back();
+        goBack('/(restaurant-owner)/menu');
       },
     });
 
@@ -63,6 +64,7 @@ export default function EditCategoryScreen() {
       <ScreenHeader
         title="Edit Category"
         subtitle={category.name}
+        backFallback="/(restaurant-owner)/menu"
         right={
           <Pressable
             onPress={() => setShowDelete(true)}

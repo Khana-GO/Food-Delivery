@@ -45,6 +45,7 @@ export default function CreateCategoryScreen() {
       <ScreenHeader
         title="New Category"
         subtitle="Group related menu items together"
+        backFallback="/(restaurant-owner)/menu"
       />
 
       {/* Restaurant selector — always shown so category is created for correct restaurant */}

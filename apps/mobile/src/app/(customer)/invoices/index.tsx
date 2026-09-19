@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInvoices } from '../../../hooks/invoice/useInvoices';
 import { Colors, Radius, Shadow } from '../../../constants/theme';
 import type { Invoice } from '../../../services/invoice/invoice.service';
+import { goBack } from '@/lib/navigation';
 
 const paymentStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
   PAID: { label: 'Paid', color: '#15803D', bg: '#F0FDF4' },
@@ -86,7 +87,7 @@ export default function InvoicesScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(customer)/(tabs)/orders')}
               activeOpacity={0.8}
               style={styles.backBtn}
             >

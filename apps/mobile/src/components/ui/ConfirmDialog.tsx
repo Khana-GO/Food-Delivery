@@ -18,8 +18,9 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   icon?: React.ComponentProps<typeof Feather>['name'];
-  tone?: 'danger' | 'warning' | 'info';
+  tone?: 'danger' | 'warning' | 'info' | 'success';
   busy?: boolean;
+  confirmBg?: string;
 }
 
 const TONE_MAP = {
@@ -38,6 +39,11 @@ const TONE_MAP = {
     iconColor: Colors.primary,
     confirmBg: Colors.primary,
   },
+  success: {
+    iconBg: Colors.successLight,
+    iconColor: Colors.success,
+    confirmBg: Colors.success,
+  },
 } as const;
 
 export function ConfirmDialog({
@@ -51,8 +57,10 @@ export function ConfirmDialog({
   icon = 'alert-triangle',
   tone = 'danger',
   busy = false,
+  confirmBg,
 }: ConfirmDialogProps) {
   const t = TONE_MAP[tone];
+  const confirmColor = confirmBg || t.confirmBg;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -139,8 +147,8 @@ export function ConfirmDialog({
                 justifyContent: 'center',
                 paddingVertical: 14,
                 borderRadius: Radius.xl,
-                backgroundColor: t.confirmBg,
-                shadowColor: t.confirmBg,
+                backgroundColor: confirmColor,
+                shadowColor: confirmColor,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
                 shadowRadius: 8,

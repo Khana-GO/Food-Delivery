@@ -1,14 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   FlatList,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { goBack } from '@/lib/navigation';
 import { useDriverNotifications } from '@/hooks/driver/useDriverNotifications';
 import { useDriverMarkAsRead } from '@/hooks/driver/useDriverMarkAsRead';
 import { useDriverMarkAllAsRead } from '@/hooks/driver/useDriverMarkAllAsRead';
@@ -25,6 +26,8 @@ export default function DriverNotificationsScreen() {
   const { mutate: deleteAll } = useDriverDeleteAllNotifications();
   const { notifications, unreadCount } = useDriverNotificationStore();
 
+  const [deleteKind, setDeleteKind] = useState<{ kind: 'one'; id: string } | { kind: 'all' } | null>(null);
+
   const handlePress = useCallback((notification: any) => {
     if (notification.data?.orderId) {
       router.push(`/(driver)/delivery/${notification.data.orderId}` as any);
@@ -32,11 +35,8 @@ export default function DriverNotificationsScreen() {
   }, []);
 
   const handleDelete = useCallback((id: string) => {
-    Alert.alert('Remove notification?', 'This will permanently delete the notification.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteNotification(id) },
-    ]);
-  }, [deleteNotification]);
+    setDeleteKind({ kind: 'one', id });
+  }, []);
 
   const handleMarkAll = useCallback(() => {
     if (unreadCount === 0) return;
@@ -45,11 +45,8 @@ export default function DriverNotificationsScreen() {
 
   const handleClearAll = useCallback(() => {
     if (notifications.length === 0) return;
-    Alert.alert('Clear all?', 'Permanently delete all notifications?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete All', style: 'destructive', onPress: () => deleteAll() },
-    ]);
-  }, [deleteAll, notifications.length]);
+    setDeleteKind({ kind: 'all' });
+  }, [notifications.length]);
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -67,7 +64,7 @@ export default function DriverNotificationsScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(driver)/(tabs)')}
               style={{
                 width: 40,
                 height: 40,
@@ -117,7 +114,7 @@ export default function DriverNotificationsScreen() {
 
         {/* Action row */}
         {notifications.length > 0 && (
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
             <TouchableOpacity
               onPress={handleMarkAll}
               disabled={unreadCount === 0 || markingAll}
@@ -141,22 +138,6 @@ export default function DriverNotificationsScreen() {
                 {markingAll ? 'Marking…' : 'Mark all as read'}
               </Text>
             </TouchableOpacity>
-            <View
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                paddingHorizontal: 14,
-                paddingVertical: 11,
-                borderRadius: Radius.full,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.2)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#4ADE80' }} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.white }}>Live</Text>
-            </View>
           </View>
         )}
       </View>
@@ -218,6 +199,36 @@ export default function DriverNotificationsScreen() {
         }
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+      />
+
+      <ConfirmDialog
+        visible={deleteKind?.kind === 'one'}
+        title="Remove notification?"
+        message="This will permanently delete the notification."
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+        onClose={() => setDeleteKind(null)}
+        onConfirm={() => {
+          if (deleteKind?.kind === 'one') {
+            deleteNotification(deleteKind.id);
+          }
+          setDeleteKind(null);
+        }}
+      />
+
+      <ConfirmDialog
+        visible={deleteKind?.kind === 'all'}
+        title="Clear all?"
+        message="Permanently delete all notifications?"
+        confirmLabel="Delete All"
+        icon="trash-2"
+        tone="danger"
+        onClose={() => setDeleteKind(null)}
+        onConfirm={() => {
+          setDeleteKind(null);
+          deleteAll();
+        }}
       />
     </View>
   );

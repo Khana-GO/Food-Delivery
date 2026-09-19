@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import PremiumCard from '@/components/ui/PremiumCard';
-import { router } from 'expo-router';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { goBack } from '@/lib/navigation';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -36,7 +37,7 @@ export default function DriverEditProfile() {
     phone: user?.phone || '',
   });
   const [profileImage, setProfileImage] = useState<string | null>(user?.imageUrl || null);
-  const [isRemoving, setIsRemoving] = useState(false);
+  const [showRemoveImage, setShowRemoveImage] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -72,10 +73,7 @@ export default function DriverEditProfile() {
   };
 
   const handleDeleteImage = () => {
-    Alert.alert('Remove Profile Image', 'Are you sure you want to remove your profile image?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
-    ]);
+    setShowRemoveImage(true);
   };
 
   const handleSave = () => {
@@ -108,7 +106,7 @@ export default function DriverEditProfile() {
       >
         <View style={{ backgroundColor: Colors.primary, paddingTop: 48, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] }}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => goBack('/(driver)/(tabs)/profile')}
             style={{
               width: 40,
               height: 40,
@@ -165,7 +163,7 @@ export default function DriverEditProfile() {
               </TouchableOpacity>
               {hasProfileImage && !isUploading && (
                 <TouchableOpacity
-                  onPress={() => setIsRemoving(true)}
+                  onPress={handleDeleteImage}
                   activeOpacity={0.7}
                   style={{
                     position: 'absolute',
@@ -195,23 +193,6 @@ export default function DriverEditProfile() {
             >
               {formData.email}
             </Text>
-
-            {isRemoving && (
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, paddingHorizontal: 20 }}>
-                <TouchableOpacity
-                  onPress={() => { deleteImage(); setIsRemoving(false); }}
-                  style={{ flex: 1, backgroundColor: Colors.error, paddingVertical: 12, borderRadius: Radius.full, alignItems: 'center' }}
-                >
-                  <Text style={{ color: Colors.white, fontWeight: '700', fontSize: 14 }}>Remove</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setIsRemoving(false)}
-                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: 12, borderRadius: Radius.full, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
-                >
-                  <Text style={{ color: Colors.white, fontWeight: '700', fontSize: 14 }}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
         </View>
 
@@ -365,6 +346,21 @@ export default function DriverEditProfile() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={showRemoveImage}
+        title="Remove Profile Image"
+        message="Are you sure you want to remove your profile image?"
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+        onClose={() => setShowRemoveImage(false)}
+        onConfirm={() => {
+          setShowRemoveImage(false);
+          deleteImage();
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }

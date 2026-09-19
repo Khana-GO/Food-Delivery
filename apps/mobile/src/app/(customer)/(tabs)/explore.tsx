@@ -178,7 +178,7 @@ export default function Explore() {
       </View>
 
       {categories.length ? (
-        <View style={{ paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
+        <View style={{ paddingVertical: 8, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }} bounces={false}>
             {categories.map((c) => (
               <CategoryChip key={c.id} label={c.name} isSelected={cat === c.id} onPress={() => setCat(cat === c.id ? null : c.id)} />
@@ -189,7 +189,7 @@ export default function Explore() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 10 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 24, gap: 8 }}
         removeClippedSubviews={true}
         refreshControl={<RefreshControl refreshing={!!isRefetching} onRefresh={() => refetch()} tintColor={Colors.primary} />}
       >
@@ -212,15 +212,15 @@ export default function Explore() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'], ...Shadow.primaryLg },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
+  header: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 14, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'], ...Shadow.primaryLg },
+  title: { fontSize: 19, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
+  subtitle: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
-    paddingHorizontal: 14,
-    marginTop: 12,
+    height: 42,
+    paddingHorizontal: 12,
+    marginTop: 10,
     borderRadius: Radius.xl,
     backgroundColor: Colors.white,
     borderWidth: 1,
@@ -228,9 +228,9 @@ const styles = StyleSheet.create({
     gap: 10,
     ...Shadow.sm,
   },
-  input: { flex: 1, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
-  filterPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  input: { flex: 1, fontSize: 13, color: Colors.textDark, paddingVertical: 0 },
+  filterPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   filterActive: { backgroundColor: Colors.white, borderColor: Colors.white },
-  filterText: { fontSize: 12, fontWeight: '600', color: Colors.white },
+  filterText: { fontSize: 11, fontWeight: '600', color: Colors.white },
   filterTextActive: { color: Colors.primary },
 });

@@ -4,6 +4,8 @@ import { WebView } from 'react-native-webview';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { api } from '@/lib/axios';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { goBack } from '@/lib/navigation';
 
 /**
  * eSewa WebView – pre-payment flow
@@ -27,6 +29,7 @@ export default function EsewaWebView() {
   const [html, setHtml] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [cancelDialog, setCancelDialog] = useState(false);
   const verifiedRef = useRef(false);
   const transactionUuidRef = useRef<string | null>(null);
 
@@ -41,27 +44,20 @@ export default function EsewaWebView() {
   }, []);
 
   const confirmCancel = () => {
-    Alert.alert(
-      'Cancel Payment?',
-      'Are you sure you want to cancel? No amount will be deducted.',
-      [
-        { text: 'Continue Payment', style: 'cancel' },
-        { text: 'Cancel Payment', style: 'destructive', onPress: () => router.replace('/(customer)/checkout' as any) },
-      ],
-    );
+    setCancelDialog(true);
   };
 
   const initializePayment = async () => {
     try {
       if (!orderPayload || !amount) {
         Alert.alert('Error', 'Missing order details');
-        router.back();
+        goBack('/(customer)/checkout');
         return;
       }
       const amtNum = parseFloat(amount);
       if (isNaN(amtNum) || amtNum <= 0) {
         Alert.alert('Error', 'Invalid amount');
-        router.back();
+        goBack('/(customer)/checkout');
         return;
       }
 
@@ -215,7 +211,7 @@ export default function EsewaWebView() {
         <Feather name="alert-circle" size={48} color="#EF4444" />
         <Text className="mt-4 text-lg font-medium text-red-500">Payment Initialization Failed</Text>
         <Text className="mt-2 text-sm text-center text-gray-500">Please check your connection and try again.</Text>
-        <TouchableOpacity className="px-6 py-3 mt-6 bg-primary rounded-xl" onPress={() => router.back()}>
+        <TouchableOpacity className="px-6 py-3 mt-6 bg-primary rounded-xl" onPress={() => goBack('/(customer)/checkout')}>
           <Text className="font-semibold text-white">Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -308,6 +304,20 @@ export default function EsewaWebView() {
             <Text className="mt-3 text-sm text-gray-500">Loading eSewa…</Text>
           </View>
         )}
+      />
+
+      <ConfirmDialog
+        visible={cancelDialog}
+        title="Cancel Payment?"
+        message="Are you sure you want to cancel? No amount will be deducted."
+        confirmLabel="Cancel Payment"
+        icon="alert-triangle"
+        tone="danger"
+        onClose={() => setCancelDialog(false)}
+        onConfirm={() => {
+          setCancelDialog(false);
+          router.replace('/(customer)/checkout' as any);
+        }}
       />
     </View>
   );

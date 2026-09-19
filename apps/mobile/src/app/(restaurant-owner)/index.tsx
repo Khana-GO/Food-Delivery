@@ -185,7 +185,9 @@ export default function RestaurantDashboard() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}>
-              <View
+              <TouchableOpacity
+                onPress={() => router.push('/(restaurant-owner)/profile' as any)}
+                activeOpacity={0.8}
                 style={{
                   width: s(48),
                   height: s(48),
@@ -208,7 +210,7 @@ export default function RestaurantDashboard() {
                     {initials}
                   </Text>
                 )}
-              </View>
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <Text
                   style={{

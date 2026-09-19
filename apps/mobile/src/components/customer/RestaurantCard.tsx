@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, Animated, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Restaurant } from '@food_delivery/types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
@@ -51,7 +51,7 @@ const RestaurantCardComponent = ({ restaurant, isFavorite = false, onToggleFavor
               </Text>
               {onToggleFavorite ? (
                 <TouchableOpacity onPress={handleFavoritePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.favBtnSmall}>
-                  <Feather name="heart" size={16} color={isFavorite ? Colors.primary : '#CBD5E1'} style={isFavorite ? { opacity: 1 } : undefined} />
+                  <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={16} color={isFavorite ? Colors.primary : '#CBD5E1'} />
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -89,7 +89,7 @@ const RestaurantCardComponent = ({ restaurant, isFavorite = false, onToggleFavor
           <View style={styles.gridGradient} />
           {onToggleFavorite ? (
             <TouchableOpacity onPress={handleFavoritePress} activeOpacity={0.8} style={styles.favBtn}>
-              <Feather name="heart" size={14} color={isFavorite ? Colors.primary : '#64748B'} fill={isFavorite ? Colors.primary : 'transparent'} />
+              <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={14} color={isFavorite ? Colors.primary : '#64748B'} />
             </TouchableOpacity>
           ) : null}
           {!restaurant.isOpen ? (

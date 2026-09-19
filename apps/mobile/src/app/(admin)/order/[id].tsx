@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useAdminOrder } from '@/hooks/admin/order/useAdminOrder';
 import { useAdminUpdateOrderStatus } from '@/hooks/admin/order/useAdminUpdateOrderStatus';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
@@ -57,7 +57,7 @@ export default function AdminOrderDetailsScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(admin)/(tabs)/orders')}
               style={{
                 width: 44,
                 height: 44,

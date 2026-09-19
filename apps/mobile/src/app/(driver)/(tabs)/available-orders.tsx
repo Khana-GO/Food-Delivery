@@ -9,7 +9,7 @@ import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function AvailableOrdersScreen() {
   const { data: orders, isLoading, refetch } = useAvailableOrders();
-  const { mutate: acceptDelivery, isPending } = useAcceptDelivery();
+  const { mutate: acceptDelivery, isPending, variables } = useAcceptDelivery();
   const { availableOrders } = useDriverStore();
 
   const displayOrders = orders || availableOrders;
@@ -31,7 +31,7 @@ export default function AvailableOrdersScreen() {
           <DeliveryCard
             order={item}
             onAccept={() => acceptDelivery(item.id)}
-            isAccepting={isPending}
+            isAccepting={isPending && variables === item.id}
           />
         )}
         ListEmptyComponent={

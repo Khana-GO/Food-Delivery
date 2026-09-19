@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import PremiumCard from '@/components/ui/PremiumCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 const METHODS = [
   { id: '1', label: 'Cash on Delivery', desc: 'Pay when your order arrives', icon: 'dollar-sign' as const },
@@ -19,7 +19,7 @@ export default function Payment() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF' }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={styles.backBtn}>
             <Feather name="arrow-left" size={18} color={Colors.textDark} />
           </TouchableOpacity>
           <Text style={styles.title}>Payment Methods</Text>

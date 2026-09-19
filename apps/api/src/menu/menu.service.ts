@@ -744,7 +744,7 @@ export class MenuItemsService {
   // ─── GET GROUPED BY CATEGORY ─── (cached)
   async getGroupedByCategory(
     restaurantId: string,
-  ): Promise<{ categoryId: string; items: MenuItemResponseDto[] }[]> {
+  ): Promise<{ categoryId: string; categoryName: string | null; items: MenuItemResponseDto[] }[]> {
     return this.handleDbOperation(async () => {
       return this.cache.wrap(
         this.keyGrouped(restaurantId),
@@ -761,6 +761,14 @@ export class MenuItemsService {
             )
             .orderBy(desc(menuItemsTable.createdAt));
 
+          // Resolve real category names so the UI never falls back to a generic label
+          const categories = await this.db
+            .select({ id: menuCategoriesTable.id, name: menuCategoriesTable.name })
+            .from(menuCategoriesTable)
+            .where(eq(menuCategoriesTable.restaurantId, restaurantId));
+
+          const nameById = new Map(categories.map((c) => [c.id, c.name]));
+
           const grouped = items.reduce<Record<string, MenuItemResponseDto[]>>(
             (acc, item) => {
               const categoryId = item.categoryId;
@@ -775,6 +783,7 @@ export class MenuItemsService {
 
           return Object.entries(grouped).map(([categoryId, groupedItems]) => ({
             categoryId,
+            categoryName: nameById.get(categoryId) ?? null,
             items: groupedItems,
           }));
         },

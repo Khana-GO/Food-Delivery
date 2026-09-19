@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useAdminRestaurant } from '@/hooks/admin/restaurant/useAdminRestaurant';
 import { useToggleVerification } from '@/hooks/admin/restaurant/useToggleVerification';
 import { useToggleActive } from '@/hooks/admin/restaurant/useToggleActive';
@@ -45,7 +46,7 @@ export default function RestaurantDetailsScreenLegacy() {
           <Feather name="package" size={32} color={Colors.primary} />
         </View>
         <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: Colors.textDark }}>Restaurant Not Found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full, ...Shadow.primary }} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => goBack('/(admin)/(tabs)/restaurants')} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full, ...Shadow.primary }} activeOpacity={0.8}>
           <Text style={{ fontWeight: '700', color: Colors.white }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -67,7 +68,7 @@ export default function RestaurantDetailsScreenLegacy() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack('/(admin)/(tabs)/restaurants')}
           style={{
             width: 44,
             height: 44,

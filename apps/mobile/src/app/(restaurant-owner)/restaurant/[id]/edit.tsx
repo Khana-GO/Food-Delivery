@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/navigation';
 import { Feather } from '@expo/vector-icons';
 import {
   ScreenHeader,
@@ -28,7 +29,7 @@ export default function EditRestaurantScreen() {
   if (!restaurant) {
     return (
       <View className="flex-1 bg-gray-50">
-        <ScreenHeader title="Edit Restaurant" />
+        <ScreenHeader title="Edit Restaurant" backFallback="/(restaurant-owner)/restaurant" />
         <View className="flex-1 items-center justify-center px-8">
           <Feather name="alert-circle" size={44} color="#CBD5E1" />
           <Text className="mt-4 text-base font-bold text-gray-800">Restaurant not found</Text>
@@ -44,7 +45,7 @@ export default function EditRestaurantScreen() {
     try {
       setError(null);
       await updateRestaurant({ id: restaurant.id, data });
-      router.back();
+      goBack('/(restaurant-owner)/restaurant');
     } catch {
       // Errors surface through the store; keep the user on the form.
     }
@@ -52,7 +53,7 @@ export default function EditRestaurantScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader title="Edit Details" subtitle={`${restaurant.name} · text info only`} />
+      <ScreenHeader title="Edit Details" subtitle={`${restaurant.name} · text info only`} backFallback="/(restaurant-owner)/restaurant" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

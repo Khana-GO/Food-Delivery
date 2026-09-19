@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { UserForm } from '@/components/admin/users/UserForm';
 import { useCreateUser } from '@/hooks/admin/user/useCreateUser';
 import { Colors, Radius } from '@/constants/theme';
@@ -23,7 +23,7 @@ export default function CreateUserScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack('/(admin)/(tabs)/users')}
           style={{
             width: 44,
             height: 44,

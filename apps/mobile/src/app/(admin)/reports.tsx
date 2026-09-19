@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router'; // ✅ added
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useSalesReport } from '@/hooks/admin/useSalesReport';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import PremiumCard from '@/components/ui/PremiumCard';
@@ -91,7 +91,7 @@ export default function ReportsScreen() {
           {/* 🔙 Back button + title */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(admin)/(tabs)')}
               style={{
                 width: 32,
                 height: 32,

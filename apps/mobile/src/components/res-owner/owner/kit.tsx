@@ -10,9 +10,9 @@ import {
   Easing,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Design tokens
@@ -54,13 +54,13 @@ interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
   back?: boolean;
+  backFallback?: string;
   right?: React.ReactNode;
   tone?: 'light' | 'brand';
 }
 
-export function ScreenHeader({ title, subtitle, back = true, right, tone = 'light' }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, back = true, backFallback = '/(restaurant-owner)', right, tone = 'light' }: ScreenHeaderProps) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const isBrand = tone === 'brand';
 
   return (
@@ -72,7 +72,7 @@ export function ScreenHeader({ title, subtitle, back = true, right, tone = 'ligh
         <View className="flex-row items-center flex-1" style={{ maxWidth: 688 }}>
           {back && (
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => goBack(backFallback)}
               hitSlop={10}
               className={`mr-1 h-10 w-10 -ml-2 items-center justify-center rounded-full ${
                 isBrand ? 'bg-white/15 active:bg-white/25' : 'active:bg-gray-100'

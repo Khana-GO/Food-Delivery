@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { reviewService } from '@/services/review/review.service';
 import { ReviewCard } from '@/components/review/ReviewCard';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeleteReview } from '@/hooks/review/useDeleteReview';
 
 export default function AdminReviewsScreen() {
@@ -13,12 +14,10 @@ export default function AdminReviewsScreen() {
     queryFn: () => reviewService.adminGetAll({ page, limit: 20 }),
   });
   const { mutate: deleteReview } = useDeleteReview();
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const handleDelete = (id: string) => {
-    Alert.alert('Delete Review', 'Are you sure you want to delete this review?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteReview(id) },
-    ]);
+    setPendingDelete(id);
   };
 
   return (
@@ -42,6 +41,20 @@ export default function AdminReviewsScreen() {
             <Text className="mt-4 text-lg font-medium text-gray-400">No Reviews</Text>
           </View>
         }
+      />
+
+      <ConfirmDialog
+        visible={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) deleteReview(pendingDelete);
+          setPendingDelete(null);
+        }}
+        title="Delete Review"
+        message="Are you sure you want to delete this review?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
       />
     </View>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProfileEditForm } from '@/components/res-owner/profile/ProfileEditForm';
 import { useUpdateProfile } from '@/hooks/owner/user/useUpdateProfile';
@@ -33,7 +33,7 @@ export default function AdminEditProfileScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack('/(admin)/(tabs)/profile')}
           style={{
             width: 44,
             height: 44,

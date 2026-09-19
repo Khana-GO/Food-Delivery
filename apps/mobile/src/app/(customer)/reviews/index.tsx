@@ -8,6 +8,7 @@ import { useDeleteReview } from '@/hooks/review/useDeleteReview';
 import { ReviewCard } from '@/components/review/ReviewCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function MyReviewsScreen() {
   const { data, isLoading, refetch } = useMyReviews();
@@ -46,7 +47,7 @@ export default function MyReviewsScreen() {
       <SafeAreaView edges={['top']} style={{ backgroundColor: Colors.primary }}>
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} activeOpacity={0.8} style={styles.backBtn}>
               <Feather name="arrow-left" size={18} color={Colors.primary} />
             </TouchableOpacity>
             <View>

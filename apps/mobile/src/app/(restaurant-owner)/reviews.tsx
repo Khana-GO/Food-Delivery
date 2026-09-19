@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, RefreshControl, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, RefreshControl, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useReviewsForRestaurant } from '@/hooks/review/useReviewsForRestaurant';
@@ -9,6 +9,7 @@ import { ReviewCard } from '@/components/review/ReviewCard';
 import { useMyRestaurants } from '@/hooks/owner/restaurant/useRestaurants';
 import { ReviewStatsView } from '@/components/review/ReviewStats';
 import { Colors } from '@/constants/theme';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function OwnerReviewsScreen() {
   const { data: restaurants, isLoading: isLoadingRestaurants } = useMyRestaurants();
@@ -27,11 +28,10 @@ export default function OwnerReviewsScreen() {
   const { data: stats } = useReviewStats(selectedRestaurantId);
   const { mutate: deleteReview } = useDeleteReview();
 
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
   const handleDelete = (id: string) => {
-    Alert.alert('Delete Review', 'Are you sure you want to delete this review?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteReview(id) },
-    ]);
+    setDeleteTarget(id);
   };
 
   const close = useCallback(() => {
@@ -137,6 +137,20 @@ export default function OwnerReviewsScreen() {
           }
         />
       )}
+
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Delete Review"
+        message="Are you sure you want to delete this review?"
+        confirmLabel="Delete"
+        icon="trash-2"
+        tone="danger"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) deleteReview(deleteTarget);
+          setDeleteTarget(null);
+        }}
+      />
     </View>
   );
 }

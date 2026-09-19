@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useUser } from '@/hooks/admin/user/useUser';
 import { useUpdateUser } from '@/hooks/admin/user/useUpdateUser';
 import { UserForm } from '@/components/admin/users/UserForm';
@@ -28,7 +29,7 @@ export default function EditUserScreen() {
           <Feather name="user-x" size={32} color={Colors.primary} />
         </View>
         <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: Colors.textDark }}>User Not Found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full }} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => goBack('/(admin)/(tabs)/users')} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full }} activeOpacity={0.7}>
           <Text style={{ fontWeight: '700', color: Colors.white }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -48,7 +49,7 @@ export default function EditUserScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack('/(admin)/(tabs)/users')}
           style={{
             width: 44,
             height: 44,

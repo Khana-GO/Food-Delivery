@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { User } from '@food_delivery/types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { ProfileActionsMenu } from '@/components/ui/ProfileActionsMenu';
 
 interface Props {
   user: User;
@@ -51,20 +52,13 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
           {user.email}
         </Text>
         {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
-
-        <View style={styles.actions}>
-          <TouchableOpacity onPress={onEditPress} activeOpacity={0.85} style={styles.editBtn}>
-            <Feather name="edit-2" size={13} color={Colors.white} />
-            <Text style={styles.editText}>Edit Profile</Text>
-          </TouchableOpacity>
-          {hasImage && onDeleteImage ? (
-            <TouchableOpacity onPress={onDeleteImage} activeOpacity={0.85} style={styles.removeBtn}>
-              <Feather name="trash-2" size={13} color={Colors.primary} />
-              <Text style={styles.removeText}>Remove</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
       </View>
+
+      <ProfileActionsMenu
+        onEdit={onEditPress}
+        onRemovePhoto={onDeleteImage}
+        canRemovePhoto={hasImage}
+      />
     </View>
   );
 };
@@ -72,36 +66,36 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: Colors.primary,
-    paddingTop: 12,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    paddingHorizontal: 18,
     borderBottomLeftRadius: Radius['3xl'],
     borderBottomRightRadius: Radius['3xl'],
   },
   inner: { alignItems: 'center' },
   avatarTouch: { position: 'relative' },
   avatarRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: 'rgba(255,255,255,0.3)',
     ...Shadow.lg,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   avatarImg: { width: '100%', height: '100%' },
-  avatarInitials: { fontSize: 28, fontWeight: '800', color: Colors.primary, letterSpacing: -0.5 },
+  avatarInitials: { fontSize: 24, fontWeight: '800', color: Colors.primary, letterSpacing: -0.5 },
   uploadOverlay: {
     position: 'absolute' as const,
     top: 0,
@@ -111,48 +105,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15,23,42,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 44,
+    borderRadius: 36,
   },
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: Colors.primary,
     ...Shadow.sm,
   },
-  name: { fontSize: 20, fontWeight: '800', color: Colors.white, marginTop: 14, letterSpacing: -0.3 },
-  email: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4, fontWeight: '500' },
-  phone: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  editText: { fontSize: 12, fontWeight: '700', color: Colors.white, letterSpacing: 0.2 },
-  removeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.white,
-  },
-  removeText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  name: { fontSize: 17, fontWeight: '800', color: Colors.white, marginTop: 10, letterSpacing: -0.3 },
+  email: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 3, fontWeight: '500' },
+  phone: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 1, fontWeight: '500' },
 });

@@ -21,12 +21,7 @@ export const useAcceptDelivery = () => {
       queryClient.invalidateQueries({ queryKey: ['available-orders'] });
       queryClient.invalidateQueries({ queryKey: ['driver-active-order'] });
       setLoading(false);
-      Alert.alert('Delivery Accepted', `Order #${data.id.slice(0, 8).toUpperCase()} accepted. Opening map...`, [
-        { text: 'View Map', onPress: () => router.push('/(driver)/(tabs)/active' as any) },
-        { text: 'OK', onPress: () => router.push('/(driver)/(tabs)/active' as any) },
-      ]);
-      // Auto-redirect to map (active page with map)
-      setTimeout(() => router.push('/(driver)/(tabs)/active' as any), 300);
+      router.replace('/(driver)/(tabs)/active' as any);
     },
     onError: (error: any) => {
       setLoading(false);

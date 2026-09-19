@@ -9,6 +9,7 @@ import { useDeleteNotification } from '@/hooks/owner/notification/useDeleteNotif
 import { DriverNotificationItem } from '@/components/driver/DriverNotificationItem';
 import { useNotificationStore } from '@/stores/owner/notificationStore';
 import { notificationService } from '@/services/owner/notification/notification.service';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function AdminNotifications() {
@@ -20,37 +21,31 @@ export default function AdminNotifications() {
   const { mutate: deleteNotification } = useDeleteNotification();
   const { notifications, clearAll } = useNotificationStore();
   const unreadCount = unreadData?.count ?? 0;
+  const [deleteKind, setDeleteKind] = useState<{ kind: 'one'; id: string } | { kind: 'all' } | null>(null);
 
   const loadMore = () => {
     if (data && page < data.totalPages) setPage((p) => p + 1);
   };
 
   const handleDelete = useCallback((id: string) => {
-    Alert.alert('Remove notification?', 'This will permanently delete the notification.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteNotification(id) },
-    ]);
-  }, [deleteNotification]);
+    setDeleteKind({ kind: 'one', id });
+  }, []);
 
   const handleClearAll = useCallback(() => {
     if (notifications.length === 0) return;
-    Alert.alert('Delete all notifications?', 'This will permanently delete all notifications.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete All',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await notificationService.deleteAll();
-            clearAll();
-            refetch();
-          } catch (e: any) {
-            Alert.alert('Error', e?.response?.data?.message || 'Failed to delete notifications');
-          }
-        },
-      },
-    ]);
-  }, [notifications.length, clearAll, refetch]);
+    setDeleteKind({ kind: 'all' });
+  }, [notifications.length]);
+
+  const handleClearAllConfirm = useCallback(async () => {
+    setDeleteKind(null);
+    try {
+      await notificationService.deleteAll();
+      clearAll();
+      refetch();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to delete notifications');
+    }
+  }, [clearAll, refetch]);
 
   const handleMarkAll = useCallback(() => {
     if (unreadCount === 0) return;
@@ -120,7 +115,7 @@ export default function AdminNotifications() {
         </View>
 
         {notifications.length > 0 && (
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
             <TouchableOpacity
               onPress={handleMarkAll}
               disabled={unreadCount === 0 || markingAll}
@@ -144,22 +139,6 @@ export default function AdminNotifications() {
                 {markingAll ? 'Marking…' : 'Mark all as read'}
               </Text>
             </TouchableOpacity>
-            <View
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                paddingHorizontal: 14,
-                paddingVertical: 11,
-                borderRadius: Radius.full,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.2)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' }} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.white }}>Live</Text>
-            </View>
           </View>
         )}
       </View>
@@ -223,6 +202,30 @@ export default function AdminNotifications() {
           ) : null
         }
         showsVerticalScrollIndicator={false}
+      />
+
+      <ConfirmDialog
+        visible={deleteKind?.kind === 'one'}
+        onClose={() => setDeleteKind(null)}
+        onConfirm={() => {
+          if (deleteKind?.kind === 'one') deleteNotification(deleteKind.id);
+          setDeleteKind(null);
+        }}
+        title="Remove notification?"
+        message="This will permanently delete the notification."
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+      />
+      <ConfirmDialog
+        visible={deleteKind?.kind === 'all'}
+        onClose={() => setDeleteKind(null)}
+        onConfirm={handleClearAllConfirm}
+        title="Delete all notifications?"
+        message="This will permanently delete all notifications."
+        confirmLabel="Delete All"
+        icon="trash-2"
+        tone="danger"
       />
     </View>
   );

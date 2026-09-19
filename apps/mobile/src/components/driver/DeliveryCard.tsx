@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { Order } from '@food_delivery/types';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
@@ -18,10 +18,33 @@ export const DeliveryCard = ({
   isAccepting = false,
   showAccept = true,
 }: DeliveryCardProps) => {
-  const formatDistance = (distance?: number) => {
-    if (!distance) return '~2 km';
-    return distance < 1 ? `${(distance * 1000).toFixed(0)} m` : `${distance.toFixed(1)} km`;
+  const haversineKm = (
+    lat1?: number | string,
+    lng1?: number | string,
+    lat2?: number | string,
+    lng2?: number | string,
+  ): number | null => {
+    const a1 = Number(lat1);
+    const b1 = Number(lng1);
+    const a2 = Number(lat2);
+    const b2 = Number(lng2);
+    if (!a1 || !b1 || !a2 || !b2 || Number.isNaN(a1) || Number.isNaN(b1) || Number.isNaN(a2) || Number.isNaN(b2)) return null;
+    const R = 6371;
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const dLat = toRad(a2 - a1);
+    const dLng = toRad(b2 - b1);
+    const s =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(a1)) * Math.cos(toRad(a2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
   };
+
+  const exactTripKm = haversineKm(
+    (order as any).restaurantLat,
+    (order as any).restaurantLng,
+    (order as any).deliveryLat,
+    (order as any).deliveryLng,
+  );
 
   const customerEmail = (order as any).customerEmail || (order as any).email || '';
   const customerPhone = (order as any).customerPhone || '';
@@ -32,6 +55,14 @@ export const DeliveryCard = ({
   const deliveryFee = Number((order as any).deliveryFee ?? 50);
   const subtotal = Math.max(0, totalAmount - deliveryFee);
   const distance = (order as any).distance as number | undefined;
+
+  const tripKm = exactTripKm != null ? exactTripKm : distance != null ? Number(distance) : null;
+  const tripText =
+    tripKm == null || Number.isNaN(tripKm)
+      ? '~2 km'
+      : tripKm < 1
+        ? `${Math.round(tripKm * 1000)} m`
+        : `${tripKm.toFixed(1)} km`;
 
   return (
     <View
@@ -60,10 +91,6 @@ export const DeliveryCard = ({
             <Feather name="home" size={13} color={Colors.primary} />
           </View>
           <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark, flex: 1 }} numberOfLines={1}>{order.restaurantName}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.white, paddingHorizontal: 6, paddingVertical: 3, borderRadius: Radius.full, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.borderLight }}>
-            <Feather name="map-pin" size={10} color={Colors.textTertiary} />
-            <Text style={{ fontSize: 10, color: Colors.textTertiary, fontWeight: '600' }}>{formatDistance((order as any).distance)}</Text>
-          </View>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
           <Feather name="map-pin" size={12} color={Colors.textTertiary} style={{ marginTop: 2 }} />
@@ -77,14 +104,14 @@ export const DeliveryCard = ({
           <Feather name="navigation" size={12} color="#2563EB" />
           <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF', letterSpacing: 0.3 }}>DELIVERY LOCATION</Text>
           <View style={{ marginLeft: 'auto', backgroundColor: Colors.white, paddingHorizontal: 6, paddingVertical: 2, borderRadius: Radius.full, borderWidth: 1, borderColor: '#BFDBFE' }}>
-            <Text style={{ fontSize: 10, fontWeight: '700', color: '#2563EB' }}>{formatDistance((order as any).distance)}</Text>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#2563EB' }}>{tripText}</Text>
           </View>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
           <Feather name="map-pin" size={13} color="#2563EB" style={{ marginTop: 1 }} />
           <Text style={{ fontSize: 13, color: '#1E293B', fontWeight: '600', flex: 1, lineHeight: 18 }} numberOfLines={3}>{deliveryAddress || 'Delivery address not available'}</Text>
         </View>
-        <Text style={{ fontSize: 11, color: '#64748B', marginTop: 4, marginLeft: 19 }}>Customer drop-off • Verify before accept</Text>
+        <Text style={{ fontSize: 11, color: '#64748B', marginTop: 4, marginLeft: 19 }}>Customer drop-off • {tripText} from restaurant • Verify before accept</Text>
       </View>
 
       {/* Customer contact */}
@@ -129,7 +156,7 @@ export const DeliveryCard = ({
           <Text style={{ fontSize: 9, fontWeight: '800', color: '#2563EB' }}>B</Text>
         </View>
         <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '800', color: Colors.textDark }}>
-          {formatDistance(distance)}
+          {tripText}
         </Text>
         <Text style={{ fontSize: 11, color: Colors.textTertiary, marginLeft: 4 }}>trip</Text>
       </View>
@@ -162,32 +189,43 @@ export const DeliveryCard = ({
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textTertiary }}>Earnings</Text>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.success }}>Rs. {order.deliveryFee || 50}</Text>
-        </View>
-
-        {showAccept && onAccept && (
-          <TouchableOpacity
-            disabled={isAccepting}
-            style={{
-              backgroundColor: isAccepting ? Colors.textTertiary : Colors.primary,
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-              borderRadius: Radius.full,
-              opacity: isAccepting ? 0.6 : 1,
-              ...Shadow.primary,
-            }}
-            onPress={onAccept}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.white }}>
-              {isAccepting ? 'Accepting...' : 'Accept & View Map →'}
-            </Text>
-          </TouchableOpacity>
-        )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textTertiary }}>Earnings</Text>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.success }}>Rs. {order.deliveryFee || 50}</Text>
       </View>
+
+      {showAccept && onAccept && (
+        <TouchableOpacity
+          disabled={isAccepting}
+          style={{
+            width: '100%',
+            alignSelf: 'stretch',
+            marginTop: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            backgroundColor: isAccepting ? Colors.textTertiary : Colors.primary,
+            paddingVertical: 14,
+            borderRadius: Radius.full,
+            opacity: isAccepting ? 0.6 : 1,
+            ...Shadow.primary,
+          }}
+          onPress={onAccept}
+          activeOpacity={0.7}
+        >
+          {isAccepting ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <>
+              <Feather name="map" size={15} color={Colors.white} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.white }}>
+                Accept & View Map →
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

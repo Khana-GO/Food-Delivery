@@ -12,6 +12,8 @@ import { notificationService } from '@/services/owner/notification/notification.
 import { useNotificationStore } from '@/stores/owner/notificationStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { DriverNotificationItem } from '@/components/driver/DriverNotificationItem';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { goBack } from '@/lib/navigation';
 
 export default function CustomerNotifications() {
   const insets = useSafeAreaInsets();
@@ -23,6 +25,7 @@ export default function CustomerNotifications() {
   const { mutate: deleteNotification } = useDeleteNotification();
   const { notifications, clearAll } = useNotificationStore();
   const unreadCount = unreadData?.count ?? 0;
+  const [deleteKind, setDeleteKind] = useState<{ kind: 'one'; id: string } | { kind: 'all' } | null>(null);
 
   const loadMore = () => {
     if (data && page < data.totalPages) setPage(page + 1);
@@ -33,21 +36,13 @@ export default function CustomerNotifications() {
   }, []);
 
   const handleDelete = useCallback((id: string) => {
-    Alert.alert('Remove notification?', 'This will permanently delete the notification.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteNotification(id) },
-    ]);
-  }, [deleteNotification]);
+    setDeleteKind({ kind: 'one', id });
+  }, []);
 
   const handleClearAll = useCallback(() => {
     if (notifications.length === 0) return;
-    Alert.alert('Delete all notifications?', 'This will permanently delete all notifications.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete All', style: 'destructive', onPress: async () => {
-        try { await notificationService.deleteAll(); clearAll(); refetch(); } catch (e: any) { Alert.alert('Error', e?.response?.data?.message || 'Failed'); }
-      } },
-    ]);
-  }, [notifications.length, clearAll, refetch]);
+    setDeleteKind({ kind: 'all' });
+  }, [notifications.length]);
 
   const handleMarkAll = useCallback(() => { if (unreadCount === 0) return; markAllAsRead(); }, [markAllAsRead, unreadCount]);
 
@@ -67,7 +62,7 @@ export default function CustomerNotifications() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => goBack('/(customer)/(tabs)')}
               style={{
                 width: 40,
                 height: 40,
@@ -114,7 +109,7 @@ export default function CustomerNotifications() {
         </View>
 
         {notifications.length > 0 ? (
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
             <TouchableOpacity
               onPress={handleMarkAll}
               disabled={unreadCount === 0 || markingAll}
@@ -138,22 +133,6 @@ export default function CustomerNotifications() {
                 {markingAll ? 'Marking…' : 'Mark all as read'}
               </Text>
             </TouchableOpacity>
-            <View
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                paddingHorizontal: 14,
-                paddingVertical: 11,
-                borderRadius: Radius.full,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.2)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' }} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.white }}>Live</Text>
-            </View>
           </View>
         ) : null}
       </View>
@@ -223,6 +202,30 @@ export default function CustomerNotifications() {
         }
         showsVerticalScrollIndicator={false}
       />
+
+      {deleteKind ? (
+        <ConfirmDialog
+          visible
+          title={deleteKind.kind === 'one' ? 'Remove notification?' : 'Delete all notifications?'}
+          message={deleteKind.kind === 'one' ? 'This will permanently delete the notification.' : 'This will permanently delete all notifications.'}
+          confirmLabel={deleteKind.kind === 'one' ? 'Remove' : 'Delete All'}
+          icon="trash-2"
+          tone="danger"
+          onClose={() => setDeleteKind(null)}
+          onConfirm={() => {
+            const kind = deleteKind.kind;
+            const id = kind === 'one' ? deleteKind.id : null;
+            setDeleteKind(null);
+            if (kind === 'all') {
+              (async () => {
+                try { await notificationService.deleteAll(); clearAll(); refetch(); } catch (e: any) { Alert.alert('Error', e?.response?.data?.message || 'Failed'); }
+              })();
+            } else if (id) {
+              deleteNotification(id);
+            }
+          }}
+        />
+      ) : null}
     </View>
   );
 }

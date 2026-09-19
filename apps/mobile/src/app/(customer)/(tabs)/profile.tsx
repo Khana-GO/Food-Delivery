@@ -17,6 +17,7 @@ import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 import { useMyReviews } from '@/hooks/review/useMyReviews';
 import * as ImagePicker from 'expo-image-picker';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 function RealStatsRow() {
   const { orders } = useOrderStore();
@@ -58,6 +59,7 @@ export default function CustomerProfile() {
   const { mutate: uploadImage, isPending: isUploading } = useUploadProfileImage();
   const { mutate: deleteImage, isPending: isDeleting } = useDeleteProfileImage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showRemoveImage, setShowRemoveImage] = useState(false);
 
   const handleEditProfile = useCallback(() => router.push('/(customer)/profile/edit' as any), []);
 
@@ -79,11 +81,8 @@ export default function CustomerProfile() {
   }, [uploadImage]);
 
   const handleDeleteImage = useCallback(() => {
-    Alert.alert('Remove Photo', 'Remove your profile photo?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteImage() },
-    ]);
-  }, [deleteImage]);
+    setShowRemoveImage(true);
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setShowLogoutModal(false);
@@ -181,6 +180,21 @@ export default function CustomerProfile() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <ConfirmDialog
+        visible={showRemoveImage}
+        title="Remove Photo"
+        message="Remove your profile photo?"
+        confirmLabel="Remove"
+        icon="trash-2"
+        tone="danger"
+        busy={isDeleting}
+        onClose={() => setShowRemoveImage(false)}
+        onConfirm={() => {
+          setShowRemoveImage(false);
+          deleteImage();
+        }}
+      />
     </View>
   );
 }
@@ -189,22 +203,22 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background, gap: 12 },
   loadingText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
   statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: -16 },
-  statCard: { flex: 1, alignItems: 'center', paddingVertical: 16 } as any,
-  statValue: { fontSize: 20, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
-  statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
-  statSub: { fontSize: 9, color: Colors.textTertiary, marginTop: 3, fontWeight: '500', textAlign: 'center' },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: 12 } as any,
+  statValue: { fontSize: 17, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
+  statLabel: { fontSize: 10, color: Colors.textSecondary, marginTop: 3, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
+  statSub: { fontSize: 9, color: Colors.textTertiary, marginTop: 2, fontWeight: '500', textAlign: 'center' },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 14,
+    marginTop: 12,
     backgroundColor: Colors.primary,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: Radius.xl,
   },
-  logoutText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  version: { textAlign: 'center', fontSize: 11, color: Colors.textTertiary, marginTop: 14, fontWeight: '500' },
+  logoutText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  version: { textAlign: 'center', fontSize: 10, color: Colors.textTertiary, marginTop: 12, fontWeight: '500' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   modalCard: {
     width: '100%',

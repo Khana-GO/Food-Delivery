@@ -3,11 +3,13 @@ import { View, Text, Image, TouchableOpacity, ActivityIndicator } from 'react-na
 import { Feather } from '@expo/vector-icons';
 import type { User } from '@food_delivery/types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+import { ProfileActionsMenu } from '@/components/ui/ProfileActionsMenu';
 
 interface DriverProfileHeaderProps {
   user: User;
   onEditPress?: () => void;
   onImagePress: () => void;
+  onRemovePhoto?: () => void;
   isUploading?: boolean;
 }
 
@@ -15,6 +17,7 @@ export const DriverProfileHeader = ({
   user,
   onEditPress,
   onImagePress,
+  onRemovePhoto,
   isUploading,
 }: DriverProfileHeaderProps) => {
   const hasImage = !!user.imageUrl;
@@ -86,6 +89,13 @@ export const DriverProfileHeader = ({
           </View>
         </View>
       </View>
+      <ProfileActionsMenu
+        onEdit={onEditPress || (() => {})}
+        onRemovePhoto={onRemovePhoto}
+        canRemovePhoto={hasImage}
+        top={52 - 8}
+        right={16}
+      />
     </View>
   );
 };

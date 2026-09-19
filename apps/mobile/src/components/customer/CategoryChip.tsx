@@ -31,8 +31,8 @@ export const CategoryChip = React.memo(CategoryChipComponent);
 
 const styles = StyleSheet.create({
   base: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: Radius.full,
     marginRight: 8,
     borderWidth: 1,
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     ...Shadow.sm,
   },
-  text: { fontSize: 13, fontWeight: '600', letterSpacing: 0.1 },
+  text: { fontSize: 12, fontWeight: '600', letterSpacing: 0.1 },
   textIdle: { color: Colors.textMedium },
   textSelected: { color: '#FFFFFF' },
 });

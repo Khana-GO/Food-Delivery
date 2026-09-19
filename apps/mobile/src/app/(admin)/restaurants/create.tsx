@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { RestaurantForm } from '@/components/res-owner/restaurant/RestaurantForm';
 import { useCreateRestaurant } from '@/hooks/owner/restaurant/useCreateRestaurant';
 import { Colors, Radius } from '@/constants/theme';
@@ -23,7 +24,7 @@ export default function CreateRestaurantAdminScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack('/(admin)/(tabs)/restaurants')}
           style={{
             width: 44,
             height: 44,
@@ -62,7 +63,6 @@ export default function CreateRestaurantAdminScreen() {
                   },
                   onSuccess: () => {
                     Alert.alert('Success', 'Restaurant created');
-                    if (router.canGoBack()) router.back();
                     setTimeout(() => router.replace('/(admin)/(tabs)/restaurants' as any), 100);
                   },
                 });

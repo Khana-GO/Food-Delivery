@@ -10,6 +10,7 @@ import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import PremiumCard from '@/components/ui/PremiumCard';
+import { goBack } from '@/lib/navigation';
 
 export default function MenuItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,7 +50,7 @@ export default function MenuItemDetailScreen() {
       <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Feather name="alert-circle" size={32} color={Colors.textTertiary} />
         <Text style={{ marginTop: 12, fontWeight: '700', color: Colors.textDark }}>Item not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: Radius.full }}>
+        <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/explore')} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: Radius.full }}>
           <Text style={{ color: '#FFF', fontWeight: '700' }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -70,7 +71,7 @@ export default function MenuItemDetailScreen() {
             </View>
           )}
           <SafeAreaView edges={['top']} style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 }}>
-            <TouchableOpacity onPress={() => router.back()} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>
+            <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)/explore')} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>
               <Feather name="arrow-left" size={18} color={Colors.textDark} />
             </TouchableOpacity>
             <TouchableOpacity style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', ...Shadow.sm }}>

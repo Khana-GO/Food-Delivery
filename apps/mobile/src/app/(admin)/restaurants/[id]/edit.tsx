@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { goBack } from '@/lib/navigation';
 import { useAdminRestaurant } from '@/hooks/admin/restaurant/useAdminRestaurant';
 import { useUpdateRestaurant } from '@/hooks/admin/restaurant/useUpdateRestaurant';
 import { RestaurantForm } from '@/components/res-owner/restaurant/RestaurantForm';
@@ -28,7 +29,7 @@ export default function EditRestaurantScreen() {
           <Feather name="package" size={32} color={Colors.primary} />
         </View>
         <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: Colors.textDark }}>Restaurant Not Found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full }} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => goBack('/(admin)/(tabs)/restaurants')} style={{ marginTop: 16, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.full }} activeOpacity={0.7}>
           <Text style={{ fontWeight: '700', color: Colors.white }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -48,7 +49,7 @@ export default function EditRestaurantScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack('/(admin)/(tabs)/restaurants')}
           style={{
             width: 44,
             height: 44,
