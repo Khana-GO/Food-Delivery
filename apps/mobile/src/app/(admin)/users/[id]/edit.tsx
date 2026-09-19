@@ -41,36 +41,36 @@ export default function EditUserScreen() {
       <View
         style={{
           backgroundColor: Colors.primary,
-          paddingTop: 52,
-          paddingBottom: 32,
-          paddingHorizontal: 20,
+          paddingTop: 40,
+          paddingBottom: 18,
+          paddingHorizontal: 16,
           borderBottomLeftRadius: Radius['3xl'],
           borderBottomRightRadius: Radius['3xl'],
         }}
       >
-        <TouchableOpacity
-          onPress={() => goBack('/(admin)/(tabs)/users')}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: 'rgba(255,255,255,0.18)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.25)',
-          }}
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={20} color={Colors.white} />
-        </TouchableOpacity>
-        <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
-            <Feather name="edit-2" size={18} color={Colors.white} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => goBack('/(admin)/(tabs)/users')}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.25)',
+            }}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={16} color={Colors.white} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: Colors.white, fontSize: 15, fontWeight: '800', textAlign: 'right' }}>Edit User</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 1, textAlign: 'right' }} numberOfLines={1}>{user.firstName} {user.lastName} • {user.role}</Text>
           </View>
-          <View>
-            <Text style={{ color: Colors.white, fontSize: 20, fontWeight: '800' }}>Edit User</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }} numberOfLines={1}>{user.firstName} {user.lastName} • {user.role}</Text>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}>
+            <Feather name="edit-2" size={15} color={Colors.white} />
           </View>
         </View>
       </View>

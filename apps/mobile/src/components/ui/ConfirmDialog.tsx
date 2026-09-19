@@ -21,6 +21,7 @@ interface ConfirmDialogProps {
   tone?: 'danger' | 'warning' | 'info' | 'success';
   busy?: boolean;
   confirmBg?: string;
+  compact?: boolean;
 }
 
 const TONE_MAP = {
@@ -58,6 +59,7 @@ export function ConfirmDialog({
   tone = 'danger',
   busy = false,
   confirmBg,
+  compact = false,
 }: ConfirmDialogProps) {
   const t = TONE_MAP[tone];
   const confirmColor = confirmBg || t.confirmBg;
@@ -68,10 +70,10 @@ export function ConfirmDialog({
         <Pressable
           style={{
             width: '100%',
-            maxWidth: 340,
+            maxWidth: compact ? 280 : 340,
             backgroundColor: Colors.white,
             borderRadius: Radius['2xl'],
-            padding: 28,
+            padding: compact ? 20 : 28,
             alignItems: 'center',
             ...Shadow.xl,
           }}
@@ -80,9 +82,9 @@ export function ConfirmDialog({
           {/* Icon */}
           <View
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
+              width: compact ? 48 : 64,
+              height: compact ? 48 : 64,
+              borderRadius: compact ? 24 : 32,
               backgroundColor: t.iconBg,
               alignItems: 'center',
               justifyContent: 'center',
@@ -90,14 +92,14 @@ export function ConfirmDialog({
               borderColor: `${t.iconColor}30`,
             }}
           >
-            <Feather name={icon} size={28} color={t.iconColor} />
+            <Feather name={icon} size={compact ? 20 : 28} color={t.iconColor} />
           </View>
 
           {/* Text */}
           <Text
             style={{
-              marginTop: 18,
-              fontSize: 18,
+              marginTop: compact ? 12 : 18,
+              fontSize: compact ? 15 : 18,
               fontWeight: '800',
               color: Colors.textDark,
               textAlign: 'center',
@@ -107,18 +109,18 @@ export function ConfirmDialog({
           </Text>
           <Text
             style={{
-              marginTop: 8,
-              fontSize: 14,
+              marginTop: compact ? 6 : 8,
+              fontSize: compact ? 12 : 14,
               color: Colors.textSecondary,
               textAlign: 'center',
-              lineHeight: 20,
+              lineHeight: compact ? 17 : 20,
             }}
           >
             {message}
           </Text>
 
           {/* Buttons */}
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, width: '100%' }}>
+          <View style={{ flexDirection: 'row', gap: compact ? 10 : 12, marginTop: compact ? 16 : 24, width: '100%' }}>
             <Pressable
               onPress={onClose}
               disabled={busy}
@@ -126,14 +128,14 @@ export function ConfirmDialog({
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 14,
+                paddingVertical: compact ? 10 : 14,
                 borderRadius: Radius.xl,
-                backgroundColor: Colors.background,
-                borderWidth: 1,
-                borderColor: Colors.border,
+                backgroundColor: Colors.white,
+                borderWidth: 1.5,
+                borderColor: compact ? Colors.primary : Colors.border,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.textMedium }}>
+              <Text style={{ fontSize: compact ? 12 : 14, fontWeight: '800', color: compact ? Colors.primary : Colors.textMedium }}>
                 {cancelLabel}
               </Text>
             </Pressable>
@@ -145,9 +147,9 @@ export function ConfirmDialog({
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 14,
+                paddingVertical: compact ? 10 : 14,
                 borderRadius: Radius.xl,
-                backgroundColor: confirmColor,
+                backgroundColor: compact ? Colors.primary : confirmColor,
                 shadowColor: confirmColor,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
@@ -158,7 +160,7 @@ export function ConfirmDialog({
               {busy ? (
                 <ActivityIndicator size="small" color={Colors.white} />
               ) : (
-                <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.white }}>
+                <Text style={{ fontSize: compact ? 12 : 14, fontWeight: '800', color: Colors.white }}>
                   {confirmLabel}
                 </Text>
               )}

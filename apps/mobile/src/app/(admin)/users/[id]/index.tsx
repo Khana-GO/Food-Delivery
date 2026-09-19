@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -38,21 +37,23 @@ export default function UserDetailsScreen() {
   const { mutate: changeRole, isPending: isChangingRole } = useChangeUserRole();
 
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [confirm, setConfirm] = useState<
     'delete' | 'restore' | 'permanent' | null
   >(null);
 
+  const openRoleModal = () => {
+    setSelectedRole(user?.role ?? null);
+    setShowRoleModal(true);
+  };
   const handleDelete = () => setConfirm('delete');
   const handleRestore = () => setConfirm('restore');
   const handlePermanentDelete = () => setConfirm('permanent');
 
-  const handleRoleSelect = (role: UserRole) => {
-    if (user?.role === role) {
-      Alert.alert('No change', `User already has role ${role}`);
-      return;
-    }
+  const handleRoleUpdate = () => {
+    if (!selectedRole || !user || selectedRole === user.role) return;
     setShowRoleModal(false);
-    changeRole({ userId: id, role });
+    changeRole({ userId: id, role: selectedRole });
   };
 
   if (isLoading) {
@@ -113,7 +114,7 @@ export default function UserDetailsScreen() {
           <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }} numberOfLines={1}>{user.firstName} {user.lastName} • {user.role}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => setShowRoleModal(true)}
+          onPress={openRoleModal}
           style={{ backgroundColor: Colors.white, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, ...Shadow.sm }}
           activeOpacity={0.7}
         >
@@ -128,7 +129,7 @@ export default function UserDetailsScreen() {
             onDelete={handleDelete}
             onRestore={handleRestore}
             onPermanentDelete={handlePermanentDelete}
-            onRoleChange={() => setShowRoleModal(true)}
+            onRoleChange={openRoleModal}
           />
         </View>
       </ScrollView>
@@ -145,79 +146,80 @@ export default function UserDetailsScreen() {
               <View style={{ width: 40, height: 6, borderRadius: 999, backgroundColor: Colors.borderLight }} />
             </View>
 
-            <View style={{ paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
+            <View style={{ paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
               <View style={{ flex: 1, paddingRight: 16 }}>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textDark }}>Change Role</Text>
-                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textDark }}>Change Role</Text>
+                <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 3 }}>
                   Select a new role for <Text style={{ fontWeight: '700', color: Colors.textDark }}>{user.firstName} {user.lastName}</Text>
                 </Text>
-                <View style={{ marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: '#FECDD3', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary }} />
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>Current: {user.role.replace('_',' ')}</Text>
+                <View style={{ marginTop: 6, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: '#FECDD3', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.primary }} />
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.primary }}>Current: {user.role.replace('_',' ')}</Text>
                 </View>
               </View>
               <TouchableOpacity
                 onPress={() => setShowRoleModal(false)}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.backgroundAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.borderLight }}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.backgroundAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.borderLight }}
               >
-                <Feather name="x" size={18} color={Colors.textDark} />
+                <Feather name="x" size={16} color={Colors.textDark} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ paddingHorizontal: 16, paddingTop: 16 }} showsVerticalScrollIndicator={false}>
-              <View style={{ gap: 12, paddingBottom: 8 }}>
+            <ScrollView style={{ paddingHorizontal: 16, paddingTop: 12 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 8, paddingBottom: 8 }}>
                 {ROLE_OPTIONS.map((opt) => {
                   const isCurrent = user.role === opt.role;
+                  const isSelected = selectedRole === opt.role;
+                  const isActive = isSelected && !isCurrent;
                   return (
                     <TouchableOpacity
                       key={opt.role}
-                      onPress={() => handleRoleSelect(opt.role)}
+                      onPress={() => setSelectedRole(opt.role)}
                       disabled={isChangingRole}
                       activeOpacity={0.85}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        gap: 12,
-                        padding: 16,
+                        gap: 10,
+                        padding: 10,
                         borderRadius: Radius.xl,
-                        borderWidth: 2,
-                        borderColor: isCurrent ? Colors.primary : Colors.borderLight,
-                        backgroundColor: isCurrent ? Colors.primaryBg : Colors.white,
+                        borderWidth: 1.5,
+                        borderColor: isActive ? Colors.primary : isCurrent ? '#FECDD3' : Colors.borderLight,
+                        backgroundColor: isActive ? Colors.primaryBg : Colors.white,
                       }}
                     >
-                      <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: opt.bg, borderWidth: 1, borderColor: `${opt.color}20` }}>
-                        <Feather name={opt.icon} size={18} color={opt.color} />
+                      <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: isActive ? Colors.primary : opt.bg }}>
+                        <Feather name={opt.icon} size={15} color={isActive ? Colors.white : opt.color} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Text style={{ fontSize: 14, fontWeight: '800', color: isCurrent ? Colors.primary : Colors.textDark }}>
-                            {opt.label}
-                          </Text>
-                          {isCurrent && (
-                            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full, backgroundColor: Colors.primary }}>
-                              <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.white }}>CURRENT</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>{opt.sub}</Text>
-                        <Text style={{ fontSize: 10, color: Colors.textTertiary, marginTop: 4 }}>{opt.role}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: isActive ? Colors.primary : Colors.textDark }}>
+                          {opt.label}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 1 }}>{opt.sub}</Text>
                       </View>
-                      <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: isCurrent ? Colors.primary : Colors.borderLight, backgroundColor: isCurrent ? Colors.primary : Colors.white }}>
-                        {isCurrent ? <Feather name="check" size={14} color={Colors.white} /> : null}
+                      {isCurrent && (
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full, backgroundColor: '#FEE2E2' }}>
+                          <Text style={{ fontSize: 9, fontWeight: '800', color: Colors.primary }}>CURRENT</Text>
+                        </View>
+                      )}
+                      <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: isActive ? Colors.primary : Colors.borderLight, backgroundColor: isActive ? Colors.primary : Colors.white }}>
+                        {isActive ? <Feather name="check" size={12} color={Colors.white} /> : null}
                       </View>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, marginBottom: 24 }}>
-                <TouchableOpacity onPress={() => setShowRoleModal(false)} style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.full, backgroundColor: Colors.backgroundAlt, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: Colors.borderLight }}>
-                  <Feather name="x" size={16} color={Colors.textDark} />
-                  <Text style={{ fontWeight: '700', color: Colors.textDark }}>Close</Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, marginBottom: 20 }}>
+                <TouchableOpacity onPress={() => setShowRoleModal(false)} style={{ flex: 1, paddingVertical: 11, borderRadius: Radius.full, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.primary }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.primary }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowRoleModal(false)} style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.full, backgroundColor: Colors.textDark, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}>
-                  <Feather name="slash" size={16} color={Colors.white} />
-                  <Text style={{ fontWeight: '700', color: Colors.white }}>Cancel</Text>
+                <TouchableOpacity
+                  onPress={handleRoleUpdate}
+                  disabled={!selectedRole || selectedRole === user.role || isChangingRole}
+                  style={{ flex: 1, paddingVertical: 11, borderRadius: Radius.full, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', opacity: !selectedRole || selectedRole === user.role || isChangingRole ? 0.5 : 1 }}
+                >
+                  {isChangingRole ? <ActivityIndicator size="small" color={Colors.white} /> : <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.white }}>Update</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>

@@ -17,13 +17,13 @@ export default function AdminTabsLayout() {
         sceneStyle: { backgroundColor: 'transparent' },
       }}
     >
-      <Tabs.Screen name="index" options={{ tabBarIcon: ({ focused }) => <TabIcon name="bar-chart-2" label="Dashboard" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="index" options={{ tabBarIcon: ({ focused }) => <TabIcon name="bar-chart-2" label="Home" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
       {/* <Tabs.Screen name="analytics" options={{ tabBarIcon: ({ focused }) => <TabIcon name="bar-chart-2" label="Analytics" focused={focused} size={iconSize} labelSize={labelSize} /> }} /> */}
       {/* <Tabs.Screen name="reports" options={{ tabBarIcon: ({ focused }) => <TabIcon name="file-text" label="Reports" focused={focused} size={iconSize} labelSize={labelSize} /> }} /> */}
       <Tabs.Screen name="users" options={{ tabBarIcon: ({ focused }) => <TabIcon name="users" label="Users" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="restaurants" options={{ tabBarIcon: ({ focused }) => <TabIcon name="home" label="Restaurants" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="restaurants" options={{ tabBarIcon: ({ focused }) => <TabIcon name="home" label="Stores" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
       <Tabs.Screen name="orders" options={{ tabBarIcon: ({ focused }) => <TabIcon name="shopping-bag" label="Orders" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
-      <Tabs.Screen name="notifications" options={{ tabBarIcon: ({ focused }) => <TabIcon name="bell" label="Alerts" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ tabBarIcon: ({ focused }) => <TabIcon name="user" label="Profile" focused={focused} size={iconSize} labelSize={labelSize} /> }} />
       <Tabs.Screen name="reviews" options={{ href: null }} />
     </Tabs>

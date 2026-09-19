@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -127,7 +128,8 @@ export default function AdminDashboard() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-              <View
+              <TouchableOpacity
+                onPress={() => router.push('/(admin)/(tabs)/profile' as any)}
                 style={{
                   width: 38,
                   height: 38,
@@ -139,9 +141,14 @@ export default function AdminDashboard() {
                   borderColor: 'rgba(255,255,255,0.3)',
                   ...Shadow.lg,
                 }}
+                activeOpacity={0.8}
               >
-                <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.primary }}>{getInitials()}</Text>
-              </View>
+                {user?.imageUrl ? (
+                  <Image source={{ uri: user.imageUrl }} style={{ width: '100%', height: '100%', borderRadius: 19 }} />
+                ) : (
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.primary }}>{getInitials()}</Text>
+                )}
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: '700', letterSpacing: 0.7 }}>WELCOME BACK</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
@@ -297,7 +304,7 @@ export default function AdminDashboard() {
         </View>
 
         {/* Overlap PremiumCards */}
-        <View style={{ paddingHorizontal: 16, marginTop: -16 }}>
+        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
           <PremiumCard elevation="md" padding={16}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textDark }}>Platform Health</Text>
@@ -365,25 +372,25 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textDark, marginBottom: 12 }}>Quick Actions</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, marginBottom: 10 }}>Quick Actions</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {quickActions.map((a) => (
               <PremiumCard
                 key={a.label}
                 elevation="sm"
-                padding={16}
-                style={{ flex: 1, minWidth: '47%', flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                padding={12}
+                style={{ flex: 1, minWidth: '47%', flexDirection: 'row', alignItems: 'center', gap: 10 }}
               >
                 <TouchableOpacity
                   onPress={() => router.push(a.route as any)}
                   activeOpacity={0.7}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
                 >
                   <View
                     style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
                       backgroundColor: Colors.primaryBg,
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -391,86 +398,20 @@ export default function AdminDashboard() {
                       borderColor: '#FECDD3',
                     }}
                   >
-                    <Feather name={a.icon} size={18} color={Colors.primary} />
+                    <Feather name={a.icon} size={14} color={Colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }}>{a.label}</Text>
-                    <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>{a.sub}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }}>{a.label}</Text>
+                    <Text style={{ fontSize: 9, color: Colors.textSecondary, marginTop: 1 }}>{a.sub}</Text>
                   </View>
-                  <Feather name="chevron-right" size={16} color={Colors.textTertiary} />
+                  <Feather name="chevron-right" size={14} color={Colors.textTertiary} />
                 </TouchableOpacity>
               </PremiumCard>
             ))}
           </View>
         </View>
 
-        {/* CTA PremiumCard */}
-        <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-  <PremiumCard
-    elevation="md"
-    padding={0}
-    style={{
-      overflow: 'hidden',
-      backgroundColor: Colors.primary,
-      borderWidth: 0,
-    }}
-  >
-    <View style={{ padding: 20, flexDirection: 'row', alignItems: 'center' }}>
-      <View style={{ flex: 1, paddingRight: 12 }}>
-        <Text style={{ color: Colors.white, fontWeight: '800', fontSize: 15 }}>Manage users</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 6, lineHeight: 16 }}>
-          Search, filter, edit roles and handle deletions from one place.
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.push('/(admin)/(tabs)/users' as any)}
-          style={{
-            marginTop: 14,
-            backgroundColor: Colors.white,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: Radius.full,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            alignSelf: 'flex-start',
-          }}
-          activeOpacity={0.7}
-        >
-          <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }}>Open Users</Text>
-          <Feather name="arrow-right" size={14} color={Colors.textDark} />
-        </TouchableOpacity>
-      </View>
-      <View
-        style={{
-          width: 72,
-          height: 72,
-          borderRadius: 20,
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.15)',
-        }}
-      >
-        <Feather name="users" size={30} color={Colors.white} />
-      </View>
-    </View>
-  </PremiumCard>
-  <View
-    style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 14,
-    }}
-  >
-    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success }} />
-    <Text style={{ fontSize: 11, color: Colors.textTertiary }}>
-      {isLoading ? 'Syncing…' : `Last updated just now • ${userStats?.totalUsers ?? 0} users • ${restaurantStats?.total ?? 0} restaurants`}
-    </Text>
-  </View>
-</View>
+        {/* CTA PremiumCard removed */}
       </ScrollView>
     </View>
   );
