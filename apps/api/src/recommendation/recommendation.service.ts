@@ -57,11 +57,18 @@ export class RecommendationsService {
     }));
   }
 
+  /** Clamp a caller-supplied limit so no query or cache key can blow up. */
+  private static clampLimit(limit: number, max = 50): number {
+    if (!Number.isFinite(limit) || limit <= 0) return 10;
+    return Math.min(Math.floor(limit), max);
+  }
+
   // ─── PERSONALIZED RECOMMENDATIONS ───
   async getPersonalizedRecommendations(
     userId: string,
     limit = 10,
   ): Promise<RestaurantResponseDto[]> {
+    limit = RecommendationsService.clampLimit(limit);
     try {
       const cacheKey = this.keyRecommendations(userId);
       const cached = await this.cache.get<RestaurantResponseDto[]>(cacheKey);
@@ -222,6 +229,7 @@ export class RecommendationsService {
 
   // ─── POPULAR RESTAURANTS ───
   async getPopularRestaurants(limit = 10): Promise<RestaurantResponseDto[]> {
+    limit = RecommendationsService.clampLimit(limit);
     try {
       const cacheKey = this.keyPopular(limit);
       const cached = await this.cache.get<RestaurantResponseDto[]>(cacheKey);
@@ -260,6 +268,7 @@ export class RecommendationsService {
     userId: string,
     limit = 5,
   ): Promise<RestaurantResponseDto[]> {
+    limit = RecommendationsService.clampLimit(limit);
     try {
       const recentOrders = await this.db
         .select()

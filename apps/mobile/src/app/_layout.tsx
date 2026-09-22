@@ -1,10 +1,11 @@
-import React from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View, StatusBar, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { resolveRouteGuard } from '@/lib/roles';
 import { ToastHost } from '@/components/ui/toast';
 import { Colors } from '@/constants/theme';
 import '@/lib/imageInterop';
@@ -41,7 +42,25 @@ export default function RootLayout() {
 }
 
 function AppNavigator() {
-  const { isInitializing } = useAuth();
+  const { isInitializing, isAuthenticated, role } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  // Central navigation guard.
+  //
+  // The route groups ((admin), (driver), (restaurant-owner), (customer)) had no
+  // client-side authorization at all: a customer could deep-link into admin or
+  // driver screens, and an expired session left the user stranded on a screen
+  // with no session and no login prompt. Both are handled here.
+  useEffect(() => {
+    const redirect = resolveRouteGuard({
+      segments: segments as unknown as string[],
+      isAuthenticated,
+      role,
+      isInitializing,
+    });
+    if (redirect) router.replace(redirect as never);
+  }, [segments, isAuthenticated, role, isInitializing, router]);
 
   if (isInitializing) {
     return (

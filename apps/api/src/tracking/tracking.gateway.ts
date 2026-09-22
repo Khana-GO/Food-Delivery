@@ -46,6 +46,10 @@ export class TrackingGateway
   // driverId -> last update timestamp for throttling
   private readonly lastLocationAt = new Map<string, number>();
   private readonly THROTTLE_MS = 1500; // 1.5s between location updates per driver
+  // Entries are only meaningful while a driver is actively pushing locations,
+  // so they are pruned after this idle window (otherwise the map grows for the
+  // lifetime of the process, one entry per driver/order pair ever seen).
+  private readonly THROTTLE_ENTRY_TTL_MS = 5 * 60 * 1000;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -205,6 +209,7 @@ export class TrackingGateway
     // Throttle per driver
     const key = `${user.sub}:${dto.orderId}`;
     const now = Date.now();
+    this.pruneLocationThrottle(now);
     const last = this.lastLocationAt.get(key) || 0;
     if (now - last < this.THROTTLE_MS) {
       // silently drop or echo throttled
@@ -254,6 +259,15 @@ export class TrackingGateway
       at: new Date().toISOString(),
       userId: user.sub,
     });
+  }
+
+  /** Drop throttle entries for drivers that stopped sending locations. */
+  private pruneLocationThrottle(now: number): void {
+    for (const [key, at] of this.lastLocationAt) {
+      if (now - at > this.THROTTLE_ENTRY_TTL_MS) {
+        this.lastLocationAt.delete(key);
+      }
+    }
   }
 
   // ─── BROADCAST HELPERS (called by service/controller) ───

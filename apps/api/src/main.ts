@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { buildSecurityHeaders } from './common/security-headers';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -11,12 +13,42 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
-  // Trust proxy for correct X-Forwarded-For / req.ip behind nginx/vercel
+  // Security headers + no framework fingerprinting.
+  app.use((_req: unknown, res: any, next: () => void) => {
+    for (const [name, value] of Object.entries(
+      buildSecurityHeaders({ isProduction }),
+    )) {
+      res.setHeader(name, value);
+    }
+    next();
+  });
+  app.getHttpAdapter().getInstance()?.disable?.('x-powered-by');
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Trust proxy for correct X-Forwarded-For / req.ip behind nginx/vercel.
+  //
+  // SECURITY: this must be opt-in. Enabling it unconditionally lets any direct
+  // client spoof X-Forwarded-For and therefore spoof req.ip, which defeats
+  // IP-based rate limiting (login/OTP brute force). Set TRUST_PROXY to the
+  // number of trusted hops (e.g. "1") or a comma-separated CIDR list when the
+  // API really is behind a proxy that overwrites the header.
+  const trustProxy = configService.get<string>('TRUST_PROXY');
   const httpAdapter = app.getHttpAdapter();
   const expressInstance = httpAdapter.getInstance();
-  if (expressInstance?.set) {
-    expressInstance.set('trust proxy', 1);
+  if (expressInstance?.set && trustProxy) {
+    const numericHops = Number(trustProxy);
+    const value =
+      trustProxy === 'true'
+        ? 1
+        : Number.isInteger(numericHops) && numericHops >= 0
+          ? numericHops
+          : trustProxy
+              .split(',')
+              .map((entry) => entry.trim())
+              .filter(Boolean);
+    expressInstance.set('trust proxy', value);
   }
 
   const allowedOrigins = [
@@ -41,7 +73,15 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api'); // app.setGlobalPrefix('api') tells NestJS to add the same prefix to every route in your application.
 
-  if (configService.get<string>('NODE_ENV') !== 'production') {
+  // Swagger is opt-in: local development only, or explicitly via ENABLE_SWAGGER.
+  // Previously any non-"production" value (e.g. a stale or misspelled NODE_ENV on
+  // a deployed environment) exposed the whole API map.
+  const nodeEnv = configService.get<string>('NODE_ENV');
+  const swaggerEnabled =
+    configService.get<string>('ENABLE_SWAGGER') === 'true' ||
+    !nodeEnv ||
+    nodeEnv === 'development';
+  if (swaggerEnabled) {
     const config = new DocumentBuilder()
       .setTitle('Food Delivery API')
       .setDescription('Auth and business APIs for the food delivery platform')
@@ -71,8 +111,7 @@ async function bootstrap() {
   }
   const logger = new Logger('Bootstrap');
   logger.log(`Server is running on port ${port}`);
-  if (configService.get<string>('NODE_ENV') !== 'production')
-    logger.log(`Swagger docs available at /docs`);
+  if (swaggerEnabled) logger.log(`Swagger docs available at /docs`);
 }
 
 bootstrap().catch((err) => {

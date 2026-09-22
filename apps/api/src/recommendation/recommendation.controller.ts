@@ -23,7 +23,7 @@ export class RecommendationsController {
   ) {
     return this.recommendationsService.getPersonalizedRecommendations(
       user.sub,
-      limit ? parseInt(limit, 10) : 10,
+      parseLimit(limit, 10),
     );
   }
 
@@ -32,7 +32,7 @@ export class RecommendationsController {
   @ApiOperation({ summary: 'Get popular restaurants' })
   async getPopularRestaurants(@Query('limit') limit?: string) {
     return this.recommendationsService.getPopularRestaurants(
-      limit ? parseInt(limit, 10) : 10,
+      parseLimit(limit, 10),
     );
   }
 
@@ -45,7 +45,22 @@ export class RecommendationsController {
   ) {
     return this.recommendationsService.getRecentlyOrdered(
       user.sub,
-      limit ? parseInt(limit, 10) : 5,
+      parseLimit(limit, 5),
     );
   }
+}
+
+/**
+ * Clamp the caller-supplied `limit`.
+ *
+ * Previously it went straight into `.limit(n)` and into a cache key, so
+ * `?limit=1000000` forced an unbounded result set and created an unbounded
+ * number of distinct cache entries.
+ */
+const MAX_RECOMMENDATION_LIMIT = 50;
+
+function parseLimit(raw: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, MAX_RECOMMENDATION_LIMIT);
 }

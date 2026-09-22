@@ -17,8 +17,8 @@
     /* Strict Type Checking Protocols */
     "strict": true,
     "strictNullChecks": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     
     /* Compilation Performance Engine */

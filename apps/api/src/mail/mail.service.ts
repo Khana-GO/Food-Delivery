@@ -50,8 +50,18 @@ export class MailService {
   ) {
     const from = this.configService.get<string>('MAIL_FROM');
     const user = this.configService.get<string>('MAIL_USER');
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
 
     if (!from || !user) {
+      // SECURITY: never log a verification/reset code outside local development.
+      // In production an unconfigured mailer must fail loudly instead.
+      if (isProduction) {
+        this.logger.error(
+          `Mail transport is not configured; refusing to send "${subject}" to <${email}>`,
+        );
+        throw new InternalServerErrorException('Failed to deliver email');
+      }
       this.logger.warn(
         `[DEV MODE - EMAIL NOT CONFIGURED] ${subject} to <${email}>: CODE = [${code}] (Action: ${action})`,
       );
@@ -67,12 +77,16 @@ export class MailService {
         html: `<p>Your code to ${action} is:</p><h2 style="letter-spacing:4px">${code}</h2><p>This code expires in 10 minutes.</p>`,
       });
     } catch (err: any) {
+      if (isProduction) {
+        // Never leak the code into production logs.
+        this.logger.error(
+          `[MAIL FAILED] SMTP delivery failed for <${email}>: ${err.message}`,
+        );
+        throw new InternalServerErrorException('Failed to deliver email');
+      }
       this.logger.warn(
         `[MAIL FAILED] SMTP delivery failed (${err.message}). [DEV CODE for ${email}]: ${code}`,
       );
-      if (process.env.NODE_ENV === 'production') {
-        throw new InternalServerErrorException('Failed to deliver email');
-      }
     }
   }
 }

@@ -14,7 +14,7 @@ function buildGateway(updateDriverLocation: jest.Mock) {
   );
   const broadcast = jest
     .spyOn(gateway, 'broadcastDriverLocation')
-    .mockResolvedValue(undefined as any);
+    .mockResolvedValue(undefined);
   return { gateway, broadcast };
 }
 
@@ -32,7 +32,7 @@ describe('TrackingGateway driver location authorization (ERR-004)', () => {
       orderId: 'o1',
       latitude: 27.7172,
       longitude: 85.324,
-    } as any);
+    });
 
     expect(updateDriverLocation).not.toHaveBeenCalled();
     expect(client.emit).toHaveBeenCalledWith(

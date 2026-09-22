@@ -5,9 +5,10 @@ import {
   BadRequestException,
   InternalServerErrorException,
   ForbiddenException,
+  ConflictException,
   Inject,
 } from '@nestjs/common';
-import { eq, and, or, ilike, desc, asc, sql, isNull } from 'drizzle-orm';
+import { eq, and, or, ilike, desc, asc, sql, isNull, count } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { MenuItemResponseDto } from './dto/menu-item-response.dto';
@@ -15,6 +16,7 @@ import {
   menuItemsTable,
   menuCategoriesTable,
   restaurantsTable,
+  orderItemsTable,
   type MenuItem,
   type NewMenuItem,
 } from '../db/schema';
@@ -89,14 +91,40 @@ export class MenuItemsService {
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
         error instanceof ForbiddenException ||
+        error instanceof ConflictException ||
         error instanceof InternalServerErrorException
       ) {
         throw error;
+      }
+      const code = (error as { code?: string })?.code;
+      if (code === '23503') {
+        // Foreign key restriction — almost always order_items.menu_item_id,
+        // which is ON DELETE RESTRICT so historical orders stay intact.
+        throw new ConflictException(
+          'This menu item appears in past orders and cannot be deleted. Mark it unavailable instead.',
+        );
+      }
+      if (code === '23505') {
+        throw new ConflictException('Duplicate entry.');
       }
       throw new InternalServerErrorException(
         'An error occurred while processing your request',
       );
     }
+  }
+
+  /**
+   * `order_items.menu_item_id` is ON DELETE RESTRICT, so deleting an item that
+   * has ever been ordered would raise a raw FK violation (previously surfaced as
+   * an opaque HTTP 500). Count references up front so the caller gets an
+   * actionable 409 instead.
+   */
+  private async countOrderReferences(menuItemId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ total: count() })
+      .from(orderItemsTable)
+      .where(eq(orderItemsTable.menuItemId, menuItemId));
+    return Number(row?.total ?? 0);
   }
 
   private extractPublicId(url: string): string | null {
@@ -569,6 +597,12 @@ export class MenuItemsService {
       const item = await this.getRawItem(id);
       await this.assertOwnershipByUser(item.restaurantId, ownerUserId);
 
+      if ((await this.countOrderReferences(id)) > 0) {
+        throw new ConflictException(
+          `"${item.name}" appears in past orders and cannot be deleted. Mark it unavailable instead.`,
+        );
+      }
+
       await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
 
       // Clean up the remote image only after the delete succeeded
@@ -667,9 +701,19 @@ export class MenuItemsService {
       let deletedCount = 0;
       const orphanImages: string[] = [];
 
+      const skipped: string[] = [];
+
       for (const id of ids) {
         const item = await this.getRawItem(id);
         await this.assertOwnershipByUser(item.restaurantId, ownerUserId);
+
+        // Items referenced by historical orders cannot be hard deleted
+        // (order_items.menu_item_id is ON DELETE RESTRICT). Skip them instead of
+        // failing the whole batch with a 500.
+        if ((await this.countOrderReferences(id)) > 0) {
+          skipped.push(item.name);
+          continue;
+        }
 
         await this.db.delete(menuItemsTable).where(eq(menuItemsTable.id, id));
         deletedCount++;
@@ -704,7 +748,10 @@ export class MenuItemsService {
 
       this.logger.log(`Bulk deleted ${deletedCount} menu items`);
       return {
-        message: `${deletedCount} menu items deleted successfully`,
+        message:
+          skipped.length > 0
+            ? `${deletedCount} menu items deleted successfully. ${skipped.length} item(s) kept because they appear in past orders: ${skipped.join(', ')}`
+            : `${deletedCount} menu items deleted successfully`,
         deleted: deletedCount,
       };
     }, 'bulkDelete');

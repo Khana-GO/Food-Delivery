@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import { getAccessToken } from '../../../lib/secure-storage';
-import { getBaseUrl } from '../../../lib/axios';
+import { getAccessToken } from '@/lib/secure-storage';
+import { getBaseUrl } from '@/lib/axios';
 
 type Listener = (data: any) => void;
 

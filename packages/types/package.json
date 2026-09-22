@@ -5,7 +5,7 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"@food_delivery/types: no tests\""
   },
   "keywords": [],
   "author": "",

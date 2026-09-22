@@ -848,6 +848,23 @@ export class RestaurantsService {
       });
       if (!restaurant)
         throw new NotFoundException(`Restaurant with ID ${id} not found`);
+
+      // Financial history guard.
+      // orders.restaurant_id (and therefore order_items and invoices) is
+      // ON DELETE CASCADE, so a hard delete would erase the restaurant's entire
+      // order and invoice history. Refuse when any exists — soft delete already
+      // covers the legitimate "remove this restaurant" workflow.
+      const [orderCount] = await this.db
+        .select({ total: count() })
+        .from(schema.ordersTable)
+        .where(eq(schema.ordersTable.restaurantId, id));
+
+      if (Number(orderCount?.total ?? 0) > 0) {
+        throw new ConflictException(
+          'This restaurant has order history, so permanently deleting it would destroy paid orders and invoices. Deactivate it instead.',
+        );
+      }
+
       // cleanup cloudinary best effort
       if (restaurant.logoUrl) {
         const pid = this.extractPublicId(restaurant.logoUrl);

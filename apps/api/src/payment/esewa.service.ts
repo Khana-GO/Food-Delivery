@@ -29,6 +29,12 @@ export interface EsewaVerificationResponse {
   transactionUuid?: string;
   totalAmount?: string;
   message?: string;
+  /**
+   * True when the eSewa status API could not be reached, so the result is not a
+   * statement about the transaction (it must not be treated as a definitive
+   * failure, and it must never be treated as a success).
+   */
+  unavailable?: boolean;
 }
 
 @Injectable()
@@ -40,6 +46,10 @@ export class EsewaService {
   private readonly STATUS_URL: string;
   private readonly SUCCESS_URL: string;
   private readonly FAILURE_URL: string;
+  // EPAYTEST is the shared public sandbox merchant. Its callback signatures
+  // cannot be reproduced reliably, so signature mismatches are only fatal for
+  // real (production) merchants.
+  private readonly IS_TEST_MERCHANT: boolean;
 
   constructor(private configService: ConfigService) {
     this.MERCHANT_ID =
@@ -50,6 +60,7 @@ export class EsewaService {
     // test merchant at the production endpoint makes every payment fail/cancel,
     // so force the RC base whenever the test merchant is used.
     const isTest = this.MERCHANT_ID === 'EPAYTEST';
+    this.IS_TEST_MERCHANT = isTest;
     let base = this.configService.get<string>('ESEWA_BASE_URL');
     if (isTest && base && !base.includes('rc-epay')) {
       this.logger.warn(
@@ -226,7 +237,11 @@ export class EsewaService {
       };
     } catch (error: any) {
       this.logger.error(`status verify failed: ${error.message}`);
-      return { status: 'failure', message: 'Verification request failed' };
+      return {
+        status: 'failure',
+        message: 'Verification request failed',
+        unavailable: true,
+      };
     }
   }
 
@@ -257,10 +272,25 @@ export class EsewaService {
       if (!transaction_uuid)
         throw new BadRequestException('Missing transaction_uuid');
 
-      // Signature validation is INFORMATIONAL only. In the eSewa RC sandbox the
-      // callback signature often cannot be reproduced reliably (field
-      // order/value formatting), so we never let it block a real payment.
-      // The server-to-server status API below is the authoritative source.
+      const callbackStatus = (status || '').toUpperCase();
+
+      // ── Amount sanity ───────────────────────────────────────────────────
+      // The callback payload is attacker-controlled until the server-to-server
+      // status API confirms it. A missing / non-numeric amount must never be
+      // turned into a "no verification needed" signal downstream.
+      const hasAmount =
+        total_amount !== undefined &&
+        total_amount !== null &&
+        String(total_amount).trim() !== '';
+      const parsedAmount = hasAmount ? Number(total_amount) : NaN;
+      const hasValidAmount =
+        hasAmount && Number.isFinite(parsedAmount) && parsedAmount > 0;
+
+      // ── Signature ───────────────────────────────────────────────────────
+      // Informational in the shared EPAYTEST sandbox (its signatures cannot be
+      // reproduced reliably). For a real merchant a mismatching signature on a
+      // COMPLETE callback is treated as an attack.
+      let signatureValid: boolean | null = null;
       if (signature && signed_field_names) {
         try {
           const fields = signed_field_names
@@ -270,80 +300,110 @@ export class EsewaService {
             .map((k: string) => `${k}=${payload[k] ?? ''}`)
             .join(',');
           const expected = this.sign(message);
-          let valid = false;
           try {
             const a = Buffer.from(expected);
             const b = Buffer.from(signature);
-            valid = a.length === b.length && crypto.timingSafeEqual(a, b);
+            signatureValid =
+              a.length === b.length && crypto.timingSafeEqual(a, b);
           } catch {
-            valid = expected === signature;
+            signatureValid = expected === signature;
           }
-          if (valid) {
+          if (signatureValid) {
             this.logger.log(
               `eSewa callback signature OK status=${status} uuid=${transaction_uuid}`,
             );
           } else {
             this.logger.warn(
-              `eSewa callback signature mismatch (ignored) status=${status} uuid=${transaction_uuid}`,
+              `eSewa callback signature mismatch status=${status} uuid=${transaction_uuid}`,
             );
           }
         } catch (e: any) {
           this.logger.warn(`eSewa signature check error: ${e?.message}`);
+          signatureValid = null;
         }
       }
 
-      const callbackStatus = (status || '').toUpperCase();
+      // A COMPLETE callback now REQUIRES a usable amount, otherwise it cannot be
+      // verified against the gateway at all and must not produce an order.
+      if (callbackStatus === 'COMPLETE' && !hasValidAmount) {
+        this.logger.warn(
+          `eSewa callback COMPLETE without a valid total_amount (uuid=${transaction_uuid}) – rejected`,
+        );
+        return {
+          status: 'failure',
+          transactionUuid: transaction_uuid,
+          message:
+            'Callback is missing a valid total_amount, so the payment cannot be verified',
+        };
+      }
 
-      // 1) Authoritative server-to-server check. eSewa may mark the callback
-      //    CANCELED/PENDING while the charge actually went through – the status
-      //    API is the ground truth, so if it says COMPLETE we ALWAYS trust it.
+      if (
+        callbackStatus === 'COMPLETE' &&
+        signatureValid === false &&
+        !this.IS_TEST_MERCHANT
+      ) {
+        this.logger.error(
+          `eSewa callback signature invalid for production merchant (uuid=${transaction_uuid}) – rejected`,
+        );
+        return {
+          status: 'failure',
+          transactionUuid: transaction_uuid,
+          message: 'Invalid callback signature',
+        };
+      }
+
+      // ── Authoritative server-to-server check ────────────────────────────
+      // eSewa requires total_amount on the status query, so it can only be
+      // consulted when the amount survived validation.
       let statusCheck: EsewaVerificationResponse | null = null;
-      if (transaction_uuid && total_amount != null) {
+      if (hasValidAmount) {
         statusCheck = await this.verifyByStatus(
           transaction_uuid,
-          total_amount,
+          parsedAmount,
         ).catch((e: any) => {
           this.logger.warn(`status API fallback failed: ${e?.message}`);
           return null;
         });
+        // "Could not ask" is not the same as "the gateway said no".
+        if (statusCheck?.unavailable) statusCheck = null;
       }
+
       if (statusCheck && statusCheck.status === 'COMPLETE') {
+        // Trust the amount the gateway reports, never the amount the client sent.
         return {
           status: 'COMPLETE',
           refId: statusCheck.refId,
           transactionUuid: transaction_uuid,
-          totalAmount: String(total_amount),
+          totalAmount: statusCheck.totalAmount ?? String(parsedAmount),
           message: 'Payment verified via eSewa status API',
         };
       }
 
-      // 2) Trust a COMPLETE callback ONLY when the authoritative status API
-      //    could not be consulted. If it answered, that answer wins – a
-      //    forged callback `data` payload must never fabricate a COMPLETE
-      //    payment (or its amount).
-      if (callbackStatus === 'COMPLETE' && !statusCheck) {
+      // The status API is the ground truth. If it answered, that answer wins –
+      // even when the callback claims COMPLETE or carries a larger amount.
+      if (statusCheck) return statusCheck;
+
+      // No status API result at all:
+      //  - a COMPLETE callback is NOT trusted (an unverifiable payment must not
+      //    create a paid order); report pending so the client retries.
+      //  - otherwise report the callback status without ever claiming COMPLETE.
+      if (callbackStatus === 'COMPLETE') {
         this.logger.warn(
-          'eSewa status API unavailable – falling back to callback status',
+          `eSewa status API unavailable – refusing to trust callback COMPLETE (uuid=${transaction_uuid})`,
         );
         return {
-          status: 'COMPLETE',
+          status: 'PENDING',
           transactionUuid: transaction_uuid,
-          totalAmount: String(total_amount),
-          message: 'Payment verified via callback (status API unavailable)',
+          totalAmount: hasValidAmount ? String(parsedAmount) : undefined,
+          message:
+            'Payment could not be verified with eSewa right now; please retry verification',
         };
       }
 
-      // 3) Otherwise report whatever the status API (the truth) says.
-      if (statusCheck) return statusCheck;
-
-      // 4) No status API result – reflect the callback status (never FAILED).
       return {
-        status:
-          callbackStatus === 'CANCELED'
-            ? 'CANCELED'
-            : callbackStatus || 'failure',
+        status: callbackStatus === 'CANCELED' ? 'CANCELED' : 'failure',
         transactionUuid: transaction_uuid,
-        totalAmount: total_amount,
+        totalAmount: hasValidAmount ? String(parsedAmount) : undefined,
         message: `Callback status: ${status}`,
       };
     } catch (error: any) {

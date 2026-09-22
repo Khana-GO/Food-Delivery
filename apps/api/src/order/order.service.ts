@@ -571,7 +571,7 @@ export class OrdersService {
     customerId: string,
     dto: CreateOrderDto,
     paymentRef: string,
-    verifiedAmount?: number,
+    verifiedAmount: number,
   ): Promise<OrderResponseDto> {
     return this.handleDbOperation(async () => {
       // Replay protection: a gateway reference may only ever produce one order.
@@ -603,12 +603,15 @@ export class OrdersService {
 
       // Cross-check the amount verified with the gateway against the
       // server-recomputed order total so a small transaction can never be
-      // redeemed for a larger order.
-      if (
-        verifiedAmount !== undefined &&
-        !Number.isNaN(verifiedAmount) &&
-        Math.abs(totalAmount - verifiedAmount) > 0.01
-      ) {
+      // redeemed for a larger order. A missing / non-numeric amount is a
+      // verification failure, NOT a reason to skip the check.
+      if (!Number.isFinite(verifiedAmount) || verifiedAmount <= 0) {
+        throw new BadRequestException(
+          'Payment amount could not be verified with the gateway',
+        );
+      }
+
+      if (Math.abs(totalAmount - verifiedAmount) > 0.01) {
         throw new BadRequestException(
           `Payment amount mismatch: order total is Rs. ${totalAmount.toFixed(2)} but the verified payment amount is Rs. ${verifiedAmount.toFixed(2)}`,
         );

@@ -73,7 +73,9 @@ const dto: CreateOrderDto = {
   paymentMethod: PaymentMethod.ONLINE,
 };
 
-function buildService(options: { existingOrder?: any; promoValid?: boolean } = {}) {
+function buildService(
+  options: { existingOrder?: any; promoValid?: boolean } = {},
+) {
   const insertedValues: any[] = [];
   let insertCall = 0;
 
@@ -161,6 +163,26 @@ describe('OrdersService payment integrity (ERR-001 / ERR-002 / ERR-005)', () => 
     ).rejects.toThrow(/Payment amount mismatch/);
 
     // No order must have been written.
+    expect(insertedValues).toHaveLength(0);
+  });
+
+  it('refuses to create a paid order when the verified amount is not a number', async () => {
+    // Regression for the forged-callback exploit: a NaN amount used to disable
+    // the cross-check entirely, creating a PAID order of arbitrary value.
+    const { service, insertedValues } = buildService();
+
+    await expect(
+      service.createPaidOrder('cust-1', dto, 'esewa-pay-1', NaN),
+    ).rejects.toThrow(/could not be verified/);
+    expect(insertedValues).toHaveLength(0);
+  });
+
+  it('refuses to create a paid order when the verified amount is zero or negative', async () => {
+    const { service, insertedValues } = buildService();
+
+    await expect(
+      service.createPaidOrder('cust-1', dto, 'esewa-pay-1', 0),
+    ).rejects.toThrow(BadRequestException);
     expect(insertedValues).toHaveLength(0);
   });
 

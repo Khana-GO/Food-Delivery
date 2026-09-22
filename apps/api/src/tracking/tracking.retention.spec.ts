@@ -17,7 +17,7 @@ function collectStrings(
   if (!node || typeof node !== 'object' || seen.has(node)) return out;
   seen.add(node);
   for (const key of Object.keys(node)) {
-    const value = (node as any)[key];
+    const value = node[key];
     if (typeof value === 'string') out.push(value);
     else if (Array.isArray(value))
       value.forEach((entry) => collectStrings(entry, out, seen));
@@ -51,7 +51,11 @@ function buildService(staleBatches: Array<Array<{ id: string }>>) {
     }),
   };
 
-  const cache: any = { get: async () => null, set: async () => undefined, del: async () => undefined };
+  const cache: any = {
+    get: async () => null,
+    set: async () => undefined,
+    del: async () => undefined,
+  };
   const config: any = { get: () => undefined };
 
   return { service: new TrackingService(db, cache, config), deletedIds };

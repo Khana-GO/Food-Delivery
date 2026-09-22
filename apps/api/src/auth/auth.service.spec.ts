@@ -229,7 +229,10 @@ describe('AuthService', () => {
     it('falls back to revokeByToken when the token is expired', async () => {
       const revokeByToken = jest.fn(async () => undefined);
       const revokeToken = jest.fn();
-      const sessionService = { revokeByToken, revokeToken } as unknown as SessionsService;
+      const sessionService = {
+        revokeByToken,
+        revokeToken,
+      } as unknown as SessionsService;
 
       const verifyAsync = jest.fn(async () => {
         throw new Error('jwt expired');
@@ -346,7 +349,10 @@ describe('AuthService', () => {
     it('falls back to revokeByToken when jti is missing from a refresh token', async () => {
       const revokeByToken = jest.fn(async () => undefined);
       const revokeToken = jest.fn();
-      const sessionService = { revokeByToken, revokeToken } as unknown as SessionsService;
+      const sessionService = {
+        revokeByToken,
+        revokeToken,
+      } as unknown as SessionsService;
 
       const verifyAsync = jest.fn(async () => ({
         sub: 'user-1',

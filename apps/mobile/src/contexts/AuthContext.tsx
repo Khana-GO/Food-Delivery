@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 
-import { api, onSessionExpired } from "../../lib/axios";
+import { api, onSessionExpired } from "@/lib/axios";
 
 import {
   saveAccessToken,
@@ -16,7 +16,7 @@ import {
   getAccessToken,
   getRefreshToken,
   deleteTokens,
-} from "../../lib/secure-storage";
+} from "@/lib/secure-storage";
 
 import { User, UserRole } from "@food_delivery/types";
 

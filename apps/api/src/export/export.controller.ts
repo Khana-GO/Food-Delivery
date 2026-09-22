@@ -40,18 +40,6 @@ export class ExportController {
       status,
     });
 
-    if (!data.length) {
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename=orders-${Date.now()}.csv`,
-      );
-      res.send(
-        'Order ID, Customer, Email, Phone, Restaurant, Date, Status, Items, Subtotal, Delivery Fee, Total, Payment Method, Payment Status, Notes\n',
-      );
-      return;
-    }
-
     const headers = [
       'Order ID',
       'Customer',
@@ -69,10 +57,18 @@ export class ExportController {
       'Notes',
     ];
 
-    const lines = [headers.join(',')];
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="orders-${Date.now()}.csv"`,
+    );
+    // Stream rows instead of building one giant string: a large date range used
+    // to materialise the entire export in memory before sending a byte.
+    res.write('\uFEFF');
+    await writeCsvLine(res, headers.join(','));
 
     for (const row of data) {
-      const items = row.items
+      const items = (row.items ?? [])
         .map(
           (i: { name: string; quantity: number }) => `${i.name} x${i.quantity}`,
         )
@@ -95,17 +91,10 @@ export class ExportController {
         row.notes ?? '',
       ].map((field) => this.escapeCsv(field));
 
-      lines.push(line.join(','));
+      await writeCsvLine(res, line.join(','));
     }
 
-    const csv = lines.join('\n');
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="orders-${Date.now()}.csv"`,
-    );
-    res.send(`\uFEFF${csv}`);
+    res.end();
   }
 
   // ─── GET SALES REPORT ───
@@ -131,9 +120,22 @@ export class ExportController {
           : typeof value === 'string'
             ? value
             : String(value);
-    if (/[",\n]/.test(str)) {
-      return `"${str.replace(/"/g, '""')}"`;
+
+    // Formula injection: spreadsheet apps execute a cell that starts with
+    // = + - @ (or a control char). Customer names and order notes are
+    // user-controlled, so neutralise them with a leading apostrophe.
+    const guarded = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+
+    if (/[",\n\r]/.test(guarded)) {
+      return `"${guarded.replace(/"/g, '""')}"`;
     }
-    return str;
+    return guarded;
+  }
+}
+
+/** Write a line, waiting for the socket to drain when the buffer is full. */
+async function writeCsvLine(res: Response, line: string): Promise<void> {
+  if (!res.write(`${line}\n`)) {
+    await new Promise<void>((resolve) => res.once('drain', () => resolve()));
   }
 }

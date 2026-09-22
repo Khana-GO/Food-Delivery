@@ -29,27 +29,23 @@ neonConfig.useSecureWebSocket = true;
         }
         // The WebSocket driver supports interactive transactions. The HTTP driver
         // cannot keep multiple queries on the same transaction connection.
-        const pool = new Pool({ connectionString });
+        const pool = new Pool({
+          connectionString,
+          // Bound the pool and fail fast instead of queueing forever: without
+          // these, a slow/hung query could exhaust the connection pool and make
+          // every request time out with no signal.
+          max: Number(config.get<string>('DATABASE_POOL_MAX') ?? 10),
+          connectionTimeoutMillis: Number(
+            config.get<string>('DATABASE_CONNECT_TIMEOUT_MS') ?? 10_000,
+          ),
+          idleTimeoutMillis: 30_000,
+        });
         // Prevent unhandled 'error' events from crashing Node (Neon idle WebSocket error)
         pool.on('error', (err: any) => {
           logger.warn(
             `[Neon pool] idle error suppressed: ${err?.message || err}`,
           );
         });
-        // Also catch WebSocket errors at process level as last resort
-        if (!(global as any).__neonWsErrorBound) {
-          (global as any).__neonWsErrorBound = true;
-          process.on('uncaughtException', (err: any) => {
-            if (err?.context?.client || err?.message?.includes('WebSocket')) {
-              logger.warn(
-                `[Neon] suppressed uncaught WebSocket error: ${err?.message}`,
-              );
-              return;
-            }
-            // rethrow non-neon errors
-            throw err;
-          });
-        }
         return drizzle({ client: pool, schema });
       },
     },

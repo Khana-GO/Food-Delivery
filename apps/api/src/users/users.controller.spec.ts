@@ -11,6 +11,7 @@ import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notification/notification.service';
 import { CacheService } from '../redis/cache.service';
+import { SessionsService } from '../sessions/sessions.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -42,6 +43,10 @@ describe('UsersController', () => {
             wrap: jest.fn(),
             hashOptions: jest.fn(() => 'hash'),
           },
+        },
+        {
+          provide: SessionsService,
+          useValue: { revokeAllForUser: jest.fn(async () => 0) },
         },
       ],
     })

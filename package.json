@@ -8,7 +8,9 @@
     "dev:api": "pnpm --filter api run start:dev",
     "dev:mobile": "pnpm --filter mobile run start",
     "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:mobile\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pnpm -r test",
+    "typecheck": "pnpm --filter api exec tsc --noEmit -p tsconfig.json && pnpm --filter mobile typecheck",
+    "lint": "pnpm --filter api run lint:check"
   },
   "keywords": [],
   "author": "",

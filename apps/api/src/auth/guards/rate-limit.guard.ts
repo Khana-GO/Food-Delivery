@@ -113,19 +113,25 @@ export class RateLimitGuard implements CanActivate {
     return { limit: 100, windowSec: 60 };
   }
 
+  /**
+   * Resolve the caller's IP for bucketing.
+   *
+   * SECURITY: never read `x-forwarded-for` / `x-real-ip` directly. Those headers
+   * are attacker-controlled, so trusting them lets a client mint a fresh rate
+   * limit bucket per request (unlimited password guessing on /auth/login).
+   * `req.ip` already accounts for proxies when `trust proxy` is configured —
+   * which main.ts only does when TRUST_PROXY is explicitly set.
+   */
   private getClientIp(req: Request): string {
-    const xff = (req.headers['x-forwarded-for'] as string | undefined)
-      ?.split(',')[0]
-      ?.trim();
-    if (xff) return xff;
-    const realIp = req.headers['x-real-ip'] as string | undefined;
-    if (realIp) return realIp;
-    // Express populates req.ip when trust proxy is set; fallback to socket
     const ip = (req as unknown as { ip?: string }).ip;
     if (ip) return ip;
-    const conn = (req as unknown as { connection?: { remoteAddress?: string } })
-      .connection?.remoteAddress;
-    return conn || 'unknown';
+    const conn = req as unknown as {
+      socket?: { remoteAddress?: string };
+      connection?: { remoteAddress?: string };
+    };
+    return (
+      conn.socket?.remoteAddress || conn.connection?.remoteAddress || 'unknown'
+    );
   }
 
   private getRouteKey(req: Request): string {

@@ -10,6 +10,7 @@ import Redis from 'ioredis';
 import { CacheService } from './cache.service';
 
 import { InMemoryRedisClient } from './in-memory-redis.client';
+import { resolveRedisMode } from './redis-mode';
 
 @Global()
 @Module({
@@ -24,10 +25,11 @@ import { InMemoryRedisClient } from './in-memory-redis.client';
         const password =
           configService.get<string>('REDIS_PASSWORD') || undefined;
         const db = Number(configService.get<string>('REDIS_DB', '0'));
-        const enabled =
-          configService.get<string>('REDIS_ENABLED', 'false') === 'true';
+        // Throws in production unless Redis is enabled or the operator has
+        // explicitly accepted per-process sessions.
+        const mode = resolveRedisMode(configService);
 
-        if (!enabled) {
+        if (mode === 'memory') {
           logger.log(
             'Redis disabled (REDIS_ENABLED=false) — using in-memory cache & rate limiter',
           );

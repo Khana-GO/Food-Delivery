@@ -32,9 +32,10 @@ describe('AppController', () => {
         expect.objectContaining({
           status: 'ok',
           timestamp: expect.any(Date),
-          data: expect.any(Array),
         }),
       );
+      // The endpoint must stay a real health signal, not a demo payload.
+      expect(result.data).toBeUndefined();
     });
   });
 });

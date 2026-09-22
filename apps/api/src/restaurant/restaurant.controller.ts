@@ -31,6 +31,7 @@ import { FindRestaurantsDto } from './dto/find-restaurants.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@food_delivery/types';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -58,6 +59,8 @@ export class RestaurantsController {
 
   // ─── STATIC / ADMIN ROUTES — MUST BE BEFORE :id ───
 
+  // Public: restaurant discovery must work before sign-in.
+  @Public()
   @Get('cuisines')
   @ApiOperation({ summary: 'Get the fixed list of supported cuisine types' })
   getCuisines(): string[] {
@@ -99,6 +102,8 @@ export class RestaurantsController {
   }
 
   // ─── FIND ALL ───
+  // Public: browsing the restaurant list does not require a session.
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Get all restaurants with pagination and filters' })
   async findAll(@Query() query: FindRestaurantsDto) {
@@ -120,6 +125,7 @@ export class RestaurantsController {
   }
 
   // ─── FIND BY SLUG ─── (must be before :id if using string)
+  @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get restaurant by slug' })
   async findBySlug(
@@ -129,6 +135,7 @@ export class RestaurantsController {
   }
 
   // ─── FIND BY ID ───
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get restaurant by ID' })
   async findById(

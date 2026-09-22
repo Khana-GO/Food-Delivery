@@ -38,7 +38,8 @@ export interface FoodItem {
 export interface HealthCheckResponse {
   status: string;
   timestamp: Date | string;
-  data: FoodItem[];
+  /** Optional diagnostics payload. */
+  data?: FoodItem[];
 }
 
 

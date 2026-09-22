@@ -265,9 +265,26 @@ export class EsewaController {
     };
 
     const verifiedAmount =
-      result.totalAmount != null && result.totalAmount !== ''
+      result.totalAmount != null && String(result.totalAmount).trim() !== ''
         ? Number(result.totalAmount)
         : undefined;
+
+    // A paid order must never be created without a usable, gateway-derived
+    // amount. Previously an absent/non-numeric amount silently disabled the
+    // cross-check inside createPaidOrder, allowing a forged callback to buy an
+    // arbitrarily large order with a tiny payment.
+    if (
+      verifiedAmount === undefined ||
+      !Number.isFinite(verifiedAmount) ||
+      verifiedAmount <= 0
+    ) {
+      return {
+        status: 'failure',
+        message:
+          'Payment verified but the amount could not be established. Please contact support.',
+        transactionUuid: txUuid,
+      };
+    }
 
     const order = await this.ordersService.createPaidOrder(
       user.sub,

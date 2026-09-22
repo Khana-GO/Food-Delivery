@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { Inject } from '@nestjs/common';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
@@ -23,10 +24,16 @@ export class InvoicesService {
     private readonly cache: CacheService,
   ) {}
 
+  /**
+   * `INV-<yyyymmdd>-<6 random digits>`.
+   *
+   * Uses a CSPRNG (previously `Math.random()`, which is predictable and gave
+   * only 9,000 values per day, so the 3 retries below could be exhausted).
+   */
   private generateInvoiceNumber(): string {
     const now = new Date();
-    const datePart = now.toISOString().split('T')[0];
-    const random = Math.floor(1000 + Math.random() * 9000);
+    const datePart = now.toISOString().split('T')[0].replace(/-/g, '');
+    const random = randomInt(0, 1_000_000).toString().padStart(6, '0');
     return `INV-${datePart}-${random}`;
   }
 

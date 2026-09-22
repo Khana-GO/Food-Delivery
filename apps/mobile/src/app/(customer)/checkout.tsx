@@ -195,9 +195,11 @@ const [promoError, setPromoError] = useState('');
     setPromoValidating(true);
     setPromoError('');
     try {
+      // Validate against the server-authoritative cart subtotal so the discount
+      // shown here is exactly what the order service will compute.
       const result = await api.post('/promotions/validate', {
         code: promoCode,
-        subtotal: totalPrice,
+        subtotal: Number(backendCart?.subtotal ?? totalPrice),
       });
       if (result.data.valid) {
         setPromoApplied(true);

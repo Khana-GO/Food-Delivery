@@ -1,5 +1,12 @@
 // src/sessions/sessions.table.ts
-import { pgTable, uuid, varchar, timestamp, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  timestamp,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { usersTable } from '.';
 
 export const sessionsTable = pgTable(
@@ -11,6 +18,8 @@ export const sessionsTable = pgTable(
       .notNull()
       .references(() => usersTable.id, { onDelete: 'cascade' }),
 
+    // One row per refresh token: a duplicated hash would let two live sessions
+    // share a token and make revocation-by-token miss one of them.
     refreshTokenHash: varchar('refresh_token_hash', { length: 255 }).notNull(),
 
     userAgent: varchar('user_agent', { length: 255 }),
@@ -20,7 +29,9 @@ export const sessionsTable = pgTable(
   },
   (table) => [
     index('sessions_user_id_idx').on(table.userId),
-    index('sessions_refresh_token_hash_idx').on(table.refreshTokenHash),
+    uniqueIndex('sessions_refresh_token_hash_unique').on(
+      table.refreshTokenHash,
+    ),
   ],
 );
 

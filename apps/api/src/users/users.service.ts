@@ -9,7 +9,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { eq, sql, and, or, ilike, desc, count, asc } from 'drizzle-orm';
+import { eq, sql, and, or, ilike, desc, count, asc, inArray } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import {
@@ -24,6 +24,7 @@ import { ConfigService } from '@nestjs/config';
 import { CloudinaryService } from '../cloudinary/clodinary.service';
 import { NotificationsService } from '../notification/notification.service';
 import { CacheService } from '../redis/cache.service';
+import { SessionsService } from '../sessions/sessions.service';
 
 @Injectable()
 export class UsersService {
@@ -40,7 +41,25 @@ export class UsersService {
     private readonly cloudinaryService: CloudinaryService,
     private readonly notificationsService: NotificationsService,
     private readonly cache: CacheService,
+    private readonly sessionsService: SessionsService,
   ) {}
+
+  /**
+   * Invalidate every token the user currently holds.
+   *
+   * Access tokens are stateless, so without this a deactivated user keeps using
+   * their (still unexpired) token, and a role change does not take effect until
+   * the next refresh.
+   */
+  private async revokeUserSessions(userId: string, context: string) {
+    try {
+      await this.sessionsService.revokeAllForUser(userId);
+    } catch (err: any) {
+      this.logger.warn(
+        `[${context}] Failed to revoke sessions for ${userId}: ${err?.message}`,
+      );
+    }
+  }
 
   private keyList(hash: string) { return `users:list:${hash}`; }
   private keyId(id: string) { return `users:id:${id}`; }
@@ -812,6 +831,9 @@ export class UsersService {
       }
 
       await this.invalidateUsers({ id: userId });
+      // Force re-authentication so the new role (and roles guard) applies now,
+      // rather than when the old access token happens to expire.
+      await this.revokeUserSessions(userId, 'changeRole');
       await this.notificationsService
         .create({
           userId,
@@ -872,6 +894,7 @@ export class UsersService {
       }
 
       await this.invalidateUsers({ id });
+      await this.revokeUserSessions(id, 'softDelete');
       await this.notificationsService
         .create({
           userId: id,
@@ -973,6 +996,35 @@ export class UsersService {
         }
       }
 
+      // Financial history guard.
+      // `users` is referenced with ON DELETE CASCADE from restaurants (owner_id)
+      // and orders (customer_id), and orders cascade further into order_items and
+      // invoices. A hard delete would therefore silently destroy paid orders and
+      // their invoices — refuse it and point the caller at soft delete instead.
+      const ownedRestaurants = await this.db
+        .select({ id: schema.restaurantsTable.id })
+        .from(schema.restaurantsTable)
+        .where(eq(schema.restaurantsTable.ownerId, id));
+      const ownedRestaurantIds = ownedRestaurants.map((r) => r.id);
+
+      const orderScope = [eq(schema.ordersTable.customerId, id)];
+      if (ownedRestaurantIds.length > 0) {
+        orderScope.push(
+          inArray(schema.ordersTable.restaurantId, ownedRestaurantIds),
+        );
+      }
+
+      const [orderCount] = await this.db
+        .select({ total: count() })
+        .from(schema.ordersTable)
+        .where(or(...orderScope));
+
+      if (Number(orderCount?.total ?? 0) > 0) {
+        throw new ConflictException(
+          'This user has order history, so permanently deleting them would destroy paid orders and invoices. Deactivate the account instead.',
+        );
+      }
+
       const result = await this.db
         .delete(usersTable)
         .where(eq(usersTable.id, id))
@@ -985,6 +1037,8 @@ export class UsersService {
       }
 
       await this.invalidateUsers({ id });
+      // Access tokens outlive the row, so revoke them explicitly.
+      await this.revokeUserSessions(id, 'hardDelete');
       this.logger.log(`User hard deleted: ${user.email} (ID: ${id})`);
     }, 'hardDelete');
   }

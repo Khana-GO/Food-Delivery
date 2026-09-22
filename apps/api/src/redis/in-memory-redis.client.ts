@@ -3,6 +3,18 @@ import { EventEmitter } from 'events';
 export class InMemoryRedisClient extends EventEmitter {
   public status = 'ready';
   private store = new Map<string, { value: string; expiresAt?: number }>();
+  // Expiry is evaluated lazily on read, so keys that are written once and never
+  // read again would live forever. Sweep periodically to bound memory.
+  private writesSinceSweep = 0;
+  private static readonly SWEEP_EVERY_WRITES = 200;
+
+  private sweepExpired(now = Date.now()): void {
+    for (const [key, item] of this.store) {
+      if (item.expiresAt && now > item.expiresAt) {
+        this.store.delete(key);
+      }
+    }
+  }
 
   async get(key: string): Promise<string | null> {
     const item = this.store.get(key);
@@ -27,6 +39,12 @@ export class InMemoryRedisClient extends EventEmitter {
     }
 
     this.store.set(key, { value: strVal, expiresAt });
+
+    if (++this.writesSinceSweep >= InMemoryRedisClient.SWEEP_EVERY_WRITES) {
+      this.writesSinceSweep = 0;
+      this.sweepExpired();
+    }
+
     return 'OK';
   }
 
