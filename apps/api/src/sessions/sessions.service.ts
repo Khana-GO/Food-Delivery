@@ -6,6 +6,7 @@ import { DATABASE } from '../db/database.constants';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import * as schema from '../db/schema';
 import { sessionsTable } from '../db/schema';
+import { CacheService } from '../redis/cache.service';
 // import your DB provider
 
 @Injectable()
@@ -13,8 +14,16 @@ export class SessionsService {
   constructor(
     @Inject(DATABASE)
     private readonly db: NeonDatabase<typeof schema>,
+    private readonly cache: CacheService,
   ) {}
 
+  /** Shared-store keys so revocations survive restarts / multiple instances. */
+  private static readonly REVOKED_TOKEN_PREFIX = 'auth:revoked:token:';
+  private static readonly REVOKED_USER_PREFIX = 'auth:revoked:user:';
+  /** Longest refresh-token lifetime — bounds how long entries must be kept. */
+  private static readonly REVOCATION_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+  /** Process-local mirror (fast path + fallback when Redis is unavailable). */
   private readonly revokedTokens = new Set<string>();
 
   /**
@@ -40,14 +49,30 @@ export class SessionsService {
     }
   }
 
-  isTokenRevoked(
+  /** Reads a user-level revocation timestamp (memory first, then shared store). */
+  private async getUserRevokedAt(userId: string): Promise<number | undefined> {
+    const local = this.revokedUsers.get(userId);
+    if (local !== undefined) return local;
+
+    const shared = await this.cache.get<number>(
+      SessionsService.REVOKED_USER_PREFIX + userId,
+    );
+    if (typeof shared === 'number' && shared > 0) {
+      // Mirror locally so subsequent checks in this process stay cheap.
+      this.revokedUsers.set(userId, shared);
+      return shared;
+    }
+    return undefined;
+  }
+
+  async isTokenRevoked(
     token: string,
     identity?: { userId?: string; issuedAtSeconds?: number },
-  ) {
+  ): Promise<boolean> {
     this.pruneUserRevocations();
 
     if (identity?.userId) {
-      const revokedAt = this.revokedUsers.get(identity.userId);
+      const revokedAt = await this.getUserRevokedAt(identity.userId);
       if (revokedAt !== undefined) {
         const issuedMs = identity.issuedAtSeconds
           ? identity.issuedAtSeconds * 1000
@@ -59,15 +84,37 @@ export class SessionsService {
       }
     }
 
-    return this.revokedTokens.has(this.hashToken(token));
+    const hash = this.hashToken(token);
+    if (this.revokedTokens.has(hash)) return true;
+
+    const shared = await this.cache.get<boolean>(
+      SessionsService.REVOKED_TOKEN_PREFIX + hash,
+    );
+    if (shared === true) {
+      this.revokedTokens.add(hash);
+      return true;
+    }
+    return false;
   }
 
-  revokeToken(token: string, userId?: string) {
-    if (userId) {
-      this.revokedUsers.set(userId, Date.now());
-    }
+  async revokeToken(token: string, userId?: string): Promise<void> {
+    const hash = this.hashToken(token);
+    this.revokedTokens.add(hash);
+    await this.cache.set(
+      SessionsService.REVOKED_TOKEN_PREFIX + hash,
+      true,
+      SessionsService.REVOCATION_TTL_SECONDS,
+    );
 
-    this.revokedTokens.add(this.hashToken(token));
+    if (userId) {
+      const now = Date.now();
+      this.revokedUsers.set(userId, now);
+      await this.cache.set(
+        SessionsService.REVOKED_USER_PREFIX + userId,
+        now,
+        SessionsService.REVOCATION_TTL_SECONDS,
+      );
+    }
   }
 
   async create(
@@ -121,7 +168,13 @@ export class SessionsService {
   }
 
   async revokeAllForUser(userId: string) {
-    this.revokedUsers.set(userId, Date.now());
+    const now = Date.now();
+    this.revokedUsers.set(userId, now);
+    await this.cache.set(
+      SessionsService.REVOKED_USER_PREFIX + userId,
+      now,
+      SessionsService.REVOCATION_TTL_SECONDS,
+    );
     const removed = await this.db
       .delete(sessionsTable)
       .where(eq(sessionsTable.userId, userId))

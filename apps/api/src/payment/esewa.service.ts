@@ -182,13 +182,20 @@ export class EsewaService {
         validateStatus: () => true,
       });
       const body = res.data;
+      // The status API response carries the amount it actually holds for the
+      // transaction. Prefer it over the caller-supplied value so verification
+      // is anchored to gateway data instead of client input.
+      const reportedAmount =
+        body?.total_amount != null && body.total_amount !== ''
+          ? Number(body.total_amount).toFixed(2)
+          : amt;
       // RC returns JSON {status: "COMPLETE"/"PENDING"/etc, ...}
       const status = (body?.status || '').toUpperCase();
       if (status === 'COMPLETE') {
         return {
           status: 'COMPLETE',
           transactionUuid,
-          totalAmount: amt,
+          totalAmount: reportedAmount,
           message: 'Payment verified (COMPLETE)',
         };
       }
@@ -196,7 +203,7 @@ export class EsewaService {
         return {
           status: 'PENDING',
           transactionUuid,
-          totalAmount: amt,
+          totalAmount: reportedAmount,
           message: 'Payment pending',
         };
       if (
@@ -207,7 +214,7 @@ export class EsewaService {
         return {
           status: 'CANCELED',
           transactionUuid,
-          totalAmount: amt,
+          totalAmount: reportedAmount,
           message: 'Payment canceled/failed',
         };
       //  fallback to legacy shape for callers expecting success/failure
@@ -310,19 +317,19 @@ export class EsewaService {
         };
       }
 
-      // 2) Trust a signed COMPLETE callback only as a fallback (status API
-      //    unavailable/error). Never downgrade an existing validated payment.
-      if (callbackStatus === 'COMPLETE') {
-        if (statusCheck) {
-          this.logger.warn(
-            `callback says COMPLETE but status API returned ${statusCheck.status} – trusting callback`,
-          );
-        }
+      // 2) Trust a COMPLETE callback ONLY when the authoritative status API
+      //    could not be consulted. If it answered, that answer wins – a
+      //    forged callback `data` payload must never fabricate a COMPLETE
+      //    payment (or its amount).
+      if (callbackStatus === 'COMPLETE' && !statusCheck) {
+        this.logger.warn(
+          'eSewa status API unavailable – falling back to callback status',
+        );
         return {
           status: 'COMPLETE',
           transactionUuid: transaction_uuid,
           totalAmount: String(total_amount),
-          message: 'Payment verified via callback',
+          message: 'Payment verified via callback (status API unavailable)',
         };
       }
 

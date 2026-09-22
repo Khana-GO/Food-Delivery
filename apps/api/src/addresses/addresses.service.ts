@@ -55,7 +55,12 @@ export class AddressesService {
       const addresses = await this.db
         .select()
         .from(addressesTable)
-        .where(eq(addressesTable.userId, userId))
+        .where(
+          and(
+            eq(addressesTable.userId, userId),
+            eq(addressesTable.isActive, true),
+          ),
+        )
         .orderBy(addressesTable.createdAt);
       return addresses.map((a) => new AddressResponseDto(a as any));
     }, 'findAll');
@@ -68,6 +73,7 @@ export class AddressesService {
         where: and(
           eq(addressesTable.id, id),
           eq(addressesTable.userId, userId),
+          eq(addressesTable.isActive, true),
         ),
       });
       if (!address) {
@@ -191,16 +197,25 @@ export class AddressesService {
   async delete(id: string, userId: string): Promise<{ message: string }> {
     return this.handleDbOperation(async () => {
       const toDelete = await this.findOne(id, userId);
+
+      // Soft delete: past orders reference this address with ON DELETE
+      // RESTRICT, so a hard delete would blow up with a foreign-key violation.
+      // Deactivate instead — history stays intact and the address disappears
+      // from the user's address list.
       await this.db
-        .delete(addressesTable)
+        .update(addressesTable)
+        .set({ isActive: false, isDefault: false, updatedAt: new Date() })
         .where(
           and(eq(addressesTable.id, id), eq(addressesTable.userId, userId)),
         );
 
-      // Auto-promote another address to default if deleted was default
+      // Auto-promote another active address to default if deleted was default
       if ((toDelete as any).isDefault) {
         const another = await this.db.query.addressesTable.findFirst({
-          where: eq(addressesTable.userId, userId),
+          where: and(
+            eq(addressesTable.userId, userId),
+            eq(addressesTable.isActive, true),
+          ),
         });
         if (another) {
           await this.db

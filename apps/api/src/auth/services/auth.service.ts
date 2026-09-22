@@ -327,13 +327,18 @@ export class AuthService {
           if (removed === 0) {
             await this.sessionService.revokeByToken(refreshToken);
           }
-          this.sessionService.revokeToken(refreshToken, payload.sub);
+          await this.sessionService.revokeToken(refreshToken, payload.sub);
+        } else {
+          // Signed by us but not a revocable refresh session (wrong token
+          // type or missing jti) – fall back to hash-based revocation.
+          await this.sessionService.revokeByToken(refreshToken);
+          await this.sessionService.revokeToken(refreshToken, payload.sub);
         }
       } catch {
         // Token unverifiable/expired — revoke server-side by hash so any
         // copies still in the wild are rejected.
         await this.sessionService.revokeByToken(refreshToken);
-        this.sessionService.revokeToken(refreshToken);
+        await this.sessionService.revokeToken(refreshToken);
       }
     }
 
@@ -343,9 +348,9 @@ export class AuthService {
         const payload = await this.jwtService.verifyAsync<{ sub?: string }>(
           accessToken,
         );
-        this.sessionService.revokeToken(accessToken, payload.sub);
+        await this.sessionService.revokeToken(accessToken, payload.sub);
       } catch {
-        this.sessionService.revokeToken(accessToken);
+        await this.sessionService.revokeToken(accessToken);
       }
     }
 

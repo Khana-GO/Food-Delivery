@@ -18,6 +18,8 @@ export interface Session {
   id: string;
   userId: string;
   createdAt: Date;
+  /** Epoch ms of the last read/write — drives idle-TTL eviction. */
+  lastUsedAt: number;
   messages: Array<{
     role: 'user' | 'assistant';
     content: string;
@@ -31,6 +33,37 @@ export class AIService {
   private sessions: Map<string, Session> = new Map();
   private rateLimit: Map<string, { count: number; resetAt: number }> =
     new Map();
+
+  // In-memory caches must be bounded: without eviction they grow with every
+  // user that ever chats, eventually OOM-ing the process.
+  private static readonly SESSION_IDLE_TTL_MS = 2 * 60 * 60 * 1000; // 2h
+  private static readonly MAX_SESSIONS = 1000;
+  private static readonly MAX_RATE_LIMIT_ENTRIES = 5000;
+
+  /** Drops expired/idle entries and caps both maps. Cheap — O(n) on cap only. */
+  private pruneCaches(now: number) {
+    for (const [key, entry] of this.rateLimit) {
+      if (now > entry.resetAt) this.rateLimit.delete(key);
+    }
+    while (this.rateLimit.size > AIService.MAX_RATE_LIMIT_ENTRIES) {
+      const oldest = this.rateLimit.keys().next().value;
+      if (!oldest) break;
+      this.rateLimit.delete(oldest);
+    }
+
+    if (this.sessions.size >= AIService.MAX_SESSIONS) {
+      for (const [id, session] of this.sessions) {
+        if (now - session.lastUsedAt > AIService.SESSION_IDLE_TTL_MS) {
+          this.sessions.delete(id);
+        }
+      }
+      while (this.sessions.size > AIService.MAX_SESSIONS) {
+        const oldest = this.sessions.keys().next().value;
+        if (!oldest) break;
+        this.sessions.delete(oldest);
+      }
+    }
+  }
 
   constructor(
     private readonly agent: KhanaGoAgent,
@@ -53,6 +86,7 @@ export class AIService {
     }
 
     // Simple rate limit: 20 messages per minute per user
+    this.pruneCaches(Date.now());
     this.checkRateLimit(userId);
 
     try {
@@ -69,6 +103,7 @@ export class AIService {
           id: effectiveSessionId,
           userId,
           createdAt: new Date(),
+          lastUsedAt: Date.now(),
           messages: [],
         };
         this.sessions.set(session.id, session);
@@ -119,6 +154,7 @@ export class AIService {
       if (session.messages.length > 50) {
         session.messages = session.messages.slice(-50);
       }
+      session.lastUsedAt = Date.now();
 
       // Persist assistant message
       this.persistMessage(
@@ -130,11 +166,8 @@ export class AIService {
         this.logger.debug(`Persist assistant skipped: ${e.message}`),
       );
 
-      // Cleanup old sessions (keep max 1000 sessions in memory, LRU via insertion order)
-      if (this.sessions.size > 1000) {
-        const firstKey = this.sessions.keys().next().value;
-        if (firstKey) this.sessions.delete(firstKey);
-      }
+      // Cleanup old sessions (idle TTL + hard cap, LRU via insertion order)
+      this.pruneCaches(Date.now());
 
       return {
         response: result.response,
@@ -195,6 +228,7 @@ export class AIService {
         id: sessionId,
         userId: rows[0].userId,
         createdAt: rows[0].createdAt,
+        lastUsedAt: Date.now(),
         messages: rows.map((r) => ({
           role: r.role as any,
           content: r.message,
@@ -247,6 +281,8 @@ export class AIService {
     const now = Date.now();
     const entry = this.rateLimit.get(userId);
     if (!entry || now > entry.resetAt) {
+      // Refresh insertion order so LRU eviction drops truly stale users.
+      this.rateLimit.delete(userId);
       this.rateLimit.set(userId, { count: 1, resetAt: now + 60_000 });
       return;
     }

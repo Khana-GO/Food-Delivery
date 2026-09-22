@@ -78,4 +78,13 @@ export class EsewaVerifyAndCreateDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @ApiPropertyOptional({
+    example: 'WELCOME50',
+    description: 'Promotion code to apply (validated server-side)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  promoCode?: string;
 }

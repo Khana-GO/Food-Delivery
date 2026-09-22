@@ -67,7 +67,7 @@ export default function OrderTrackingScreen() {
     if (user?.id) {
       connectWebSocket(user.id);
     }
-  }, [user, connectWebSocket]);
+  }, [user?.id, connectWebSocket]);
 
   // ─── Handle refresh ───
   const handleRefresh = async () => {

@@ -31,6 +31,8 @@ export const useOrderTracking = ({
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const dataRef = useRef<OrderTrackingData | null>(null);
+  dataRef.current = data;
 
   const safeOrderId = orderId?.trim();
 
@@ -41,7 +43,7 @@ export const useOrderTracking = ({
       return null;
     }
     try {
-      if (!data) setIsLoading(true);
+      if (!dataRef.current) setIsLoading(true);
       else setIsPolling(true);
       const result = await trackingService.getOrderTrackingData(safeOrderId);
       if (!mountedRef.current) return null;
@@ -69,7 +71,10 @@ export const useOrderTracking = ({
         setIsPolling(false);
       }
     }
-  }, [safeOrderId, data]);
+  }, [safeOrderId]);
+
+  const fetchTrackingDataRef = useRef(fetchTrackingData);
+  fetchTrackingDataRef.current = fetchTrackingData;
 
   const handleDriverUpdate = useCallback(
     (payload: DriverLocationUpdate) => {
@@ -109,10 +114,10 @@ export const useOrderTracking = ({
       });
       // Also refetch snapshot for route recalculation if status moved to PICKED_UP etc
       if (['PICKED_UP', 'READY', 'PREPARING', 'CONFIRMED'].includes(payload.orderStatus)) {
-        fetchTrackingData();
+        fetchTrackingDataRef.current();
       }
     },
-    [safeOrderId, fetchTrackingData],
+    [safeOrderId],
   );
 
   const handleEtaUpdate = useCallback(
@@ -148,6 +153,12 @@ export const useOrderTracking = ({
       if (!enableWebSocket || !safeOrderId) return;
       try {
         await webSocketService.connect(userId);
+        // The screen may have unmounted while connecting — registering now
+        // would leak listeners that nobody ever unsubscribes.
+        if (!mountedRef.current) {
+          webSocketService.leaveOrder(safeOrderId);
+          return;
+        }
         webSocketService.joinOrder(safeOrderId);
         // Subscribe to live events (canonical names only — server emits these)
         webSocketService.on('driver:location', handleDriverUpdate);
@@ -168,7 +179,6 @@ export const useOrderTracking = ({
     webSocketService.off('order:eta', handleEtaUpdate);
     webSocketService.off('order:snapshot', handleSnapshot);
     webSocketService.leaveOrder(safeOrderId);
-    // Don't fully disconnect - keep socket for other orders, but we can keep it
   }, [safeOrderId, handleDriverUpdate, handleStatusUpdate, handleEtaUpdate, handleSnapshot]);
 
   useEffect(() => {

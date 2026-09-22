@@ -84,15 +84,19 @@ class WebSocketService {
     }
   }
 
+  private joinedOrderId: string | null = null;
+
   private bindSocketEvents() {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
       console.log('[WS] connected', this.socket?.id);
       this.reconnectAttempts = 0;
+      this.joinedOrderId = null;
       // Re-join order room after reconnect
       if (this.orderId) {
         this.socket?.emit('join-order', { orderId: this.orderId }, (ack: any) => {
+          this.joinedOrderId = this.orderId;
           console.log('[WS] re-joined order', ack);
         });
       }
@@ -100,11 +104,13 @@ class WebSocketService {
 
     this.socket.on('disconnect', (reason) => {
       console.log('[WS] disconnected:', reason);
+      this.joinedOrderId = null;
     });
 
     this.socket.on('connect_error', (err) => {
       console.warn('[WS] connect_error', err.message);
       this.reconnectAttempts += 1;
+      this.joinedOrderId = null;
     });
 
     // Multiplex events
@@ -131,6 +137,7 @@ class WebSocketService {
   disconnect() {
     this.shouldReconnect = false;
     this.orderId = null;
+    this.joinedOrderId = null;
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();
@@ -146,6 +153,10 @@ class WebSocketService {
       // will be joined on connect event
       return;
     }
+    if (this.joinedOrderId === orderId) {
+      return; // Already joined this order
+    }
+    this.joinedOrderId = orderId;
     this.socket.emit('join-order', { orderId }, (res: any) => {
       console.log('[WS] join-order ack', res);
     });
@@ -153,6 +164,7 @@ class WebSocketService {
 
   leaveOrder(orderId: string) {
     if (this.orderId === orderId) this.orderId = null;
+    if (this.joinedOrderId === orderId) this.joinedOrderId = null;
     this.socket?.emit('leave-order', { orderId });
   }
 

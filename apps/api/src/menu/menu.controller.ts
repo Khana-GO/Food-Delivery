@@ -14,6 +14,9 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
   BadRequestException,
 } from '@nestjs/common';
 import {
@@ -75,7 +78,16 @@ export class MenuItemsController {
   async create(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateMenuItemDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        fileIsRequired: false,
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)$/ }),
+        ],
+      }),
+    )
+    file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
     // Explicit selection (multi-restaurant owners) is ownership-checked;
     // otherwise fall back to the owner's default restaurant.
@@ -216,7 +228,16 @@ export class MenuItemsController {
     @CurrentUser() user: JwtPayload,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateMenuItemDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        fileIsRequired: false,
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)$/ }),
+        ],
+      }),
+    )
+    file?: Express.Multer.File,
   ): Promise<MenuItemResponseDto> {
     const ownerUserId = this.resolveOwnerScope(user);
     return this.menuItemsService.update(id, dto, file, ownerUserId);

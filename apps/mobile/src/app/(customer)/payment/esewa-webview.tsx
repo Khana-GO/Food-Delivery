@@ -144,6 +144,7 @@ export default function EsewaWebView() {
         addressId: orderPayload.addressId,
         items: orderPayload.items,
         notes: orderPayload.notes,
+        promoCode: orderPayload.promoCode,
       });
       const status = res.data?.status || res.data?.raw?.status;
       if (status === 'success' || status === 'COMPLETE') {
@@ -180,6 +181,7 @@ export default function EsewaWebView() {
         addressId: orderPayload.addressId,
         items: orderPayload.items,
         notes: orderPayload.notes,
+        promoCode: orderPayload.promoCode,
       });
       const s = res.data?.status || res.data?.raw?.status;
       if (s === 'success' || s === 'COMPLETE') {

@@ -73,7 +73,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     if (
-      this.sessionsService.isTokenRevoked(token, {
+      await this.sessionsService.isTokenRevoked(token, {
         userId: payload.sub,
         issuedAtSeconds: payload.iat,
       })

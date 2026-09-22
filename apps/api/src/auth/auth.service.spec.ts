@@ -180,11 +180,13 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('revokes the session by jti when a valid refresh token is provided', async () => {
-      const revoke = jest.fn(async () => undefined);
+      const revoke = jest.fn(async () => 1);
       const revokeByToken = jest.fn(async () => undefined);
+      const revokeToken = jest.fn();
       const sessionService = {
         revoke,
         revokeByToken,
+        revokeToken,
       } as unknown as SessionsService;
 
       const verifyAsync = jest.fn(async () => ({
@@ -226,7 +228,8 @@ describe('AuthService', () => {
 
     it('falls back to revokeByToken when the token is expired', async () => {
       const revokeByToken = jest.fn(async () => undefined);
-      const sessionService = { revokeByToken } as unknown as SessionsService;
+      const revokeToken = jest.fn();
+      const sessionService = { revokeByToken, revokeToken } as unknown as SessionsService;
 
       const verifyAsync = jest.fn(async () => {
         throw new Error('jwt expired');
@@ -269,12 +272,12 @@ describe('AuthService', () => {
 
       const verifyAsync = jest
         .fn<() => Promise<{ sub: string; type?: string; jti?: string }>>()
-        .mockResolvedValueOnce({ sub: 'user-1', type: 'access' })
         .mockResolvedValueOnce({
           sub: 'user-1',
           type: 'refresh',
           jti: 'session-123',
-        });
+        })
+        .mockResolvedValueOnce({ sub: 'user-1', type: 'access' });
       const jwt = { verifyAsync } as unknown as JwtService;
       const users = {} as UsersService;
       const mail = {} as MailService;
@@ -300,9 +303,11 @@ describe('AuthService', () => {
     it('falls back to revokeByToken when the token type is not refresh', async () => {
       const revoke = jest.fn(async () => undefined);
       const revokeByToken = jest.fn(async () => undefined);
+      const revokeToken = jest.fn();
       const sessionService = {
         revoke,
         revokeByToken,
+        revokeToken,
       } as unknown as SessionsService;
 
       const verifyAsync = jest.fn(async () => ({
@@ -340,7 +345,8 @@ describe('AuthService', () => {
 
     it('falls back to revokeByToken when jti is missing from a refresh token', async () => {
       const revokeByToken = jest.fn(async () => undefined);
-      const sessionService = { revokeByToken } as unknown as SessionsService;
+      const revokeToken = jest.fn();
+      const sessionService = { revokeByToken, revokeToken } as unknown as SessionsService;
 
       const verifyAsync = jest.fn(async () => ({
         sub: 'user-1',

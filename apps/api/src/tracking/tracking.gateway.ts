@@ -87,7 +87,7 @@ export class TrackingGateway
       throw new UnauthorizedException('Refresh token not allowed');
     }
     if (
-      this.sessionsService.isTokenRevoked(raw, {
+      await this.sessionsService.isTokenRevoked(raw, {
         userId: payload.sub,
         issuedAtSeconds: payload.iat,
       })

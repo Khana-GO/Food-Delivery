@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq, and, desc } from 'drizzle-orm';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { eq, and, desc, inArray, lt } from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import {
@@ -48,6 +49,10 @@ export class TrackingService {
   private readonly LOCATION_HISTORY_LIMIT = 50;
   private readonly ROUTE_CACHE_TTL = 300; // 5 min
   private readonly DRIVER_CACHE_TTL = 90; // seconds
+  // GPS breadcrumb retention — without this the history table grows unbounded
+  // (every driver ping inserts a row).
+  private readonly LOCATION_HISTORY_RETENTION_DAYS = 7;
+  private readonly LOCATION_HISTORY_DELETE_BATCH = 5000;
 
   constructor(
     @Inject(DATABASE)
@@ -202,6 +207,55 @@ export class TrackingService {
       `Driver ${driverId} location updated for order ${dto.orderId}`,
     );
     return dtoCached;
+  }
+
+  // ─── LOCATION HISTORY RETENTION ───
+  /**
+   * Deletes GPS breadcrumbs older than the retention window in bounded
+   * batches so a single run never locks the table for long.
+   */
+  async purgeOldLocationHistory(
+    retentionDays = this.LOCATION_HISTORY_RETENTION_DAYS,
+  ): Promise<number> {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    let totalDeleted = 0;
+
+    // Hard cap per run so a huge backlog is drained across several runs.
+    for (let batch = 0; batch < 100; batch++) {
+      const stale = await this.db
+        .select({ id: driverLocationHistoryTable.id })
+        .from(driverLocationHistoryTable)
+        .where(lt(driverLocationHistoryTable.recordedAt, cutoff))
+        .limit(this.LOCATION_HISTORY_DELETE_BATCH);
+
+      if (!stale.length) break;
+
+      await this.db.delete(driverLocationHistoryTable).where(
+        inArray(
+          driverLocationHistoryTable.id,
+          stale.map((r) => r.id),
+        ),
+      );
+      totalDeleted += stale.length;
+
+      if (stale.length < this.LOCATION_HISTORY_DELETE_BATCH) break;
+    }
+
+    if (totalDeleted > 0) {
+      this.logger.log(
+        `Purged ${totalDeleted} driver location history row(s) older than ${retentionDays}d`,
+      );
+    }
+    return totalDeleted;
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async handleLocationHistoryCleanup() {
+    try {
+      await this.purgeOldLocationHistory();
+    } catch (err: any) {
+      this.logger.warn(`Location history cleanup failed: ${err?.message}`);
+    }
   }
 
   // ─── GET DRIVER LOCATION (cache-first) ───

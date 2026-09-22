@@ -20,7 +20,6 @@ export const OrderSummary = ({ subtotal, deliveryFee, total, itemsCount }: Order
         </View>
         <Text className="text-sm font-bold text-black">Order Summary</Text>
       </View>
-      <Text className="mb-3 text-sm font-bold text-black">Order Summary</Text>
       <View className="flex-row justify-between py-2 border-b border-gray-50">
         <Text className="text-sm text-gray-600">Items ({itemsCount})</Text>
         <Text className="text-sm font-medium text-black">Rs. {subtotal}</Text>

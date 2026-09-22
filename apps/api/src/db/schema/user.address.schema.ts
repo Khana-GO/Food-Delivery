@@ -26,12 +26,16 @@ export const addressesTable = pgTable(
     latitude: doublePrecision('latitude'),
     longitude: doublePrecision('longitude'),
     isDefault: boolean('is_default').notNull().default(false),
+    // Soft-delete flag: order rows reference addresses with ON DELETE RESTRICT,
+    // so addresses used by past orders are deactivated instead of removed.
+    isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
     index('addresses_user_id_idx').on(table.userId),
     index('addresses_user_default_idx').on(table.userId, table.isDefault),
+    index('addresses_user_active_idx').on(table.userId, table.isActive),
   ],
 );
 

@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
-import { getHomeRoute } from 'lib/roles';
+import { getHomeRoute } from '@/lib/roles';
 import { useGoogleAuth } from '@/hooks/auth/useGoogleAuth';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 

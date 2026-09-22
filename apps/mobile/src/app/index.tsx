@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
-import { getHomeRoute } from 'lib/roles';
+import { getHomeRoute } from '@/lib/roles';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 export default function SplashPage() {

@@ -5,6 +5,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
   InternalServerErrorException,
   Inject,
   Optional,
@@ -49,6 +50,7 @@ import type { TrackingGateway } from '../tracking/tracking.gateway';
 import type { OrderGateway } from './order.gateway';
 import { AdminOrderPaginationDto } from './dto/admin-order-pagination.dto';
 import { InvoicesService } from '../invoices/invoices.service';
+import { PromotionsService } from '../promotions/promotions.service';
 
 @Injectable()
 export class OrdersService {
@@ -62,6 +64,7 @@ export class OrdersService {
     private readonly cache: CacheService,
     private readonly notificationsService: NotificationsService,
     private readonly invoicesService: InvoicesService,
+    private readonly promotionsService: PromotionsService,
     @Optional()
     @Inject(
       forwardRef(() => require('../tracking/tracking.gateway').TrackingGateway),
@@ -123,10 +126,20 @@ export class OrdersService {
     try {
       return await operation();
     } catch (error) {
+      // Unique payment reference (concurrent replay) -> surface as 409, not 500
+      const pgCode = (error as any)?.code ?? (error as any)?.cause?.code;
+      const constraint =
+        (error as any)?.constraint ?? (error as any)?.cause?.constraint ?? '';
+      if (pgCode === '23505' && /payment/i.test(String(constraint))) {
+        throw new ConflictException(
+          'Payment transaction has already been used for another order',
+        );
+      }
       if (
         error instanceof NotFoundException ||
         error instanceof ForbiddenException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
       ) {
         this.logger.debug(`[${context}] ${(error as Error).message}`);
         throw error;
@@ -263,122 +276,198 @@ export class OrdersService {
     return { valid, items: validatedItems };
   }
 
+  /**
+   * Validates the restaurant, address and menu items, then computes
+   * authoritative pricing from the database (client prices are never trusted)
+   * and applies an optional server-validated promotion code.
+   */
+  private async resolveOrderDraft(customerId: string, dto: CreateOrderDto) {
+    // 0. Require a phone number on the account before ordering (customers
+    // who signed in via Google may not have provided one yet).
+    const orderingCustomer = await this.db.query.usersTable.findFirst({
+      where: eq(usersTable.id, customerId),
+    });
+    const customerPhone = orderingCustomer?.phone?.trim();
+    if (!customerPhone) {
+      throw new BadRequestException(
+        'A phone number is required to place an order. Please add your phone number in your profile first.',
+      );
+    }
+
+    // 1. Validate restaurant
+    const restaurant = await this.db.query.restaurantsTable.findFirst({
+      where: and(
+        eq(restaurantsTable.id, dto.restaurantId),
+        sql`${restaurantsTable.deletedAt} IS NULL`,
+      ),
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant.isOpen || !restaurant.isActive) {
+      throw new BadRequestException(
+        'Restaurant is currently not accepting orders',
+      );
+    }
+    if (!restaurant.isVerified) {
+      throw new BadRequestException('Restaurant is not verified yet');
+    }
+
+    // 2. Validate address belongs to customer (soft-deleted ones are unusable)
+    const address = await this.db.query.addressesTable.findFirst({
+      where: and(
+        eq(addressesTable.id, dto.addressId),
+        eq(addressesTable.userId, customerId),
+        eq(addressesTable.isActive, true),
+      ),
+    });
+    if (!address) throw new NotFoundException('Address not found');
+
+    // 3. Validate & fetch menu items (secure – ignore client price)
+    const menuItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
+    const menuItems = await this.db
+      .select()
+      .from(menuItemsTable)
+      .where(inArray(menuItemsTable.id, menuItemIds));
+    if (menuItems.length !== menuItemIds.length)
+      throw new BadRequestException('Some menu items are invalid');
+
+    for (const m of menuItems) {
+      if (m.restaurantId !== dto.restaurantId) {
+        throw new BadRequestException(
+          `Menu item "${m.name}" does not belong to this restaurant`,
+        );
+      }
+      if (!m.isAvailable)
+        throw new BadRequestException(`Menu item "${m.name}" is not available`);
+    }
+
+    // Build priced items from DB
+    let subtotal = 0;
+    const orderItemsPrep: Array<Omit<NewOrderItem, 'orderId'>> = [];
+    const itemsResponse: OrderItemResponseDto[] = [];
+
+    for (const reqItem of dto.items) {
+      const menuItem = menuItems.find((m) => m.id === reqItem.menuItemId)!;
+      const dbPrice = parseFloat(menuItem.price);
+      if (Number.isNaN(dbPrice))
+        throw new InternalServerErrorException(
+          `Invalid price for ${menuItem.name}`,
+        );
+      const qty = Math.floor(reqItem.quantity);
+      if (qty < 1 || qty > 100)
+        throw new BadRequestException(
+          `Quantity for ${menuItem.name} must be 1-100`,
+        );
+      const totalPrice = +(dbPrice * qty).toFixed(2);
+      subtotal = +(subtotal + totalPrice).toFixed(2);
+
+      orderItemsPrep.push({
+        menuItemId: menuItem.id,
+        itemNameSnapshot: menuItem.name,
+        quantity: qty,
+        unitPrice: dbPrice.toFixed(2),
+        totalPrice: totalPrice.toFixed(2),
+        createdAt: new Date(),
+      });
+
+      itemsResponse.push({
+        id: '',
+        menuItemId: menuItem.id,
+        name: menuItem.name,
+        quantity: qty,
+        unitPrice: dbPrice,
+        totalPrice,
+      });
+    }
+
+    // Minimum order amount check
+    const minAmount = parseFloat(restaurant.minimumOrderAmount) || 0;
+    if (subtotal < minAmount) {
+      throw new BadRequestException(
+        `Minimum order amount is Rs. ${minAmount.toFixed(2)} (current subtotal Rs. ${subtotal.toFixed(2)})`,
+      );
+    }
+
+    const deliveryFee = parseFloat(restaurant.deliveryFee) || 0;
+
+    // 4. Promotion: validated server-side against DB prices only – a client
+    //    supplied discount is never trusted.
+    const promoCode = dto.promoCode?.trim().toUpperCase() || undefined;
+    let discount = 0;
+    if (promoCode) {
+      const promo = await this.promotionsService.validatePromotion(
+        { code: promoCode, subtotal, restaurantId: dto.restaurantId },
+        customerId,
+      );
+      if (!promo.valid) {
+        throw new BadRequestException(
+          promo.message || 'Invalid promotion code',
+        );
+      }
+      discount = Math.min(+(promo.discountAmount || 0).toFixed(2), subtotal);
+    }
+
+    const totalAmount = Math.max(
+      +(subtotal + deliveryFee - discount).toFixed(2),
+      0,
+    );
+    const deliverySnapshot = this.buildFullAddress(address);
+
+    return {
+      orderingCustomer,
+      restaurant,
+      address,
+      orderItemsPrep,
+      itemsResponse,
+      subtotal,
+      deliveryFee,
+      discount,
+      totalAmount,
+      deliverySnapshot,
+      promoCode,
+    };
+  }
+
+  /** Records promo usage after the order is committed (best-effort). */
+  private async recordPromotionUsage(
+    promoCode: string | undefined,
+    customerId: string,
+    orderId: string,
+    discount: number,
+  ) {
+    if (!promoCode || discount <= 0) return;
+    try {
+      await this.promotionsService.applyPromotion(
+        promoCode,
+        customerId,
+        orderId,
+        discount,
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to record promotion ${promoCode} for order ${orderId}: ${err?.message}`,
+      );
+    }
+  }
+
   // ─── CREATE ORDER (transactional + secure pricing) ───
   async create(
     customerId: string,
     dto: CreateOrderDto,
   ): Promise<OrderResponseDto> {
     return this.handleDbOperation(async () => {
-      // 0. Require a phone number on the account before ordering (customers
-      // who signed in via Google may not have provided one yet).
-      const orderingCustomer = await this.db.query.usersTable.findFirst({
-        where: eq(usersTable.id, customerId),
-      });
-      const customerPhone = orderingCustomer?.phone?.trim();
-      if (!customerPhone) {
-        throw new BadRequestException(
-          'A phone number is required to place an order. Please add your phone number in your profile first.',
-        );
-      }
-
-      // 1. Validate restaurant
-      const restaurant = await this.db.query.restaurantsTable.findFirst({
-        where: and(
-          eq(restaurantsTable.id, dto.restaurantId),
-          sql`${restaurantsTable.deletedAt} IS NULL`,
-        ),
-      });
-      if (!restaurant) throw new NotFoundException('Restaurant not found');
-      if (!restaurant.isOpen || !restaurant.isActive) {
-        throw new BadRequestException(
-          'Restaurant is currently not accepting orders',
-        );
-      }
-      if (!restaurant.isVerified) {
-        throw new BadRequestException('Restaurant is not verified yet');
-      }
-
-      // 2. Validate address belongs to customer
-      const address = await this.db.query.addressesTable.findFirst({
-        where: and(
-          eq(addressesTable.id, dto.addressId),
-          eq(addressesTable.userId, customerId),
-        ),
-      });
-      if (!address) throw new NotFoundException('Address not found');
-
-      // 3. Validate & fetch menu items (secure – ignore client price)
-      const menuItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
-      const menuItems = await this.db
-        .select()
-        .from(menuItemsTable)
-        .where(inArray(menuItemsTable.id, menuItemIds));
-      if (menuItems.length !== menuItemIds.length)
-        throw new BadRequestException('Some menu items are invalid');
-
-      // Ensure all items belong to ordered restaurant
-      for (const m of menuItems) {
-        if (m.restaurantId !== dto.restaurantId) {
-          throw new BadRequestException(
-            `Menu item "${m.name}" does not belong to this restaurant`,
-          );
-        }
-        if (!m.isAvailable)
-          throw new BadRequestException(
-            `Menu item "${m.name}" is not available`,
-          );
-      }
-
-      // Build priced items from DB
-      let subtotal = 0;
-      const orderItemsPrep: Array<Omit<NewOrderItem, 'orderId'>> = [];
-      const itemsResponse: OrderItemResponseDto[] = [];
-
-      for (const reqItem of dto.items) {
-        const menuItem = menuItems.find((m) => m.id === reqItem.menuItemId)!;
-        const dbPrice = parseFloat(menuItem.price);
-        if (Number.isNaN(dbPrice))
-          throw new InternalServerErrorException(
-            `Invalid price for ${menuItem.name}`,
-          );
-        const qty = Math.floor(reqItem.quantity);
-        if (qty < 1 || qty > 100)
-          throw new BadRequestException(
-            `Quantity for ${menuItem.name} must be 1-100`,
-          );
-        const totalPrice = +(dbPrice * qty).toFixed(2);
-        subtotal = +(subtotal + totalPrice).toFixed(2);
-
-        orderItemsPrep.push({
-          menuItemId: menuItem.id,
-          itemNameSnapshot: menuItem.name,
-          quantity: qty,
-          unitPrice: dbPrice.toFixed(2),
-          totalPrice: totalPrice.toFixed(2),
-          createdAt: new Date(),
-        });
-
-        itemsResponse.push({
-          id: '',
-          menuItemId: menuItem.id,
-          name: menuItem.name,
-          quantity: qty,
-          unitPrice: dbPrice,
-          totalPrice,
-        });
-      }
-
-      // Minimum order amount check
-      const minAmount = parseFloat(restaurant.minimumOrderAmount) || 0;
-      if (subtotal < minAmount) {
-        throw new BadRequestException(
-          `Minimum order amount is Rs. ${minAmount.toFixed(2)} (current subtotal Rs. ${subtotal.toFixed(2)})`,
-        );
-      }
-
-      const deliveryFee = parseFloat(restaurant.deliveryFee) || 0;
-      const totalAmount = +(subtotal + deliveryFee).toFixed(2);
-      const deliverySnapshot = this.buildFullAddress(address);
+      const draft = await this.resolveOrderDraft(customerId, dto);
+      const {
+        orderingCustomer,
+        restaurant,
+        address,
+        orderItemsPrep,
+        itemsResponse,
+        subtotal,
+        deliveryFee,
+        discount,
+        totalAmount,
+      } = draft;
+      const deliverySnapshot = draft.deliverySnapshot;
 
       // ONLINE may be created before eSewa verification – paymentId optional, will be set on verify.
       // If you want to enforce, uncomment next line. For now allow PENDING creation.
@@ -396,6 +485,7 @@ export class OrdersService {
               deliveryAddressSnapshot: deliverySnapshot,
               subtotal: subtotal.toFixed(2),
               deliveryFee: deliveryFee.toFixed(2),
+              discount: discount.toFixed(2),
               totalAmount: totalAmount.toFixed(2),
               notes: dto.notes,
               paymentMethod: dto.paymentMethod || 'OFFLINE',
@@ -433,6 +523,14 @@ export class OrdersService {
             `Invoice creation failed for order ${order.id}: ${err?.message}`,
           ),
         );
+
+      // Record promotion usage (best-effort: order is already committed)
+      await this.recordPromotionUsage(
+        draft.promoCode,
+        customerId,
+        order.id,
+        discount,
+      );
 
       // 5. Notifications (fail-open)
       await this.notificationsService
@@ -473,107 +571,48 @@ export class OrdersService {
     customerId: string,
     dto: CreateOrderDto,
     paymentRef: string,
+    verifiedAmount?: number,
   ): Promise<OrderResponseDto> {
     return this.handleDbOperation(async () => {
-      const orderingCustomer = await this.db.query.usersTable.findFirst({
-        where: eq(usersTable.id, customerId),
-      });
-      const customerPhone = orderingCustomer?.phone?.trim();
-      if (!customerPhone) {
-        throw new BadRequestException(
-          'A phone number is required to place an order.',
-        );
-      }
-
-      const restaurant = await this.db.query.restaurantsTable.findFirst({
-        where: and(
-          eq(restaurantsTable.id, dto.restaurantId),
-          sql`${restaurantsTable.deletedAt} IS NULL`,
-        ),
-      });
-      if (!restaurant) throw new NotFoundException('Restaurant not found');
-      if (!restaurant.isOpen || !restaurant.isActive)
-        throw new BadRequestException(
-          'Restaurant is currently not accepting orders',
-        );
-      if (!restaurant.isVerified)
-        throw new BadRequestException('Restaurant is not verified yet');
-
-      const address = await this.db.query.addressesTable.findFirst({
-        where: and(
-          eq(addressesTable.id, dto.addressId),
-          eq(addressesTable.userId, customerId),
-        ),
-      });
-      if (!address) throw new NotFoundException('Address not found');
-
-      const menuItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
-      const menuItems = await this.db
-        .select()
-        .from(menuItemsTable)
-        .where(inArray(menuItemsTable.id, menuItemIds));
-      if (menuItems.length !== menuItemIds.length)
-        throw new BadRequestException('Some menu items are invalid');
-
-      for (const m of menuItems) {
-        if (m.restaurantId !== dto.restaurantId)
-          throw new BadRequestException(
-            `Menu item "${m.name}" does not belong to this restaurant`,
-          );
-        if (!m.isAvailable)
-          throw new BadRequestException(
-            `Menu item "${m.name}" is not available`,
-          );
-      }
-
-      let subtotal = 0;
-      const orderItemsPrep: Array<Omit<NewOrderItem, 'orderId'>> = [];
-      const itemsResponse: OrderItemResponseDto[] = [];
-
-      for (const reqItem of dto.items) {
-        const menuItem = menuItems.find((m) => m.id === reqItem.menuItemId)!;
-        const dbPrice = parseFloat(menuItem.price);
-        if (Number.isNaN(dbPrice))
-          throw new InternalServerErrorException(
-            `Invalid price for ${menuItem.name}`,
-          );
-        const qty = Math.floor(reqItem.quantity);
-        if (qty < 1 || qty > 100)
-          throw new BadRequestException(
-            `Quantity for ${menuItem.name} must be 1-100`,
-          );
-        const totalPrice = +(dbPrice * qty).toFixed(2);
-        subtotal = +(subtotal + totalPrice).toFixed(2);
-
-        orderItemsPrep.push({
-          menuItemId: menuItem.id,
-          itemNameSnapshot: menuItem.name,
-          quantity: qty,
-          unitPrice: dbPrice.toFixed(2),
-          totalPrice: totalPrice.toFixed(2),
-          createdAt: new Date(),
+      // Replay protection: a gateway reference may only ever produce one order.
+      // (The partial unique index on orders.payment_id is the final backstop.)
+      if (paymentRef) {
+        const existing = await this.db.query.ordersTable.findFirst({
+          where: eq(ordersTable.paymentId, paymentRef),
         });
-
-        itemsResponse.push({
-          id: '',
-          menuItemId: menuItem.id,
-          name: menuItem.name,
-          quantity: qty,
-          unitPrice: dbPrice,
-          totalPrice,
-        });
+        if (existing) {
+          throw new ConflictException(
+            'Payment transaction has already been used for another order',
+          );
+        }
       }
 
-      const minAmount = parseFloat(restaurant.minimumOrderAmount) || 0;
-      if (subtotal < minAmount) {
+      const draft = await this.resolveOrderDraft(customerId, dto);
+      const {
+        orderingCustomer,
+        restaurant,
+        address,
+        orderItemsPrep,
+        itemsResponse,
+        subtotal,
+        deliveryFee,
+        discount,
+        totalAmount,
+      } = draft;
+      const deliverySnapshot = draft.deliverySnapshot;
+
+      // Cross-check the amount verified with the gateway against the
+      // server-recomputed order total so a small transaction can never be
+      // redeemed for a larger order.
+      if (
+        verifiedAmount !== undefined &&
+        !Number.isNaN(verifiedAmount) &&
+        Math.abs(totalAmount - verifiedAmount) > 0.01
+      ) {
         throw new BadRequestException(
-          `Minimum order amount is Rs. ${minAmount.toFixed(2)}`,
+          `Payment amount mismatch: order total is Rs. ${totalAmount.toFixed(2)} but the verified payment amount is Rs. ${verifiedAmount.toFixed(2)}`,
         );
       }
-
-      const deliveryFee = parseFloat(restaurant.deliveryFee) || 0;
-      const totalAmount = +(subtotal + deliveryFee).toFixed(2);
-      const deliverySnapshot = this.buildFullAddress(address);
 
       const { order, createdItems } = await (this.db as any).transaction(
         async (tx: any) => {
@@ -586,6 +625,7 @@ export class OrdersService {
               deliveryAddressSnapshot: deliverySnapshot,
               subtotal: subtotal.toFixed(2),
               deliveryFee: deliveryFee.toFixed(2),
+              discount: discount.toFixed(2),
               totalAmount: totalAmount.toFixed(2),
               notes: dto.notes,
               paymentMethod: 'ONLINE',
@@ -621,6 +661,13 @@ export class OrdersService {
             `Invoice creation failed for order ${order.id}: ${err?.message}`,
           ),
         );
+
+      await this.recordPromotionUsage(
+        draft.promoCode,
+        customerId,
+        order.id,
+        discount,
+      );
 
       await this.notificationsService
         .create({

@@ -9,7 +9,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { saveAccessToken, saveRefreshToken } from '@/lib/secure-storage';
 
-import { getHomeRoute } from 'lib/roles';
+import { getHomeRoute } from '@/lib/roles';
 
 export const useGoogleAuth = () => {
   const { setUser } = useAuth();

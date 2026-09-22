@@ -7,5 +7,6 @@ import { SessionsModule } from '../sessions/session.module';
   imports: [SessionsModule],
   controllers: [PromotionsController],
   providers: [PromotionsService],
+  exports: [PromotionsService],
 })
 export class PromotionsModule {}

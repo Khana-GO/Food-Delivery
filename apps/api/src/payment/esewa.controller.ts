@@ -250,20 +250,30 @@ export class EsewaController {
       };
     }
 
-    // 2. Payment COMPLETE – create the order as PAID
+    // 2. Payment COMPLETE – create the order as PAID.
+    //    The verified amount from the gateway is cross-checked against the
+    //    server-recomputed order total inside createPaidOrder so a small
+    //    transaction can never be redeemed for a larger order.
     const orderPayload: CreateOrderDto = {
       restaurantId: dto.restaurantId,
       addressId: dto.addressId,
       items: dto.items,
       notes: dto.notes,
+      promoCode: dto.promoCode,
       paymentMethod: PaymentMethod.ONLINE,
       paymentId: `esewa-${txUuid}`,
     };
+
+    const verifiedAmount =
+      result.totalAmount != null && result.totalAmount !== ''
+        ? Number(result.totalAmount)
+        : undefined;
 
     const order = await this.ordersService.createPaidOrder(
       user.sub,
       orderPayload,
       `esewa-${txUuid}`,
+      verifiedAmount,
     );
 
     // 3. Clear the customer's cart (payment succeeded)

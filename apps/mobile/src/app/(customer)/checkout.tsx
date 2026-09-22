@@ -13,7 +13,7 @@ import { OrderSummary } from '@/components/payment/OrderSummary';
 import { orderService } from '@/services/customer/order.service';
 import { cartService } from '@/stores/customer/cart.service';
 import { getApiErrorMessage } from '@/lib/api-error';
-import { api } from 'lib/axios';
+import { api } from '@/lib/axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { goBack } from '@/lib/navigation';
@@ -139,6 +139,7 @@ const [promoError, setPromoError] = useState('');
       addressId: selectedAddressId,
       items: items.map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity, unitPrice: i.price })),
       notes: notes?.trim() || undefined,
+      promoCode: promoApplied && promoCode.trim() ? promoCode.trim() : undefined,
       paymentMethod,
     };
 
@@ -227,52 +228,6 @@ const [promoError, setPromoError] = useState('');
         </View>
 
 
-<View className="mt-4">
-  <Text className="text-sm font-semibold text-black mb-1.5">Promo Code</Text>
-  <View className="flex-row items-center gap-2">
-    <TextInput
-      className="flex-1 px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
-      placeholder="Enter promo code"
-      value={promoCode}
-      onChangeText={setPromoCode}
-      editable={!promoApplied}
-    />
-    {!promoApplied ? (
-      <TouchableOpacity
-        className={`bg-primary px-6 py-3 rounded-xl ${promoValidating ? 'opacity-50' : ''}`}
-        onPress={validatePromo}
-        disabled={promoValidating}
-      >
-        {promoValidating ? (
-          <ActivityIndicator size="small" color="#FFF" />
-        ) : (
-          <Text className="font-semibold text-white">Apply</Text>
-        )}
-      </TouchableOpacity>
-    ) : (
-      <TouchableOpacity
-        className="px-6 py-3 bg-red-500 rounded-xl"
-        onPress={() => {
-          setPromoApplied(false);
-          setPromoCode('');
-          setPromoDiscount(0);
-        }}
-      >
-        <Text className="font-semibold text-white">Remove</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-  {promoError && (
-    <Text className="mt-1 text-sm text-red-500">{promoError}</Text>
-  )}
-  {promoApplied && (
-    <Text className="mt-1 text-sm text-green-500">
-      Discount: -Rs. {promoDiscount}
-    </Text>
-  )}
-</View>
-
-
       <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
         {/* Address Section */}
         <View className="mb-4">
@@ -305,14 +260,60 @@ const [promoError, setPromoError] = useState('');
           )}
         </View>
 
+        {/* Promo Code */}
+        <View className="mb-4">
+          <Text className="text-sm font-semibold text-black mb-1.5">Promo Code</Text>
+          <View className="flex-row items-center gap-2">
+            <TextInput
+              className="flex-1 px-4 py-3 text-base text-black bg-white border border-gray-200 rounded-xl"
+              placeholder="Enter promo code"
+              value={promoCode}
+              onChangeText={setPromoCode}
+              editable={!promoApplied}
+            />
+            {!promoApplied ? (
+              <TouchableOpacity
+                className={`bg-primary px-6 py-3 rounded-xl ${promoValidating ? 'opacity-50' : ''}`}
+                onPress={validatePromo}
+                disabled={promoValidating}
+              >
+                {promoValidating ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text className="font-semibold text-white">Apply</Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                className="px-6 py-3 bg-red-500 rounded-xl"
+                onPress={() => {
+                  setPromoApplied(false);
+                  setPromoCode('');
+                  setPromoDiscount(0);
+                }}
+              >
+                <Text className="font-semibold text-white">Remove</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {promoError ? (
+            <Text className="mt-1 text-sm text-red-500">{promoError}</Text>
+          ) : null}
+          {promoApplied ? (
+            <Text className="mt-1 text-sm text-green-500">
+              Discount: -Rs. {promoDiscount}
+            </Text>
+          ) : null}
+        </View>
+
         {/* Payment Method */}
         <PaymentMethodSelector selected={paymentMethod} onSelect={setPaymentMethod} />
-        {paymentMethod === 'ONLINE' && (
+        {paymentMethod === 'ONLINE' ? (
           <View className="flex-row gap-2 p-3 mt-3 border border-blue-100 bg-blue-50 rounded-xl">
             <Feather name="info" size={16} color="#2563EB" />
             <Text className="flex-1 text-xs text-blue-800">You'll be redirected to eSewa to complete payment. Your order will be created only after payment is successful.</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Notes */}
         <View className="mt-4">
@@ -332,8 +333,8 @@ const [promoError, setPromoError] = useState('');
         {/* Order Summary – authoritative from backend when available */}
         <View className="mt-4">
           <OrderSummary subtotal={subtotal} deliveryFee={deliveryFee} total={total} itemsCount={items.length} />
-          {belowMinimum && <Text className="mt-2 text-xs text-red-500">Below minimum order Rs. {minimumOrder}. Add Rs. {(minimumOrder! - subtotal).toFixed(2)} more.</Text>}
-          {backendCart?.restaurantIsOpen === false && <Text className="mt-2 text-xs text-red-500">Restaurant is currently closed.</Text>}
+          {belowMinimum ? <Text className="mt-2 text-xs text-red-500">Below minimum order Rs. {minimumOrder}. Add Rs. {(minimumOrder! - subtotal).toFixed(2)} more.</Text> : null}
+          {backendCart?.restaurantIsOpen === false ? <Text className="mt-2 text-xs text-red-500">Restaurant is currently closed.</Text> : null}
         </View>
 
         <View className="h-6" />
@@ -350,8 +351,8 @@ const [promoError, setPromoError] = useState('');
             </>
           )}
         </TouchableOpacity>
-        {addresses.length === 0 && <Text className="mt-2 text-xs text-center text-red-500">Please add a delivery address</Text>}
-        {belowMinimum && <Text className="mt-2 text-xs text-center text-red-500">Add more items to meet minimum</Text>}
+        {addresses.length === 0 ? <Text className="mt-2 text-xs text-center text-red-500">Please add a delivery address</Text> : null}
+        {belowMinimum ? <Text className="mt-2 text-xs text-center text-red-500">Add more items to meet minimum</Text> : null}
       </View>
 
       <ConfirmDialog

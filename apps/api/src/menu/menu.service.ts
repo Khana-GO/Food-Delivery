@@ -742,9 +742,13 @@ export class MenuItemsService {
   }
 
   // ─── GET GROUPED BY CATEGORY ─── (cached)
-  async getGroupedByCategory(
-    restaurantId: string,
-  ): Promise<{ categoryId: string; categoryName: string | null; items: MenuItemResponseDto[] }[]> {
+  async getGroupedByCategory(restaurantId: string): Promise<
+    {
+      categoryId: string;
+      categoryName: string | null;
+      items: MenuItemResponseDto[];
+    }[]
+  > {
     return this.handleDbOperation(async () => {
       return this.cache.wrap(
         this.keyGrouped(restaurantId),
@@ -763,7 +767,10 @@ export class MenuItemsService {
 
           // Resolve real category names so the UI never falls back to a generic label
           const categories = await this.db
-            .select({ id: menuCategoriesTable.id, name: menuCategoriesTable.name })
+            .select({
+              id: menuCategoriesTable.id,
+              name: menuCategoriesTable.name,
+            })
             .from(menuCategoriesTable)
             .where(eq(menuCategoriesTable.restaurantId, restaurantId));
 

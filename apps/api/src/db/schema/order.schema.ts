@@ -6,8 +6,10 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 import { usersTable } from './user.schema';
 import { restaurantsTable } from './restaurant.schema';
@@ -80,8 +82,14 @@ export const ordersTable = pgTable(
       scale: 2,
     }).notNull(),
 
+    discount: numeric('discount', { precision: 10, scale: 2 })
+      .notNull()
+      .default('0'),
+
     notes: text('notes'),
 
+    // Unique per non-null payment reference — prevents a single gateway
+    // transaction from being replayed into multiple paid orders.
     paymentId: text('payment_id'),
 
     paymentMethod: paymentMethodEnum('payment_method')
@@ -112,6 +120,9 @@ export const ordersTable = pgTable(
     index('orders_status_idx').on(table.orderStatus),
     index('orders_created_at_idx').on(table.createdAt),
     index('orders_address_id_idx').on(table.addressId),
+    uniqueIndex('orders_payment_id_unique')
+      .on(table.paymentId)
+      .where(sql`${table.paymentId} IS NOT NULL`),
   ],
 );
 

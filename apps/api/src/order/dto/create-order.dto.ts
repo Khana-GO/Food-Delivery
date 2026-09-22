@@ -80,4 +80,13 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   paymentId?: string;
+
+  @ApiPropertyOptional({
+    example: 'WELCOME50',
+    description: 'Promotion code to apply (validated server-side)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  promoCode?: string;
 }

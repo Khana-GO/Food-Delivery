@@ -80,10 +80,15 @@ export class InvoicesService {
     now: Date,
   ) {
     // Derive all amounts from the order snapshot — no need to re-query items.
+    // The customer's prices are VAT-inclusive, so order.totalAmount is the
+    // authoritative billable figure (items + delivery - discount). The tax
+    // component is *derived* from it, never added on top of it.
     const subtotal = parseFloat(order.subtotal);
     const deliveryFee = parseFloat(order.deliveryFee);
-    const tax = subtotal * 0.13;
-    const total = subtotal + deliveryFee + tax;
+    const discount = parseFloat(String(order.discount ?? '0')) || 0;
+    const taxableBase = Math.max(subtotal - discount, 0);
+    const tax = +(taxableBase - taxableBase / 1.13).toFixed(2);
+    const total = parseFloat(order.totalAmount);
 
     const [created] = await this.db
       .insert(invoicesTable)
@@ -95,7 +100,7 @@ export class InvoicesService {
         subtotal: subtotal.toFixed(2),
         tax: tax.toFixed(2),
         deliveryFee: deliveryFee.toFixed(2),
-        discount: '0.00',
+        discount: discount.toFixed(2),
         total: total.toFixed(2),
         paymentMethod: order.paymentMethod,
         paymentStatus: order.paymentStatus,
