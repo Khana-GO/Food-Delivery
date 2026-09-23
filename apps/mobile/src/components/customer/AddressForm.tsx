@@ -67,7 +67,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
           onChangeText={(text) => setForm({ ...form, addressLine: text })}
           multiline
         />
-        {errors.addressLine && <Text className="mt-1 text-xs text-red-500">{errors.addressLine}</Text>}
+        {errors.addressLine ? <Text className="mt-1 text-xs text-red-500">{errors.addressLine}</Text> : null}
       </View>
 
       {/* City */}
@@ -79,7 +79,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
           value={form.city}
           onChangeText={(text) => setForm({ ...form, city: text })}
         />
-        {errors.city && <Text className="mt-1 text-xs text-red-500">{errors.city}</Text>}
+        {errors.city ? <Text className="mt-1 text-xs text-red-500">{errors.city}</Text> : null}
       </View>
 
       {/* State (optional) */}
@@ -102,7 +102,7 @@ export const AddressForm = ({ initialData, onSubmit, isLoading, submitLabel = 'A
           value={form.country}
           onChangeText={(text) => setForm({ ...form, country: text })}
         />
-        {errors.country && <Text className="mt-1 text-xs text-red-500">{errors.country}</Text>}
+        {errors.country ? <Text className="mt-1 text-xs text-red-500">{errors.country}</Text> : null}
       </View>
 
       {/* Postal Code */}

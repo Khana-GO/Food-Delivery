@@ -134,35 +134,36 @@ export default function Input({
     }).start();
   }, [borderColorAnim]);
 
+  const isNative = Platform.OS !== 'web';
   const shakeError = useCallback(() => {
     Animated.sequence([
       Animated.timing(errorShake, {
         toValue: 10,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: isNative,
       }),
       Animated.timing(errorShake, {
         toValue: -10,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: isNative,
       }),
       Animated.timing(errorShake, {
         toValue: 5,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: isNative,
       }),
       Animated.timing(errorShake, {
         toValue: -5,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: isNative,
       }),
       Animated.timing(errorShake, {
         toValue: 0,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: isNative,
       }),
     ]).start();
-  }, [errorShake]);
+  }, [errorShake, isNative]);
 
   // ── Handlers ──
   const handleFocus = useCallback((e: any) => {

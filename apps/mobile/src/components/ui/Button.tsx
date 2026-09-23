@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Colors, Radius, Spacing, Shadow } from '@/constants/theme';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'danger' | 'secondary';
@@ -19,6 +19,8 @@ interface ButtonProps {
   rightIcon?: React.ReactNode;
 }
 
+const isNative = Platform.OS !== 'web';
+
 export default function Button({
   label,
   onPress,
@@ -37,10 +39,10 @@ export default function Button({
 
   const onPressIn = () => {
     if (isDisabled) return;
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 6 }).start();
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: isNative, speed: 50, bounciness: 6 }).start();
   };
   const onPressOut = () => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 8 }).start();
+    Animated.spring(scale, { toValue: 1, useNativeDriver: isNative, speed: 40, bounciness: 8 }).start();
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, Animated, StatusBar, Easing, Dimensions, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Animated, StatusBar, Easing, Dimensions, Pressable, StyleSheet, Image, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHomeRoute } from '@/lib/roles';
 import { Colors, Radius, Shadow } from '@/constants/theme';
+
+const isNative = Platform.OS !== 'web';
 
 export default function SplashPage() {
   const { isAuthenticated, isInitializing, role } = useAuth();
@@ -36,8 +38,8 @@ export default function SplashPage() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: isNative }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: isNative, speed: 20, bounciness: 8 }),
     ]).start();
     Animated.timing(progressAnim, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }).start();
     timerRef.current = setTimeout(navigateToNext, 2400);

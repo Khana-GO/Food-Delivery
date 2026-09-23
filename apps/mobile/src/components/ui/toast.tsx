@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,8 +88,9 @@ export function ToastHost() {
   const translateY = useRef(new Animated.Value(-24)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const rotate = useRef(new Animated.Value(0)).current;
+  const isNative = Platform.OS !== 'web';
   const spin = useRef(
-    Animated.loop(Animated.timing(rotate, { toValue: 1, duration: 900, useNativeDriver: true })),
+    Animated.loop(Animated.timing(rotate, { toValue: 1, duration: 900, useNativeDriver: isNative })),
   ).current;
   const shownId = useRef<number | null>(null);
   const { width } = useWindowDimensions();
@@ -97,13 +99,13 @@ export function ToastHost() {
   const animateOut = useCallback(
     (after?: () => void) => {
       Animated.parallel([
-        Animated.timing(translateY, { toValue: -24, duration: 180, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: -24, duration: 180, useNativeDriver: isNative }),
+        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: isNative }),
       ]).start(({ finished }) => {
         if (finished) after?.();
       });
     },
-    [translateY, opacity],
+    [translateY, opacity, isNative],
   );
 
   React.useEffect(() => {
@@ -127,9 +129,9 @@ export function ToastHost() {
         toValue: 0,
         friction: 8,
         tension: 90,
-        useNativeDriver: true,
+        useNativeDriver: isNative,
       }),
-      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: isNative }),
     ]).start();
 
     const t = setTimeout(() => {
@@ -150,16 +152,26 @@ export function ToastHost() {
       clearTimeout(t);
       spin.stop();
     };
-  }, [current, dismiss, animateOut, opacity, translateY, spin]);
+  }, [current, dismiss, animateOut, opacity, translateY, spin, isNative]);
 
   if (!current) return null;
 
   const meta = VARIANT_META[current.variant];
+  const pointerEventMode = current.variant === 'loading' ? 'none' : 'box-none';
 
   return (
     <Animated.View
-      pointerEvents={current.variant === 'loading' ? 'none' : 'box-none'}
-      style={[styles.host, { top: insets.top + 8, width: Math.min(width - 24, 480), opacity, transform: [{ translateY }] }]}
+      {...(Platform.OS !== 'web' ? { pointerEvents: pointerEventMode } : {})}
+      style={[
+        styles.host,
+        {
+          top: insets.top + 8,
+          width: Math.min(width - 24, 480),
+          opacity,
+          transform: [{ translateY }],
+          pointerEvents: pointerEventMode as any,
+        },
+      ]}
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
     >

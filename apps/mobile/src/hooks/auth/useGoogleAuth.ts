@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { saveAccessToken, saveRefreshToken } from '@/lib/secure-storage';
 
 import { getHomeRoute } from '@/lib/roles';
+import { toast } from '@/components/ui/toast';
 
 export const useGoogleAuth = () => {
   const { setUser } = useAuth();
@@ -78,13 +79,48 @@ export const useGoogleAuth = () => {
 
   // ─── Trigger Google Login ───
   const signInWithGoogle = useCallback(async () => {
+    // ─── Development / Testing Stage Bypass ───
+    if (!googleAuthService.isConfigured) {
+      if (__DEV__ || process.env.NODE_ENV !== 'production') {
+        setIsLoading(true);
+        setError(null);
+        toast.info(
+          'Signing in with Test Google Account (Dev Mode)...',
+          'Google Sign-In'
+        );
+        try {
+          await completeGoogleLogin('mock-google-token-dev');
+          toast.success('Signed in as Test Google User!', 'Welcome');
+        } catch (err: any) {
+          const message = err?.message || 'Dev Google login failed';
+          setError(message);
+          toast.error(message, 'Google Sign-In');
+          Alert.alert('Dev Google Sign-In Error', message);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const msg =
+        'Google Sign-In is not configured yet. Please set EXPO_PUBLIC_GOOGLE_CLIENT_ID in apps/mobile/.env, or use email and password to log in.';
+      setError(msg);
+      toast.error(msg, 'Google Sign-In');
+      Alert.alert('Google Sign-In Not Configured', msg);
+      return;
+    }
+
     // ─── Web: keep the expo-auth-session browser flow ───
     if (googleAuthService.isWeb) {
-      if (!request) return;
+      if (!request) {
+        toast.error('Google Auth is still initializing. Please try again.', 'Google Sign-In');
+        return;
+      }
       try {
         await promptAsync();
       } catch (error) {
         setError('Failed to open Google login');
+        toast.error('Could not open Google login popup. Please check your browser popup blocker.', 'Google Sign-In');
         Alert.alert('Error', 'Could not open Google login');
       }
       return;

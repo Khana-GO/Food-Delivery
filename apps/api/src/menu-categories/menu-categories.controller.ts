@@ -17,6 +17,7 @@ import { CategoryResponseDto } from './dto/category-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@food_delivery/types';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -98,6 +99,7 @@ export class CategoriesController {
 
   // ─── GET ALL (By Restaurant) ───
   @Get('restaurant/:restaurantId')
+  @Public()
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'Get all categories for a restaurant' })
   async findByRestaurant(
@@ -112,6 +114,7 @@ export class CategoriesController {
 
   // ─── GET BY ID ───
   @Get(':id')
+  @Public()
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'Get category by ID' })
   async findById(

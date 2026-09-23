@@ -31,6 +31,7 @@ import { MenuItemResponseDto } from './dto/menu-item-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@food_delivery/types';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -127,6 +128,7 @@ export class MenuItemsController {
 
   // ─── GET FEATURED (only approved restaurants) ───
   @Get('featured')
+  @Public()
   @Roles(
     UserRole.CUSTOMER,
     UserRole.ADMIN,
@@ -142,7 +144,8 @@ export class MenuItemsController {
 
   // ─── GET GROUPED BY CATEGORY ───
   @Get('restaurant/:restaurantId/grouped')
-  @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
+  @Public()
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'Get menu items grouped by category' })
   getGroupedByCategory(
     @Param('restaurantId', new ParseUUIDPipe()) restaurantId: string,
@@ -152,7 +155,8 @@ export class MenuItemsController {
 
   // ─── GET BY CATEGORY ───
   @Get('category/:categoryId')
-  @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
+  @Public()
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'Get menu items by category' })
   findByCategory(
     @Param('categoryId', new ParseUUIDPipe()) categoryId: string,
@@ -166,6 +170,7 @@ export class MenuItemsController {
 
   // ─── GET BY ID ───
   @Get(':id')
+  @Public()
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'Get menu item by ID' })
   async findById(

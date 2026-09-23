@@ -63,13 +63,21 @@ async function loadGoogleSignin(): Promise<typeof GoogleSigninModule> {
   return googleSigninModule;
 }
 
+const DUMMY_CLIENT_ID = 'unconfigured-client-id';
+
 export const googleAuthService = {
   isWeb: IS_WEB,
+  isConfigured: Boolean(
+    WEB_CLIENT_ID &&
+      WEB_CLIENT_ID.trim() !== '' &&
+      WEB_CLIENT_ID !== 'your_google_client_id' &&
+      WEB_CLIENT_ID !== DUMMY_CLIENT_ID,
+  ),
 
   useGoogleAuth: () => {
     return Google.useAuthRequest({
-      clientId: WEB_CLIENT_ID || 'your_google_client_id',
-      webClientId: WEB_CLIENT_ID || 'your_google_client_id',
+      clientId: WEB_CLIENT_ID || DUMMY_CLIENT_ID,
+      webClientId: WEB_CLIENT_ID || DUMMY_CLIENT_ID,
       scopes: ['profile', 'email'],
     });
   },
@@ -125,9 +133,14 @@ export const googleAuthService = {
     try {
       const response = await api.post('/auth/google', { idToken });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google auth error:', error);
-      throw new Error('Failed to authenticate with Google');
+      const serverMessage =
+        error?.response?.data?.message ||
+        (Array.isArray(error?.response?.data?.message)
+          ? error?.response?.data?.message[0]
+          : null);
+      throw new Error(serverMessage || 'Failed to authenticate with Google');
     }
   },
 };

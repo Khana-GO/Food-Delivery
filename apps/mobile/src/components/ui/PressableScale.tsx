@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
-import { Animated, Pressable, ViewStyle } from 'react-native';
+import { Animated, Pressable, ViewStyle, Platform } from 'react-native';
+
+const isNative = Platform.OS !== 'web';
 
 export default function PressableScale({
   children,
@@ -16,7 +18,7 @@ export default function PressableScale({
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const animate = (to: number) =>
-    Animated.spring(scale, { toValue: to, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
+    Animated.spring(scale, { toValue: to, useNativeDriver: isNative, speed: 40, bounciness: 4 }).start();
   return (
     <Pressable
       onPress={onPress}

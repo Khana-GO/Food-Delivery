@@ -40,7 +40,7 @@ export class DashboardService {
           this.recommendationsService.getPopularRestaurants(6),
           this.recommendationsService.getPersonalizedRecommendations(userId, 6),
           this.recommendationsService.getRecentlyOrdered(userId, 4),
-          this.getFeaturedMenuItems(16),
+          this.getFeaturedMenuItems(48),
         ]);
 
         return {
@@ -81,7 +81,7 @@ export class DashboardService {
         const rows = await this.db.query.menuCategoriesTable.findMany({
           where: (cat, { inArray }) => inArray(cat.restaurantId, ids),
           orderBy: [desc(schema.menuCategoriesTable.createdAt)],
-          limit: 24,
+          limit: 80,
         });
 
         if (rows.length === 0) return [];
@@ -95,7 +95,7 @@ export class DashboardService {
             seen.add(key);
             deduped.push(r);
           }
-          if (deduped.length >= 8) break;
+          if (deduped.length >= 16) break;
         }
 
         return deduped.map((cat) => new CategoryResponseDto(cat as any));
@@ -108,18 +108,23 @@ export class DashboardService {
     });
   }
 
-  private async getFeaturedMenuItems(limit = 8): Promise<any[]> {
+  private async getFeaturedMenuItems(limit = 48): Promise<any[]> {
     return this.cache.wrap(`dashboard:featured:${limit}`, 60, async () => {
       try {
         const items = await this.db
           .select({
             menuItem: schema.menuItemsTable,
             restaurantName: schema.restaurantsTable.name,
+            categoryName: schema.menuCategoriesTable.name,
           })
           .from(schema.menuItemsTable)
           .innerJoin(
             schema.restaurantsTable,
             eq(schema.menuItemsTable.restaurantId, schema.restaurantsTable.id),
+          )
+          .leftJoin(
+            schema.menuCategoriesTable,
+            eq(schema.menuItemsTable.categoryId, schema.menuCategoriesTable.id),
           )
           .where(
             and(
@@ -132,11 +137,12 @@ export class DashboardService {
           .orderBy(desc(schema.menuItemsTable.createdAt))
           .limit(limit);
 
-        // Map to expected shape (MenuItem plus restaurantName for UI)
+        // Map to expected shape (MenuItem plus restaurantName and categoryName for UI)
         return items.map((row) => ({
           id: row.menuItem.id,
           restaurantId: row.menuItem.restaurantId,
           categoryId: row.menuItem.categoryId,
+          categoryName: row.categoryName ?? undefined,
           name: row.menuItem.name,
           description: row.menuItem.description,
           price: Number(row.menuItem.price),

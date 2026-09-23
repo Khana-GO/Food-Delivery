@@ -4,6 +4,7 @@ import {
   Logger,
   BadRequestException,
   Inject,
+  Optional,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { KhanaGoAgent } from '../agents/khana-go.agent';
@@ -13,6 +14,11 @@ import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import * as schema from '../db/schema';
 import { chatMessagesTable } from '../db/schema/chat.message.schema';
 import { eq, desc } from 'drizzle-orm';
+
+import { UsersService } from '../users/users.service';
+import { AddressesService } from '../addresses/addresses.service';
+import { CartService } from '../cart/cart.service';
+import { OrdersService } from '../order/order.service';
 
 export interface Session {
   id: string;
@@ -68,7 +74,83 @@ export class AIService {
   constructor(
     private readonly agent: KhanaGoAgent,
     @Inject(DATABASE) private readonly db: NeonDatabase<typeof schema>,
+    @Optional() private readonly usersService?: UsersService,
+    @Optional() private readonly addressesService?: AddressesService,
+    @Optional() private readonly cartService?: CartService,
+    @Optional() private readonly ordersService?: OrdersService,
   ) {}
+
+  /**
+   * Builds live snapshot of user profile, cart, recent orders, and addresses.
+   * Runs in parallel (~10-20ms) so agent knows immediate answers without extra round-trips.
+   */
+  async buildLiveUserContext(userId: string): Promise<string> {
+    if (!userId) return '';
+
+    try {
+      const [userRes, cartRes, ordersRes, addrRes] = await Promise.allSettled([
+        this.usersService?.findById(userId),
+        this.cartService?.getCart(userId),
+        this.ordersService?.getOrders(userId, 'CUSTOMER', { limit: 3 }),
+        this.addressesService?.findAll(userId),
+      ]);
+
+      const user = userRes.status === 'fulfilled' ? userRes.value : null;
+      const cart = cartRes.status === 'fulfilled' ? cartRes.value : null;
+      const orders = ordersRes.status === 'fulfilled' ? ordersRes.value : null;
+      const addresses = addrRes.status === 'fulfilled' ? addrRes.value : null;
+
+      const parts: string[] = [];
+
+      // 1. User Profile
+      if (user) {
+        const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+        parts.push(`User Name: ${name}`);
+        if (user.phone) parts.push(`User Phone: ${user.phone}`);
+      }
+
+      // 2. Saved Addresses
+      if (addresses && addresses.length > 0) {
+        const addrList = addresses
+          .map((a) => `${a.label || 'Home'}: ${a.addressLine || ''}, ${a.city || 'Kathmandu'}`.trim())
+          .join(' | ');
+        parts.push(`Saved Delivery Addresses: ${addrList}`);
+      }
+
+      // 3. Active Shopping Cart
+      if (cart && cart.items && cart.items.length > 0) {
+        const itemsStr = cart.items
+          .map((i) => `${i.quantity}x ${i.name} (Rs. ${i.totalPrice || i.unitPrice * i.quantity})`)
+          .join(', ');
+        const estTotal = (cart.subtotal || 0) + (cart.deliveryFee || 0);
+        parts.push(
+          `Current Cart (${cart.restaurantName || 'Restaurant'}): [${itemsStr}]. Cart Subtotal: Rs. ${cart.subtotal}, Delivery Fee: Rs. ${cart.deliveryFee || 0}, Estimated Total: Rs. ${estTotal}. Total items: ${cart.totalItems}.`,
+        );
+      } else {
+        parts.push(`Current Cart: Empty.`);
+      }
+
+      // 4. Recent / Ongoing Orders
+      if (orders && orders.data && orders.data.length > 0) {
+        const ordersStr = orders.data
+          .map((o) => {
+            const eta = o.estimatedDeliveryTime
+              ? ` (ETA: ${new Date(o.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+              : '';
+            return `Order #${o.id.slice(0, 8)}: Status=${o.orderStatus}, Restaurant=${o.restaurantName || 'Partner'}, Total=Rs. ${o.totalAmount}${eta}`;
+          })
+          .join('; ');
+        parts.push(`Recent Orders: ${ordersStr}`);
+      } else {
+        parts.push(`Recent Orders: None placed yet.`);
+      }
+
+      return parts.join('\n');
+    } catch (e: any) {
+      this.logger.debug(`Could not build live user context: ${e?.message}`);
+      return '';
+    }
+  }
 
   // ─── Process Chat Message ───
   async processChat(request: ChatRequest): Promise<ChatResponse> {
@@ -130,12 +212,16 @@ export class AIService {
         this.logger.debug(`Persist user message skipped: ${e.message}`),
       );
 
-      // ─── Process with agent (pass sessionId for correct history isolation) ───
+      // Build live snapshot of user context (profile, addresses, active cart, orders)
+      const userContext = await this.buildLiveUserContext(userId);
+
+      // ─── Process with agent (pass sessionId and live userContext) ───
       const result = await this.agent.processMessage(
         userId,
         message,
         context,
         session.id,
+        userContext,
       );
 
       // ─── Save to session memory ───

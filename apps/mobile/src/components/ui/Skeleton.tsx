@@ -1,16 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions, ViewStyle } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, ViewStyle, Platform } from 'react-native';
 import { Colors, Radius } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
+const isNative = Platform.OS !== 'web';
 
 function Shimmer({ style }: { style?: any }) {
   const opacity = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.6, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: isNative }),
+        Animated.timing(opacity, { toValue: 0.6, duration: 700, useNativeDriver: isNative }),
       ])
     );
     loop.start();

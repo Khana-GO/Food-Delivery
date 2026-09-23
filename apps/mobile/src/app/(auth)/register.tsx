@@ -324,7 +324,7 @@ export default function RegisterScreen() {
 
 
 
-    const { signInWithGoogle, isLoading: isGoogleLoading, request } = useGoogleAuth();
+  const { signInWithGoogle, isLoading: isGoogleLoading, error: googleError } = useGoogleAuth();
   
 
   const goToLogin = useCallback(() => {
@@ -505,11 +505,11 @@ export default function RegisterScreen() {
             )}
 
             {/* General Error */}
-            {generalError ? (
+            {generalError || googleError ? (
               <View className="flex-row items-center justify-center gap-1.5 mb-3 px-2">
                 <Feather name="alert-triangle" size={16} color="#EF4444" />
                 <Text className="flex-1 text-sm font-medium text-center text-red-500">
-                  {generalError}
+                  {generalError || googleError}
                 </Text>
               </View>
             ) : null}

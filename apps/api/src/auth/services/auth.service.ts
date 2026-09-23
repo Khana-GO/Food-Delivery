@@ -220,6 +220,24 @@ export class AuthService {
 
   // auth.service.ts
   async verifyGoogleToken(idToken: string): Promise<any> {
+    // ─── Development / Testing Stage Mock Token ───
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      idToken &&
+      idToken.startsWith('mock-google-token')
+    ) {
+      this.logger.warn(
+        `[DEV] Bypassing Google token verification with mock profile for testing stage`,
+      );
+      return {
+        email: 'test.google@khana.dev',
+        firstName: 'Test',
+        lastName: 'GoogleUser',
+        picture:
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120',
+      };
+    }
+
     try {
       const response = await axios.get(
         `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,

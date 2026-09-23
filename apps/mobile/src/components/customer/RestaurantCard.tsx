@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, Animated, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Animated, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -8,6 +8,7 @@ import { Colors, Radius, Shadow } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 16 * 2 - 10) / 2;
+const isNative = Platform.OS !== 'web';
 
 interface Props {
   restaurant: Restaurant;
@@ -19,8 +20,8 @@ interface Props {
 
 const RestaurantCardComponent = ({ restaurant, isFavorite = false, onToggleFavorite, variant = 'grid', showDistance = false }: Props) => {
   const scale = useRef(new Animated.Value(1)).current;
-  const onPressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 6 }).start();
-  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 8 }).start();
+  const onPressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: isNative, speed: 40, bounciness: 6 }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: isNative, speed: 40, bounciness: 8 }).start();
   const handlePress = () => router.push(`/(customer)/restaurant/${restaurant.id}` as any);
   const handleFavoritePress = (e: any) => {
     e.stopPropagation?.();

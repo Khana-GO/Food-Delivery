@@ -15,6 +15,7 @@ import { ReviewCard } from '@/components/review/ReviewCard';
 import { ReviewStatsView } from '@/components/review/ReviewStats';
 import { useReviewsForRestaurant } from '@/hooks/review/useReviewsForRestaurant';
 import { useReviewStats } from '@/hooks/review/useReviewStats';
+import { getCategoryIcon } from '@/utils/categoryIcons';
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -190,7 +191,9 @@ export default function RestaurantDetailScreen() {
               {menuData.map((group) => (
                 <CategoryChip
                   key={group.categoryId}
-                  label={`${group.categoryName || 'Category'} • ${group.items.length}`}
+                  label={group.categoryName || 'Category'}
+                  icon={getCategoryIcon(group.categoryName)}
+                  count={group.items.length}
                   isSelected={activeCategoryId === group.categoryId}
                   onPress={() => handleCategoryPress(group.categoryId)}
                 />

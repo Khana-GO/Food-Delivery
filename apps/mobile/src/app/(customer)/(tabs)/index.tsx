@@ -19,6 +19,7 @@ import { useFavoritesStore } from '@/stores/customer/favoritesStore';
 import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
+import { getCategoryIcon } from '@/utils/categoryIcons';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -68,11 +69,15 @@ export default function HomeScreen() {
     return 'Good Evening';
   }, []);
 
-  // ─── Global filtering helpers ───
-  const selectedCategoryName = useMemo(() => {
+  // ─── Category Selection Metadata ───
+  const selectedCategoryObj = useMemo(() => {
     if (!selectedCategory) return null;
-    return categories.find((c) => c.id === selectedCategory)?.name.toLowerCase().trim() || null;
+    return categories.find((c) => c.id === selectedCategory) || null;
   }, [selectedCategory, categories]);
+
+  const selectedCategoryName = useMemo(() => {
+    return selectedCategoryObj?.name?.toLowerCase().trim() || null;
+  }, [selectedCategoryObj]);
 
   const q = debouncedQuery.trim().toLowerCase();
   const matchesSearch = useCallback(
@@ -88,14 +93,48 @@ export default function HomeScreen() {
     [q]
   );
 
+  // ─── Dual-Layer Dish Category Matcher (Zomato-style) ───
   const menuItemMatchesCat = useCallback(
     (item: any) => {
-      if (!selectedCategory) return true;
-      // direct id match
+      if (!selectedCategory || !selectedCategoryName) return true;
+
+      // 1. Direct ID match
       if (item.categoryId === selectedCategory) return true;
-      // fallback by name
-      const catName = categories.find((c) => c.id === item.categoryId)?.name.toLowerCase().trim();
-      return catName === selectedCategoryName;
+
+      // 2. Direct categoryName match (joined in API)
+      const itemCatName = (item.categoryName || '').toLowerCase().trim();
+      if (
+        itemCatName &&
+        (itemCatName === selectedCategoryName ||
+          itemCatName.includes(selectedCategoryName) ||
+          selectedCategoryName.includes(itemCatName))
+      ) {
+        return true;
+      }
+
+      // 3. Fallback name lookup via categories in store
+      const catInStore = categories.find((c) => c.id === item.categoryId)?.name?.toLowerCase().trim();
+      if (
+        catInStore &&
+        (catInStore === selectedCategoryName ||
+          catInStore.includes(selectedCategoryName) ||
+          selectedCategoryName.includes(catInStore))
+      ) {
+        return true;
+      }
+
+      // 4. Keyword match in dish name or description
+      const itemName = (item.name || '').toLowerCase();
+      const itemDesc = (item.description || '').toLowerCase();
+      if (itemName.includes(selectedCategoryName) || itemDesc.includes(selectedCategoryName)) {
+        return true;
+      }
+      const singular = selectedCategoryName.replace(/s$/, '');
+      if (singular.length >= 3 && (itemName.includes(singular) || itemDesc.includes(singular))) {
+        return true;
+      }
+
+      return false;
     },
     [selectedCategory, selectedCategoryName, categories]
   );
@@ -112,46 +151,86 @@ export default function HomeScreen() {
     [q]
   );
 
-  // Build set of restaurantIds that have at least one menu item in selected category (for restaurant filtering)
+  // Set of restaurant IDs that have at least one featured dish in the selected category
   const restaurantIdsWithSelectedCategory = useMemo(() => {
-    if (!selectedCategoryName) return null;
     const set = new Set<string>();
+    if (!selectedCategory) return set;
     for (const item of featuredMenuItems || []) {
-      if (menuItemMatchesCat(item)) set.add(item.restaurantId);
+      if (menuItemMatchesCat(item)) {
+        set.add(item.restaurantId);
+      }
     }
     return set;
-  }, [selectedCategoryName, featuredMenuItems, menuItemMatchesCat]);
+  }, [selectedCategory, featuredMenuItems, menuItemMatchesCat]);
 
+  // ─── Robust Restaurant Category Matcher ───
   const restaurantMatchesCategory = useCallback(
     (restaurant: any) => {
-      if (!selectedCategory) return true;
-      if (!restaurantIdsWithSelectedCategory) return true;
-      // If featured list has no restaurant for this category, don't hide all – show all but indicate filter active
-      if (restaurantIdsWithSelectedCategory.size === 0) return true;
-      return restaurantIdsWithSelectedCategory.has(restaurant.id);
+      if (!selectedCategory || !selectedCategoryName) return true;
+
+      // 1. Restaurant's enriched categories list (from backend withCategories)
+      const hasCat = (restaurant.categories || []).some((c: any) => {
+        if (c.id === selectedCategory) return true;
+        const n = (c.name || '').toLowerCase().trim();
+        return (
+          n === selectedCategoryName ||
+          n.includes(selectedCategoryName) ||
+          selectedCategoryName.includes(n)
+        );
+      });
+      if (hasCat) return true;
+
+      // 2. Restaurant's cuisineType matches
+      const cuisine = (restaurant.cuisineType || '').toLowerCase();
+      if (cuisine.includes(selectedCategoryName)) return true;
+      const singular = selectedCategoryName.replace(/s$/, '');
+      if (singular.length >= 3 && cuisine.includes(singular)) return true;
+
+      // 3. Featured dish match
+      if (restaurantIdsWithSelectedCategory.has(restaurant.id)) return true;
+
+      // 4. Restaurant name or description keyword match
+      const restName = (restaurant.name || '').toLowerCase();
+      const restDesc = (restaurant.description || '').toLowerCase();
+      if (restName.includes(selectedCategoryName) || restDesc.includes(selectedCategoryName)) {
+        return true;
+      }
+
+      return false;
     },
-    [selectedCategory, restaurantIdsWithSelectedCategory]
+    [selectedCategory, selectedCategoryName, restaurantIdsWithSelectedCategory]
   );
 
-  const filteredPopular = useMemo(() => {
-    return popularRestaurants.filter((r: any) => matchesSearch(r) && restaurantMatchesCategory(r));
-  }, [popularRestaurants, matchesSearch, restaurantMatchesCategory]);
+  // Dynamic counts for each category chip
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const cat of categories) {
+      const cName = cat.name.toLowerCase().trim();
+      const singular = cName.replace(/s$/, '');
+      const dishCount = (featuredMenuItems || []).filter((item: any) => {
+        if (item.categoryId === cat.id) return true;
+        const itemCatName = (item.categoryName || '').toLowerCase().trim();
+        if (itemCatName && (itemCatName === cName || itemCatName.includes(cName))) return true;
+        const itemName = (item.name || '').toLowerCase();
+        if (itemName.includes(cName) || (singular.length >= 3 && itemName.includes(singular))) return true;
+        return false;
+      }).length;
+      if (dishCount > 0) counts[cat.id] = dishCount;
+    }
+    return counts;
+  }, [categories, featuredMenuItems]);
 
   const filteredRecommendations = useMemo(() => {
     return recommendations.filter((r: any) => matchesSearch(r) && restaurantMatchesCategory(r));
   }, [recommendations, matchesSearch, restaurantMatchesCategory]);
 
-  const filteredRecently = useMemo(() => {
-    return recentlyOrdered.filter((r: any) => matchesSearch(r) && restaurantMatchesCategory(r));
-  }, [recentlyOrdered, matchesSearch, restaurantMatchesCategory]);
+
 
   const filteredMenus = useMemo(() => {
     return (featuredMenuItems || []).filter((m: any) => menuItemMatchesCat(m) && menuItemMatchesSearch(m));
   }, [featuredMenuItems, menuItemMatchesCat, menuItemMatchesSearch]);
 
-  const activeFilterLabel = selectedCategoryName
-    ? categories.find((c) => c.id === selectedCategory)?.name
-    : null;
+  const activeFilterLabel = selectedCategoryObj ? selectedCategoryObj.name : null;
 
   const clearFilters = () => {
     setSelectedCategory(null);
@@ -159,7 +238,7 @@ export default function HomeScreen() {
     setDebouncedQuery('');
   };
 
-  if (isLoading && !popularRestaurants.length) {
+  if (isLoading && !recommendations.length && !featuredMenuItems.length) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
         <View style={styles.headerShimmer}>
@@ -304,16 +383,36 @@ export default function HomeScreen() {
         </View>
 
         <AnimatedPage delay={40} slide>
-          {/* ─── Categories – sticky filter ─── */}
+          {/* ─── Categories – Sticky Filter Bar with Zomato Style ─── */}
           {categories.length > 0 ? (
-            <View style={{ paddingVertical: 14 }}>
-              <View style={{ paddingHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textDark }}>Browse by category</Text>
-                <Text style={{ fontSize: 11, color: Colors.textTertiary }}>{categories.length} categories</Text>
+            <View style={styles.categoriesSection}>
+              <View style={styles.categoriesHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.categoriesTitle}>What's on your mind?</Text>
+                </View>
+                {selectedCategory ? (
+                  <TouchableOpacity
+                    onPress={() => setSelectedCategory(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.resetCatBtn}
+                  >
+                    <Feather name="rotate-ccw" size={12} color={Colors.primary} />
+                    <Text style={styles.resetCatText}>View all food</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.categoriesSub}>{categories.length} categories</Text>
+                )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }} bounces={false}>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesScrollContent}
+                bounces={false}
+              >
                 <CategoryChip
                   label="All"
+                  icon="🍽️"
                   isSelected={selectedCategory === null}
                   onPress={() => setSelectedCategory(null)}
                 />
@@ -321,239 +420,332 @@ export default function HomeScreen() {
                   <CategoryChip
                     key={category.id}
                     label={category.name}
+                    icon={getCategoryIcon(category.name)}
+                    count={categoryCounts[category.id]}
                     isSelected={selectedCategory === category.id}
-                    onPress={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+                    onPress={() =>
+                      setSelectedCategory(selectedCategory === category.id ? null : category.id)
+                    }
                   />
                 ))}
               </ScrollView>
             </View>
           ) : null}
 
-          {/* ─── Promo banner ─── */}
-          <View style={{ paddingHorizontal: 16, marginTop: 2, marginBottom: 6 }}>
-            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} snapToInterval={width - 32 + 12} decelerationRate="fast">
-              <View style={[styles.promoCard, { width: width - 32, backgroundColor: Colors.primary }]}>
-                <View style={{ flex: 1, paddingRight: 12 }}>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 }}>LIMITED TIME</Text>
+          {/* ─── Category Spotlight Banner (shown when a category is tapped) ─── */}
+          {selectedCategory && selectedCategoryObj ? (
+            <View style={{ paddingHorizontal: 16, marginTop: 4, marginBottom: 8 }}>
+              <View style={styles.categorySpotlightCard}>
+                <View style={styles.categorySpotlightLeft}>
+                  <View style={styles.categorySpotlightIconWrap}>
+                    <Text style={{ fontSize: 26 }}>{getCategoryIcon(selectedCategoryObj.name)}</Text>
                   </View>
-                  <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 }}>Free delivery on Rs.500+</Text>
-                  <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>Hot meals from verified kitchens — no extra fee</Text>
-                  <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={{ marginTop: 10, backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>Order now →</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                  <Text style={{ fontSize: 34 }}>🍱</Text>
-                </View>
-              </View>
-
-              <View style={[styles.promoCard, { width: width - 32, backgroundColor: '#B91C1C' }]}>
-                <View style={{ flex: 1, paddingRight: 12 }}>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 0.6 }}>POPULAR NOW</Text>
-                  </View>
-                  <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF' }}>Momo & Chowmein specials</Text>
-                  <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>Crispy, juicy & freshly steamed daily</Text>
-                  <TouchableOpacity onPress={() => setSelectedCategory(categories.find((c) => c.name.toLowerCase().includes('momo'))?.id || null)} style={{ marginTop: 10, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#B91C1C' }}>Browse Momo →</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 34 }}>🥟</Text>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* ─── 1️⃣ Popular Restaurants FIRST ─── */}
-          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECACA' }}>
-                  <Feather name="star" size={14} color={Colors.primary} />
-                </View>
-                <Text style={styles.sectionTitle}>Popular Restaurants</Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.sectionAction}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            {filteredPopular.length === 0 ? (
-              <View style={styles.emptyInline}>
-                <Feather name="search" size={20} color="#CBD5E1" />
-                <Text style={styles.emptyInlineTitle}>No restaurants match</Text>
-                <Text style={styles.emptyInlineSub}>{activeFilterLabel ? `No restaurants for “${activeFilterLabel}”` : q ? `No match for “${q}”` : 'Try a different filter'}</Text>
-                <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
-                  <Text style={styles.emptyInlineBtnText}>Clear filters</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
-                {filteredPopular.slice(0, 8).map((restaurant) => (
-                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
-                ))}
-              </ScrollView>
-            )}
-          </View>
-
-          {/* ─── 2️⃣ Recommended for you SECOND ─── */}
-          <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
-                  <Feather name="heart" size={14} color="#2563EB" />
-                </View>
-                <Text style={styles.sectionTitle}>Recommended for you</Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
-                <Text style={styles.sectionAction}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            {filteredRecommendations.length === 0 ? (
-              <View style={styles.emptyInline}>
-                <Feather name="heart" size={20} color="#CBD5E1" />
-                <Text style={styles.emptyInlineTitle}>No recommendations yet</Text>
-                <Text style={styles.emptyInlineSub}>{activeFilterLabel ? `Nothing matched “${activeFilterLabel}”` : 'Order more to get personalized picks'}</Text>
-                {!activeFilterLabel && !q ? (
-                  <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={styles.emptyInlineBtn}>
-                    <Text style={styles.emptyInlineBtnText}>Explore</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
-                    <Text style={styles.emptyInlineBtnText}>Clear filters</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
-                {filteredRecommendations.slice(0, 8).map((restaurant) => (
-                  <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
-                ))}
-              </ScrollView>
-            )}
-          </View>
-
-          {/* ─── 3️⃣ Menu Items THIRD ─── */}
-          {(() => {
-            if (filteredMenus.length === 0) {
-              if (selectedCategory || q) {
-                return (
-                  <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
-                    <View style={styles.sectionHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDBA74' }}>
-                          <Feather name="grid" size={14} color="#EA580C" />
-                        </View>
-                        <Text style={styles.sectionTitle}>Popular Dishes</Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.categorySpotlightTitle}>{selectedCategoryObj.name} specials</Text>
+                      <View style={styles.categorySpotlightBadge}>
+                        <Text style={styles.categorySpotlightBadgeText}>Filtered</Text>
                       </View>
                     </View>
-                    <View style={styles.emptyInline}>
-                      <Text style={{ fontSize: 28 }}>🍽️</Text>
-                      <Text style={styles.emptyInlineTitle}>No dishes found</Text>
-                      <Text style={styles.emptyInlineSub}>{activeFilterLabel ? `Nothing in “${activeFilterLabel}”` : `No match for “${q}”`}</Text>
-                      <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
-                        <Text style={styles.emptyInlineBtnText}>Clear filters</Text>
+                    <Text style={styles.categorySpotlightSub}>
+                      {filteredMenus.length} dishes · {filteredRecommendations.length} kitchens ready
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setSelectedCategory(null)}
+                  style={styles.categorySpotlightClearBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="x" size={13} color="#EF4444" />
+                  <Text style={styles.categorySpotlightClearText}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* SCENARIO 1: A Category IS Selected -> Spotlight Dishes & Kitchens */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {selectedCategory && selectedCategoryObj ? (
+            <>
+              {/* Category Dishes */}
+              {filteredMenus.length > 0 ? (
+                <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+                  <View style={styles.sectionHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECACA' }}>
+                        <Text style={{ fontSize: 15 }}>{getCategoryIcon(selectedCategoryObj.name)}</Text>
+                      </View>
+                      <Text style={styles.sectionTitle}>Must-Try {selectedCategoryObj.name}</Text>
+                      <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary }}>{filteredMenus.length} items</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
+                      <Text style={styles.sectionAction}>See all</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }} bounces={false}>
+                    {filteredMenus.slice(0, 12).map((item: any) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        activeOpacity={0.88}
+                        onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
+                        style={{
+                          width: 172,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: Radius.xl,
+                          overflow: 'hidden',
+                          borderWidth: StyleSheet.hairlineWidth,
+                          borderColor: '#E2E8F0',
+                          ...Shadow.sm,
+                        }}
+                      >
+                        <View style={{ height: 132, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {item.imageUrl ? (
+                            <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
+                          ) : (
+                            <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDE68A' }}>
+                              <Text style={{ fontSize: 30 }}>{getCategoryIcon(selectedCategoryObj.name)}</Text>
+                            </View>
+                          )}
+                          <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primaryDark }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
+                          </View>
+                        </View>
+                        <View style={{ padding: 12, paddingBottom: 10 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.2 }}>
+                            {item.name}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <Feather name="map-pin" size={10} color={Colors.textTertiary} />
+                            <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, color: Colors.textSecondary, fontWeight: '500' }}>
+                              {item.restaurantName || 'Verified Kitchen'}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+
+              {/* Kitchens serving this category */}
+              {filteredRecommendations.length > 0 ? (
+                <View style={{ paddingHorizontal: 16, marginTop: 22 }}>
+                  <View style={styles.sectionHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
+                        <Feather name="map-pin" size={14} color="#2563EB" />
+                      </View>
+                      <Text style={styles.sectionTitle}>Kitchens for {selectedCategoryObj.name}</Text>
+                      <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#2563EB' }}>{filteredRecommendations.length} kitchens</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
+                      <Text style={styles.sectionAction}>See all</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
+                    {filteredRecommendations.slice(0, 8).map((restaurant) => (
+                      <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+
+              {/* Empty state for this specific category if 0 dishes and 0 kitchens */}
+              {filteredMenus.length === 0 && filteredRecommendations.length === 0 ? (
+                <View style={{ paddingHorizontal: 16, marginTop: 20, marginBottom: 20 }}>
+                  <View style={styles.categoryEmptyBox}>
+                    <View style={styles.categoryEmptyIconWrap}>
+                      <Text style={{ fontSize: 36 }}>{getCategoryIcon(selectedCategoryObj.name)}</Text>
+                    </View>
+                    <Text style={styles.categoryEmptyTitle}>No {selectedCategoryObj.name} items found</Text>
+                    <Text style={styles.categoryEmptySub}>
+                      No active kitchens are serving {selectedCategoryObj.name} right now. How about exploring another craving?
+                    </Text>
+                    <View style={styles.quickPillRow}>
+                      {categories.filter((c) => c.id !== selectedCategory).slice(0, 4).map((c) => (
+                        <TouchableOpacity
+                          key={c.id}
+                          onPress={() => setSelectedCategory(c.id)}
+                          style={styles.quickCategoryPill}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={{ fontSize: 14 }}>{getCategoryIcon(c.name)}</Text>
+                          <Text style={styles.quickCategoryText}>{c.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <TouchableOpacity onPress={() => setSelectedCategory(null)} style={styles.categoryEmptyAllBtn} activeOpacity={0.85}>
+                      <Text style={styles.categoryEmptyAllText}>Show all food & restaurants</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            /* ═══════════════════════════════════════════════════════════════ */
+            /* SCENARIO 2: No Category Selected -> Default Home Feed          */
+            /* ═══════════════════════════════════════════════════════════════ */
+            <>
+              {/* ─── Promo banner ─── */}
+              <View style={{ paddingHorizontal: 16, marginTop: 2, marginBottom: 6 }}>
+                <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} snapToInterval={width - 32 + 12} decelerationRate="fast">
+                  <View style={[styles.promoCard, { width: width - 32, backgroundColor: Colors.primary }]}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 }}>LIMITED TIME</Text>
+                      </View>
+                      <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 }}>Free delivery on Rs.500+</Text>
+                      <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>Hot meals from verified kitchens — no extra fee</Text>
+                      <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={{ marginTop: 10, backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>Order now →</Text>
                       </TouchableOpacity>
                     </View>
+                    <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                      <Text style={{ fontSize: 34 }}>🍱</Text>
+                    </View>
                   </View>
-                );
-              }
-              return null;
-            }
-            return (
+
+                  <View style={[styles.promoCard, { width: width - 32, backgroundColor: '#B91C1C' }]}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 0.6 }}>POPULAR NOW</Text>
+                      </View>
+                      <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '800', color: '#FFF' }}>Momo & Chowmein specials</Text>
+                      <Text style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>Crispy, juicy & freshly steamed daily</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const momoCat = categories.find((c) => c.name.toLowerCase().includes('momo'));
+                          if (momoCat) setSelectedCategory(momoCat.id);
+                        }}
+                        style={{ marginTop: 10, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, alignSelf: 'flex-start' }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#B91C1C' }}>Browse Momo →</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 34 }}>🥟</Text>
+                    </View>
+                  </View>
+                </ScrollView>
+              </View>
+
+              {/* ─── Recommended for you ─── */}
               <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
                 <View style={styles.sectionHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDBA74' }}>
-                      <Feather name="grid" size={14} color="#EA580C" />
+                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
+                      <Feather name="heart" size={14} color="#2563EB" />
                     </View>
-                    <Text style={styles.sectionTitle}>Trending Dishes</Text>
-                    <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary }}>{filteredMenus.length} items</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>Recommended for you</Text>
                   </View>
                   <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
                     <Text style={styles.sectionAction}>See all</Text>
                   </TouchableOpacity>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }} bounces={false}>
-                  {filteredMenus.slice(0, 10).map((item: any) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      activeOpacity={0.88}
-                      onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
-                      style={{
-                        width: 168,
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: Radius.xl,
-                        overflow: 'hidden',
-                        borderWidth: StyleSheet.hairlineWidth,
-                        borderColor: '#E2E8F0',
-                        ...Shadow.sm,
-                      }}
-                    >
-                      <View style={{ height: 128, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        {item.imageUrl ? (
-                          <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
-                        ) : (
-                          <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDE68A' }}>
-                            <Text style={{ fontSize: 28 }}>🍽️</Text>
-                          </View>
-                        )}
-                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primaryDark }}>
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
-                        </View>
-                        
-                      </View>
-                      <View style={{ padding: 12, paddingBottom: 10 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.2 }}>
-                          {item.name}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                          <Feather name="map-pin" size={10} color={Colors.textTertiary} />
-                          <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, color: Colors.textSecondary, fontWeight: '500' }}>
-                            {item.restaurantName || 'Restaurant'}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            );
-          })()}
-
-          {/* ─── Recently ordered / Order again ─── */}
-          {filteredRecently.length > 0 ? (
-            <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
-              <View style={styles.sectionHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BBF7D0' }}>
-                    <Feather name="repeat" size={14} color="#15803D" />
+                {filteredRecommendations.length === 0 ? (
+                  <View style={styles.emptyInline}>
+                    <Feather name="heart" size={20} color="#CBD5E1" />
+                    <Text style={styles.emptyInlineTitle}>No recommendations yet</Text>
+                    <Text style={styles.emptyInlineSub}>{q ? `No kitchens match "${q}"` : 'Order more to get personalized picks'}</Text>
+                    {q ? (
+                      <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
+                        <Text style={styles.emptyInlineBtnText}>Clear search</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={styles.emptyInlineBtn}>
+                        <Text style={styles.emptyInlineBtnText}>Explore</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  <Text style={styles.sectionTitle}>Order again</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/orders' as any)}>
-                  <Text style={styles.sectionAction}>History</Text>
-                </TouchableOpacity>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }} bounces={false}>
+                    {filteredRecommendations.slice(0, 8).map((restaurant) => (
+                      <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} />
+                    ))}
+                  </ScrollView>
+                )}
               </View>
-              {filteredRecently.slice(0, 3).map((restaurant) => (
-                <RestaurantCard key={restaurant.id} restaurant={restaurant} isFavorite={favoriteIds.has(restaurant.id)} onToggleFavorite={handleToggleFavorite} variant="list" />
-              ))}
-            </View>
-          ) : null}
 
-          {/* ─── Empty global ─── */}
-          {!filteredPopular.length && !filteredRecommendations.length && !filteredMenus.length && !filteredRecently.length ? (
-            <EmptyState
-              icon="search"
-              title={activeFilterLabel || q ? 'No matches' : 'Welcome to KhanaGo!'}
-              description={activeFilterLabel || q ? `Try clearing filters or search differently.` : 'Start exploring restaurants and discover delicious food near you.'}
-              actionLabel={activeFilterLabel || q ? 'Clear filters' : 'Explore Restaurants'}
-              onAction={() => (activeFilterLabel || q ? clearFilters() : router.push('/(customer)/(tabs)/explore' as any))}
-            />
-          ) : null}
+              {/* ─── Trending Dishes ─── */}
+              {filteredMenus.length > 0 ? (
+                <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+                  <View style={styles.sectionHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDBA74' }}>
+                        <Feather name="grid" size={14} color="#EA580C" />
+                      </View>
+                      <Text style={styles.sectionTitle}>Trending Dishes</Text>
+                      <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary }}>{filteredMenus.length} items</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
+                      <Text style={styles.sectionAction}>See all</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }} bounces={false}>
+                    {filteredMenus.slice(0, 10).map((item: any) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        activeOpacity={0.88}
+                        onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
+                        style={{
+                          width: 168,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: Radius.xl,
+                          overflow: 'hidden',
+                          borderWidth: StyleSheet.hairlineWidth,
+                          borderColor: '#E2E8F0',
+                          ...Shadow.sm,
+                        }}
+                      >
+                        <View style={{ height: 128, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {item.imageUrl ? (
+                            <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }} />
+                          ) : (
+                            <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDE68A' }}>
+                              <Text style={{ fontSize: 28 }}>🍽️</Text>
+                            </View>
+                          )}
+                          <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primaryDark }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Rs. {item.price}</Text>
+                          </View>
+                        </View>
+                        <View style={{ padding: 12, paddingBottom: 10 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.2 }}>
+                            {item.name}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                            <Feather name="map-pin" size={10} color={Colors.textTertiary} />
+                            <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, color: Colors.textSecondary, fontWeight: '500' }}>
+                              {item.restaurantName || 'Restaurant'}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+
+              {/* ─── Empty global ─── */}
+              {!filteredRecommendations.length && !filteredMenus.length ? (
+                <EmptyState
+                  icon="search"
+                  title={q ? 'No matches' : 'Welcome to KhanaGo!'}
+                  description={q ? `Try clearing filters or search differently.` : 'Start exploring restaurants and discover delicious food near you.'}
+                  actionLabel={q ? 'Clear filters' : 'Explore Restaurants'}
+                  onAction={() => (q ? clearFilters() : router.push('/(customer)/(tabs)/explore' as any))}
+                />
+              ) : null}
+            </>
+          )}
         </AnimatedPage>
       </ScrollView>
     </View>
@@ -690,4 +882,188 @@ const styles = StyleSheet.create({
   emptyInlineSub: { marginTop: 4, fontSize: 12, color: Colors.textSecondary, textAlign: 'center', lineHeight: 16 },
   emptyInlineBtn: { marginTop: 12, backgroundColor: Colors.textDark, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
   emptyInlineBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+
+  // ─── Zomato-grade Category UX Styles ───
+  categoriesSection: {
+    paddingVertical: 14,
+  },
+  categoriesHeader: {
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  categoriesTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.textDark,
+    letterSpacing: -0.3,
+  },
+  categoriesSub: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontWeight: '600',
+  },
+  categoriesScrollContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  resetCatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  resetCatText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  categorySpotlightCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: '#FEE2E2',
+    ...Shadow.xs,
+  },
+  categorySpotlightLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  categorySpotlightIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+  },
+  categorySpotlightTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textDark,
+    letterSpacing: -0.2,
+  },
+  categorySpotlightBadge: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  categorySpotlightBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  categorySpotlightSub: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  categorySpotlightClearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginLeft: 8,
+  },
+  categorySpotlightClearText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#EF4444',
+  },
+  categoryEmptyBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius['2xl'],
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 24,
+    alignItems: 'center',
+    ...Shadow.sm,
+  },
+  categoryEmptyIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFF1F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FECDD3',
+  },
+  categoryEmptyTitle: {
+    marginTop: 14,
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textDark,
+    textAlign: 'center',
+  },
+  categoryEmptySub: {
+    marginTop: 6,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 280,
+  },
+  quickPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 16,
+    justifyContent: 'center',
+  },
+  quickCategoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+  },
+  quickCategoryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  categoryEmptyAllBtn: {
+    marginTop: 18,
+    backgroundColor: Colors.textDark,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  categoryEmptyAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
 });

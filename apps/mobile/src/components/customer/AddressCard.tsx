@@ -22,33 +22,43 @@ export const AddressCard = ({ address, isSelected, onSelect, onEdit, onDelete }:
         <View className="flex-1">
           <View className="flex-row items-center gap-2">
             <Text className="text-base font-bold text-black">{address.label || 'Home'}</Text>
-            {address.isDefault && (
+            {Boolean(address.isDefault) ? (
               <View className="bg-primary/10 px-2 py-0.5 rounded-full">
                 <Text className="text-[10px] text-primary font-medium">Default</Text>
               </View>
-            )}
+            ) : null}
           </View>
-          <Text className="mt-1 text-sm text-gray-600">{address.addressLine}</Text>
-          <Text className="text-sm text-gray-600">
-            {address.city}, {address.country}
-          </Text>
-          {address.postalCode && (
+          {address.addressLine ? (
+            <Text className="mt-1 text-sm text-gray-600">{address.addressLine}</Text>
+          ) : null}
+          {(address.city || address.country) ? (
+            <Text className="text-sm text-gray-600">
+              {[address.city, address.country].filter(Boolean).join(', ')}
+            </Text>
+          ) : null}
+          {Boolean(address.postalCode) ? (
             <Text className="text-sm text-gray-500">Postal: {address.postalCode}</Text>
-          )}
+          ) : null}
         </View>
-        {isSelected && <Feather name="check-circle" size={20} color="#E23744" />}
+        {Boolean(isSelected) ? <Feather name="check-circle" size={20} color="#E23744" /> : null}
       </View>
 
-      <View className="flex-row gap-4 pt-3 mt-3 border-t border-gray-100">
-        <TouchableOpacity className="flex-row items-center gap-1" onPress={() => onEdit?.(address.id)}>
-          <Feather name="edit-2" size={14} color="#666" />
-          <Text className="text-sm text-gray-600">Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="flex-row items-center gap-1" onPress={() => onDelete?.(address.id)}>
-          <Feather name="trash-2" size={14} color="#EF4444" />
-          <Text className="text-sm text-red-500">Delete</Text>
-        </TouchableOpacity>
-      </View>
+      {(onEdit || onDelete) ? (
+        <View className="flex-row gap-4 pt-3 mt-3 border-t border-gray-100">
+          {onEdit ? (
+            <TouchableOpacity className="flex-row items-center gap-1" onPress={() => onEdit(address.id)}>
+              <Feather name="edit-2" size={14} color="#666" />
+              <Text className="text-sm text-gray-600">Edit</Text>
+            </TouchableOpacity>
+          ) : null}
+          {onDelete ? (
+            <TouchableOpacity className="flex-row items-center gap-1" onPress={() => onDelete(address.id)}>
+              <Feather name="trash-2" size={14} color="#EF4444" />
+              <Text className="text-sm text-red-500">Delete</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 };

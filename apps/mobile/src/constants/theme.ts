@@ -147,76 +147,96 @@ export const Radius = {
 } as const;
 
 // Premium elevation — subtle 3D with layered soft shadows
+const isWeb = Platform.OS === 'web';
+
 // Level 1: Background (no shadow)
 // Level 2: Cards — very soft shadow
 // Level 3: Floating controls — stronger shadow
 export const Shadow = {
-  none: {
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
+  none: isWeb
+    ? ({ boxShadow: 'none' } as const)
+    : {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+      },
   // Level 2: Cards
-  xs: {
-    shadowColor: '#0A0A0A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  sm: {
-    shadowColor: '#0A0A0A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#0A0A0A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
-  },
+  xs: isWeb
+    ? ({ boxShadow: '0 1px 4px rgba(10,10,10,0.04)' } as const)
+    : {
+        shadowColor: '#0A0A0A',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
+      },
+  sm: isWeb
+    ? ({ boxShadow: '0 2px 8px rgba(10,10,10,0.05)' } as const)
+    : {
+        shadowColor: '#0A0A0A',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+      },
+  md: isWeb
+    ? ({ boxShadow: '0 4px 12px rgba(10,10,10,0.06)' } as const)
+    : {
+        shadowColor: '#0A0A0A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 4,
+      },
   // Level 3: Floating components
-  lg: {
-    shadowColor: '#0A0A0A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  xl: {
-    shadowColor: '#0A0A0A',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.10,
-    shadowRadius: 28,
-    elevation: 12,
-  },
-  floating: {
-    shadowColor: '#0A0A0A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.10,
-    shadowRadius: 24,
-    elevation: 10,
-  },
+  lg: isWeb
+    ? ({ boxShadow: '0 8px 20px rgba(10,10,10,0.08)' } as const)
+    : {
+        shadowColor: '#0A0A0A',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
+        elevation: 8,
+      },
+  xl: isWeb
+    ? ({ boxShadow: '0 12px 28px rgba(10,10,10,0.10)' } as const)
+    : {
+        shadowColor: '#0A0A0A',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.10,
+        shadowRadius: 28,
+        elevation: 12,
+      },
+  floating: isWeb
+    ? ({ boxShadow: '0 8px 24px rgba(10,10,10,0.10)' } as const)
+    : {
+        shadowColor: '#0A0A0A',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.10,
+        shadowRadius: 24,
+        elevation: 10,
+      },
   // Primary accent shadows
-  primary: {
-    shadowColor: '#B5122A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.20,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  primaryLg: {
-    shadowColor: '#B5122A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 20,
-    elevation: 10,
-  },
+  primary: isWeb
+    ? ({ boxShadow: '0 4px 12px rgba(181,18,42,0.20)' } as const)
+    : {
+        shadowColor: '#B5122A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.20,
+        shadowRadius: 12,
+        elevation: 6,
+      },
+  primaryLg: isWeb
+    ? ({ boxShadow: '0 8px 20px rgba(181,18,42,0.24)' } as const)
+    : {
+        shadowColor: '#B5122A',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.24,
+        shadowRadius: 20,
+        elevation: 10,
+      },
 } as const;
 
 export const Animation = {

@@ -14,6 +14,26 @@ export class GoogleTokenService {
   }
 
   async verifyIdToken(idToken: string): Promise<TokenPayload> {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      idToken &&
+      idToken.startsWith('mock-google-token')
+    ) {
+      return {
+        email: 'test.google@khana.dev',
+        email_verified: true,
+        given_name: 'Test',
+        family_name: 'GoogleUser',
+        picture:
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120',
+        sub: 'mock-google-sub-dev',
+        iss: 'https://accounts.google.com',
+        aud: 'mock-client-id',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      } as TokenPayload;
+    }
+
     try {
       const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
 

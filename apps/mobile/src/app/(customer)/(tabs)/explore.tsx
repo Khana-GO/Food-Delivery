@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { RestaurantCard } from '@/components/customer/RestaurantCard';
 import { CategoryChip } from '@/components/customer/CategoryChip';
@@ -13,16 +14,28 @@ import { useAddFavorite } from '@/hooks/customer/useAddFavorite';
 import { useRemoveFavorite } from '@/hooks/customer/useRemoveFavorite';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { api } from '@/lib/axios';
+import { getCategoryIcon } from '@/utils/categoryIcons';
 
 const FILTERS = ['Fast Delivery', 'Top Rated', 'Free Delivery'];
 
 export default function Explore() {
-  const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
+  const params = useLocalSearchParams<{ q?: string; categoryId?: string }>();
+  const [q, setQ] = useState(params.q || '');
+  const [debouncedQ, setDebouncedQ] = useState(params.q?.trim() || '');
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
-  const [cat, setCat] = useState<string | null>(null);
+  const [cat, setCat] = useState<string | null>(params.categoryId || null);
+
+  useEffect(() => {
+    if (params.q !== undefined && params.q !== q) {
+      setQ(params.q);
+      setDebouncedQ(params.q.trim());
+    }
+    if (params.categoryId !== undefined && params.categoryId !== cat) {
+      setCat(params.categoryId || null);
+    }
+  }, [params.q, params.categoryId]);
 
   const { refetch, isRefetching } = useDashboard();
   const { popularRestaurants, recommendations, categories, isLoading } = useDashboardStore();
@@ -102,11 +115,18 @@ export default function Explore() {
 
       // Category filter match
       if (cat && catNameLower) {
-        const hasCategory = (r.categories || []).some(
-          (c: any) => c.name.toLowerCase().trim() === catNameLower
-        );
-        const cuisineMatch = r.cuisineType?.toLowerCase().includes(catNameLower);
-        if (!hasCategory && !cuisineMatch) return false;
+        const singular = catNameLower.replace(/s$/, '');
+        const hasCategory = (r.categories || []).some((c: any) => {
+          if (c.id === cat) return true;
+          const n = (c.name || '').toLowerCase().trim();
+          return n === catNameLower || n.includes(catNameLower) || catNameLower.includes(n);
+        });
+        const cuisine = (r.cuisineType || '').toLowerCase();
+        const cuisineMatch = cuisine.includes(catNameLower) || (singular.length >= 3 && cuisine.includes(singular));
+        const nameMatch =
+          (r.name || '').toLowerCase().includes(catNameLower) ||
+          (r.description || '').toLowerCase().includes(catNameLower);
+        if (!hasCategory && !cuisineMatch && !nameMatch) return false;
       }
 
       // Multi-select filters
@@ -178,10 +198,22 @@ export default function Explore() {
       </View>
 
       {categories.length ? (
-        <View style={{ paddingVertical: 8, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
+        <View style={{ paddingVertical: 10, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }} bounces={false}>
+            <CategoryChip
+              label="All"
+              icon="🍽️"
+              isSelected={cat === null}
+              onPress={() => setCat(null)}
+            />
             {categories.map((c) => (
-              <CategoryChip key={c.id} label={c.name} isSelected={cat === c.id} onPress={() => setCat(cat === c.id ? null : c.id)} />
+              <CategoryChip
+                key={c.id}
+                label={c.name}
+                icon={getCategoryIcon(c.name)}
+                isSelected={cat === c.id}
+                onPress={() => setCat(cat === c.id ? null : c.id)}
+              />
             ))}
           </ScrollView>
         </View>

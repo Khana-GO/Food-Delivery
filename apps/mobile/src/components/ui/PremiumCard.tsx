@@ -33,17 +33,19 @@ export default function PremiumCard({
   const scale = useRef(new Animated.Value(1)).current;
   const shadowAnim = useRef(new Animated.Value(0)).current;
 
+  const isNative = Platform.OS !== 'web';
+
   const handlePressIn = () => {
     if (!pressable || disabled) return;
     Animated.parallel([
-      Animated.spring(scale, { toValue: 0.985, useNativeDriver: true, speed: 40, bounciness: 4 }),
+      Animated.spring(scale, { toValue: 0.985, useNativeDriver: isNative, speed: 40, bounciness: 4 }),
       Animated.timing(shadowAnim, { toValue: 1, duration: 120, useNativeDriver: false }),
     ]).start();
   };
   const handlePressOut = () => {
     if (!pressable || disabled) return;
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: isNative, speed: 30, bounciness: 6 }),
       Animated.timing(shadowAnim, { toValue: 0, duration: 140, useNativeDriver: false }),
     ]).start();
   };

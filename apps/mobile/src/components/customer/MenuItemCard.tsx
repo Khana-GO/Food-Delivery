@@ -15,6 +15,8 @@ interface Props {
 
 export const MenuItemCard = ({ item, quantity = 0, onAdd, onRemove, onPress }: Props) => {
   const isAvailable = item.isAvailable !== false;
+  const [imageError, setImageError] = React.useState(false);
+
   return (
     <View style={styles.card}>
       <TouchableOpacity
@@ -24,8 +26,16 @@ export const MenuItemCard = ({ item, quantity = 0, onAdd, onRemove, onPress }: P
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
       >
         <View style={styles.imageWrap}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.image} contentFit="cover" transition={200} cachePolicy="memory-disk" placeholder={{ blurhash: 'LHB7%L%MRjj[~q%MofRj00ayD%WB' }} />
+        {item.imageUrl && !imageError ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            placeholder={{ blurhash: 'LHB7%L%MRjj[~q%MofRj00ayD%WB' }}
+            onError={() => setImageError(true)}
+          />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={{ fontSize: 28 }}>🍽️</Text>

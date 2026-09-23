@@ -10,7 +10,7 @@ export class InMemoryRedisClient extends EventEmitter {
 
   private sweepExpired(now = Date.now()): void {
     for (const [key, item] of this.store) {
-      if (item.expiresAt && now > item.expiresAt) {
+      if (item.expiresAt !== undefined && now >= item.expiresAt) {
         this.store.delete(key);
       }
     }

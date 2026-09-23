@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
@@ -312,9 +313,10 @@ export default function OnboardingScreen() {
           left: 0,
           right: 0,
           zIndex: 20,
+          pointerEvents: "box-none" as any,
         }}
         className="px-6 gap-5"
-        pointerEvents="box-none"
+        {...(Platform.OS !== 'web' ? { pointerEvents: "box-none" } : {})}
       >
         {/* Dot indicators */}
         <View className="flex-row items-center justify-center gap-2">

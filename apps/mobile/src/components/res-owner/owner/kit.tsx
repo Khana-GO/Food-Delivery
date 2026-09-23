@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -569,7 +570,7 @@ export function Toggle({
     >
       {loading && (
         <View
-          pointerEvents="none"
+          {...(Platform.OS !== 'web' ? { pointerEvents: 'none' } : {})}
           style={{
             position: 'absolute',
             left: (TOGGLE_W - TOGGLE_H) / 2 + PADDING,
@@ -580,6 +581,7 @@ export function Toggle({
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 2,
+            pointerEvents: 'none' as any,
           }}
         >
           <ActivityIndicator size="small" color={checked ? '#FFFFFF' : '#64748B'} />
