@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,7 +17,16 @@ export class DashboardController {
   @ApiOperation({ summary: 'Get customer dashboard data' })
   async getDashboard(
     @CurrentUser() user: JwtPayload,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
   ): Promise<DashboardResponseDto> {
-    return this.dashboardService.getDashboard(user.sub);
+    const parsedLat = lat ? Number.parseFloat(lat) : undefined;
+    const parsedLng = lng ? Number.parseFloat(lng) : undefined;
+    const origin =
+      Number.isFinite(parsedLat) && Number.isFinite(parsedLng)
+        ? { lat: parsedLat as number, lng: parsedLng as number }
+        : null;
+
+    return this.dashboardService.getDashboard(user.sub, origin);
   }
 }

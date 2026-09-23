@@ -153,6 +153,40 @@ export class MenuItemsController {
     return this.menuItemsService.getGroupedByCategory(restaurantId);
   }
 
+  // ─── PUBLIC DISH SEARCH ───
+  // Declared before `:id` so "search" is not captured as a UUID param.
+  @Get('search')
+  @Public()
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.ADMIN,
+    UserRole.RESTAURANT_OWNER,
+    UserRole.DRIVER,
+  )
+  @ApiOperation({
+    summary:
+      'Search dishes across approved restaurants (relevance ranked, typo tolerant)',
+  })
+  search(
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('restaurantId') restaurantId?: string,
+    @Query('isAvailable') isAvailable?: string,
+  ) {
+    return this.menuItemsService.search({
+      q,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20,
+      lat: lat ? Number.parseFloat(lat) : undefined,
+      lng: lng ? Number.parseFloat(lng) : undefined,
+      restaurantId,
+      onlyAvailable: isAvailable !== undefined ? isAvailable === 'true' : true,
+    });
+  }
+
   // ─── GET BY CATEGORY ───
   @Get('category/:categoryId')
   @Public()

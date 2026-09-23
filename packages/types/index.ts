@@ -74,7 +74,10 @@ export type CuisineType = (typeof CUISINE_TYPES)[number];
 
 export const WARD_NUMBERS = Array.from({ length: 35 }, (_, i) => i + 1);
 
-export interface Restaurant {  id: string;
+export interface Restaurant {
+  /** Real distance in km from the caller's location, when known. */
+  distanceKm?: number;
+  id: string;
   ownerId: string;
   name: string;
   slug: string;
@@ -310,6 +313,26 @@ export interface DashboardData {
   recentlyOrdered: Restaurant[];
   categories: Category[];
   featuredMenuItems?: (MenuItem & { restaurantName?: string })[];
+  /**
+   * Dynamic Explore rows built from real data. Rows with too little data are
+   * omitted entirely, so this can legitimately be empty or missing.
+   */
+  sections?: ExploreSection[];
+}
+
+/** A data-driven discovery row returned by the dashboard. */
+export interface ExploreSection {
+  key:
+    | 'near_you'
+    | 'trending'
+    | 'top_rated'
+    | 'fast_delivery'
+    | 'cafes'
+    | 'budget'
+    | 'recently_added';
+  title: string;
+  subtitle?: string;
+  restaurants: Restaurant[];
 }
 
 export interface Favorite {

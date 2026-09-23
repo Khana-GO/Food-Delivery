@@ -42,6 +42,16 @@
 - **Resilient Image Fallback**: `MenuItemCard` gracefully handles slow or failed external image loads with fallback placeholders.
 - **Public Menu Browsing**: Unauthenticated guests can freely discover restaurants, browse categorized menus, and search food items without mandatory initial sign-in.
 
+### 🔎 Relevance-Ranked Search & Data-Driven Explore
+- **One Search, Both Kinds of Result**: `GET /search` returns matching restaurants **and** dishes in a single (cached) request, so typing never fans out into duplicate calls.
+- **Typo & Synonym Tolerant**: `mommo → momo`, `piza → pizza`, `chiken → chicken`, `chowmin → chowmein`, `dumplings → momo`, `chiya → tea` — resolved through query normalization, never duplicate rows.
+- **Real Relevance Ranking**: exact name → prefix → word match → cuisine → dish match → rating → popularity → open now → distance. Results are never returned in insertion order.
+- **Availability-Aware**: only active, verified kitchens and available dishes are searchable; closed venues are deprioritized rather than hidden.
+- **Data-Driven Explore**: "Popular near you", "Trending in Butwal", "Top rated", "Fast delivery", "Cafes & bakeries", "Budget friendly" and "Recently added" are derived from real orders, ratings and coordinates — rows without enough data are simply omitted.
+- **Helpful Dead Ends**: no-result searches answer with real suggestions and a "did you mean" correction instead of an empty screen.
+- **Indexed for Search**: `pg_trgm` GIN indexes plus filter/sort btree indexes on `restaurants` and `menu_items` (see `drizzle/0010_search_indexes.sql`).
+- **Repeatable Verification**: `pnpm --filter api db:verify:search` runs the full search/discovery E2E matrix.
+
 ---
 
 ## 🏗️ Architecture & Structure
@@ -91,7 +101,7 @@ Food-Delivery/
 | :--- | :--- |
 | **Mobile Client** | React Native, Expo SDK 52, Expo Router v4, TypeScript, NativeWind / TailwindCSS, TanStack React Query, Axios, Zustand |
 | **Backend API** | NestJS, TypeScript, Passport.js, JWT, LangChain/LangGraph, OpenRouter, Socket.IO WebSockets, Swagger |
-| **Database & ORM** | Neon PostgreSQL (Serverless), Drizzle ORM, Drizzle Kit Studio |
+| **Database & ORM** | Neon PostgreSQL (Serverless), Drizzle ORM, Drizzle Kit Studio, `pg_trgm` trigram indexes |
 | **Media & Storage** | Cloudinary |
 | **Caching** | Redis with automatic in-memory fallback for local development |
 | **Tooling & Monorepo** | pnpm Workspaces, Jest, ESLint, Prettier, tsx |
@@ -260,6 +270,7 @@ Pre-configured accounts for testing each user role:
 | `pnpm db:studio` | Launch Drizzle Studio GUI |
 | `pnpm db:seed:butwal` | Seed authentic Butwal restaurants & menus |
 | `pnpm db:verify:butwal`| Run automated end-to-end dataset verification |
+| `pnpm db:verify:search`| Verify search, discovery & Explore end-to-end |
 | `pnpm test` | Run Jest unit & integration tests |
 
 ### Mobile Client (`apps/mobile`)

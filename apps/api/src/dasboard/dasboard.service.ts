@@ -22,8 +22,24 @@ export class DashboardService {
     private readonly cache: CacheService,
   ) {}
 
-  async getDashboard(userId: string): Promise<DashboardResponseDto> {
-    const cacheKey = `dashboard:user:${userId}`;
+  async getDashboard(
+    userId: string,
+    /** Optional caller location — enables the "Popular near you" Explore row. */
+    origin?: { lat: number; lng: number } | null,
+  ): Promise<DashboardResponseDto> {
+    // Rounded to ~100m so the cache key space stays bounded.
+    const safeOrigin =
+      origin && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)
+        ? {
+            lat: Math.round(origin.lat * 1000) / 1000,
+            lng: Math.round(origin.lng * 1000) / 1000,
+          }
+        : null;
+
+    const cacheKey = safeOrigin
+      ? `dashboard:user:${userId}:${safeOrigin.lat}:${safeOrigin.lng}`
+      : `dashboard:user:${userId}`;
+
     return this.cache.wrap(cacheKey, 30, async () => {
       try {
         const user = await this.usersService.findByIdOrThrow(userId);
@@ -35,12 +51,14 @@ export class DashboardService {
           recommendations,
           recentlyOrdered,
           featuredMenuItems,
+          sections,
         ] = await Promise.all([
           this.getCategoriesForUser(),
           this.recommendationsService.getPopularRestaurants(6),
           this.recommendationsService.getPersonalizedRecommendations(userId, 6),
           this.recommendationsService.getRecentlyOrdered(userId, 4),
           this.getFeaturedMenuItems(48),
+          this.recommendationsService.getExploreSections(safeOrigin, 8),
         ]);
 
         return {
@@ -50,6 +68,7 @@ export class DashboardService {
           recentlyOrdered,
           categories,
           featuredMenuItems,
+          sections,
         };
       } catch (error) {
         this.logger.error(

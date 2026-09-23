@@ -63,10 +63,12 @@ const RestaurantCardComponent = ({ restaurant, isFavorite = false, onToggleFavor
               </View>
               <Text style={styles.dot}>•</Text>
               <Text style={styles.meta}>{restaurant.estimatedDeliveryTime || 30} min</Text>
-              {showDistance ? (
+              {/* Real distance only — never a hard-coded value. Hidden when the
+                  caller's location is unknown instead of guessing. */}
+              {showDistance && typeof restaurant.distanceKm === 'number' ? (
                 <>
                   <Text style={styles.dot}>•</Text>
-                  <Text style={styles.meta}>1.2 km</Text>
+                  <Text style={styles.meta}>{(restaurant.distanceKm as number).toFixed(1)} km</Text>
                 </>
               ) : null}
             </View>

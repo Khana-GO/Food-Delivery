@@ -20,6 +20,11 @@ import { useCartStore } from '@/stores/customer/cartStore';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { useUnreadCount } from '@/hooks/owner/notification/useUnreadCount';
 import { getCategoryIcon } from '@/utils/categoryIcons';
+import {
+  dishMatchesQuery,
+  matchesCategoryName,
+  restaurantMatchesQuery,
+} from '@/utils/searchText';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -80,17 +85,14 @@ export default function HomeScreen() {
   }, [selectedCategoryObj]);
 
   const q = debouncedQuery.trim().toLowerCase();
+  // Typo/plural/synonym tolerant so "mom" matches "Momo Hub" and "momos"
+  // matches "momo" — the same rules the API applies server-side.
   const matchesSearch = useCallback(
     (r: any) => {
-      if (!q) return true;
-      return (
-        r.name?.toLowerCase().includes(q) ||
-        r.cuisineType?.toLowerCase().includes(q) ||
-        r.address?.toLowerCase().includes(q) ||
-        r.description?.toLowerCase().includes(q)
-      );
+      if (!debouncedQuery.trim()) return true;
+      return restaurantMatchesQuery(r, debouncedQuery);
     },
-    [q]
+    [debouncedQuery]
   );
 
   // ─── Dual-Layer Dish Category Matcher (Zomato-style) ───
@@ -102,35 +104,21 @@ export default function HomeScreen() {
       if (item.categoryId === selectedCategory) return true;
 
       // 2. Direct categoryName match (joined in API)
-      const itemCatName = (item.categoryName || '').toLowerCase().trim();
-      if (
-        itemCatName &&
-        (itemCatName === selectedCategoryName ||
-          itemCatName.includes(selectedCategoryName) ||
-          selectedCategoryName.includes(itemCatName))
-      ) {
+      if (matchesCategoryName(item.categoryName, selectedCategoryName)) {
         return true;
       }
 
       // 3. Fallback name lookup via categories in store
-      const catInStore = categories.find((c) => c.id === item.categoryId)?.name?.toLowerCase().trim();
-      if (
-        catInStore &&
-        (catInStore === selectedCategoryName ||
-          catInStore.includes(selectedCategoryName) ||
-          selectedCategoryName.includes(catInStore))
-      ) {
+      const catInStore = categories.find((c) => c.id === item.categoryId)?.name;
+      if (matchesCategoryName(catInStore, selectedCategoryName)) {
         return true;
       }
 
-      // 4. Keyword match in dish name or description
-      const itemName = (item.name || '').toLowerCase();
-      const itemDesc = (item.description || '').toLowerCase();
-      if (itemName.includes(selectedCategoryName) || itemDesc.includes(selectedCategoryName)) {
-        return true;
-      }
-      const singular = selectedCategoryName.replace(/s$/, '');
-      if (singular.length >= 3 && (itemName.includes(singular) || itemDesc.includes(singular))) {
+      // 4. Keyword match in dish name or description (plural/synonym aware)
+      if (
+        matchesCategoryName(item.name, selectedCategoryName) ||
+        matchesCategoryName(item.description, selectedCategoryName)
+      ) {
         return true;
       }
 
@@ -141,14 +129,10 @@ export default function HomeScreen() {
 
   const menuItemMatchesSearch = useCallback(
     (item: any) => {
-      if (!q) return true;
-      return (
-        item.name?.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q) ||
-        item.restaurantName?.toLowerCase().includes(q)
-      );
+      if (!debouncedQuery.trim()) return true;
+      return dishMatchesQuery(item, debouncedQuery);
     },
-    [q]
+    [debouncedQuery]
   );
 
   // Set of restaurant IDs that have at least one featured dish in the selected category
@@ -171,28 +155,21 @@ export default function HomeScreen() {
       // 1. Restaurant's enriched categories list (from backend withCategories)
       const hasCat = (restaurant.categories || []).some((c: any) => {
         if (c.id === selectedCategory) return true;
-        const n = (c.name || '').toLowerCase().trim();
-        return (
-          n === selectedCategoryName ||
-          n.includes(selectedCategoryName) ||
-          selectedCategoryName.includes(n)
-        );
+        return matchesCategoryName(c.name, selectedCategoryName);
       });
       if (hasCat) return true;
 
       // 2. Restaurant's cuisineType matches
-      const cuisine = (restaurant.cuisineType || '').toLowerCase();
-      if (cuisine.includes(selectedCategoryName)) return true;
-      const singular = selectedCategoryName.replace(/s$/, '');
-      if (singular.length >= 3 && cuisine.includes(singular)) return true;
+      if (matchesCategoryName(restaurant.cuisineType, selectedCategoryName)) return true;
 
       // 3. Featured dish match
       if (restaurantIdsWithSelectedCategory.has(restaurant.id)) return true;
 
       // 4. Restaurant name or description keyword match
-      const restName = (restaurant.name || '').toLowerCase();
-      const restDesc = (restaurant.description || '').toLowerCase();
-      if (restName.includes(selectedCategoryName) || restDesc.includes(selectedCategoryName)) {
+      if (
+        matchesCategoryName(restaurant.name, selectedCategoryName) ||
+        matchesCategoryName(restaurant.description, selectedCategoryName)
+      ) {
         return true;
       }
 
@@ -205,14 +182,10 @@ export default function HomeScreen() {
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const cat of categories) {
-      const cName = cat.name.toLowerCase().trim();
-      const singular = cName.replace(/s$/, '');
       const dishCount = (featuredMenuItems || []).filter((item: any) => {
         if (item.categoryId === cat.id) return true;
-        const itemCatName = (item.categoryName || '').toLowerCase().trim();
-        if (itemCatName && (itemCatName === cName || itemCatName.includes(cName))) return true;
-        const itemName = (item.name || '').toLowerCase();
-        if (itemName.includes(cName) || (singular.length >= 3 && itemName.includes(singular))) return true;
+        if (matchesCategoryName(item.categoryName, cat.name)) return true;
+        if (matchesCategoryName(item.name, cat.name)) return true;
         return false;
       }).length;
       if (dishCount > 0) counts[cat.id] = dishCount;

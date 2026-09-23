@@ -6,6 +6,7 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 import { restaurantsTable } from './restaurant.schema';
 
@@ -34,6 +35,11 @@ export const menuCategoriesTable = pgTable(
       table.name,
     ),
     index('menu_categories_restaurant_id_idx').on(table.restaurantId),
+    // Trigram index so category-name search is index-assisted (requires pg_trgm).
+    index('menu_categories_name_trgm_idx').using(
+      'gin',
+      sql`${table.name} gin_trgm_ops`,
+    ),
   ],
 );
 

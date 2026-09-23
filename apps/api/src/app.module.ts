@@ -30,6 +30,7 @@ import { ReviewsModule } from './review/review.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { ExportModule } from './export/export.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { InvoicesModule } from './invoices/invoices.module';
     PromotionsModule,
     ExportModule,
     InvoicesModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [

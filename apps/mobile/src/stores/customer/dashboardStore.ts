@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Category, DashboardData, Restaurant, MenuItem } from '@food_delivery/types';
+import { Category, DashboardData, ExploreSection, Restaurant, MenuItem } from '@food_delivery/types';
 
 interface DashboardState {
   // ─── State ───
@@ -9,6 +9,8 @@ interface DashboardState {
   recentlyOrdered: Restaurant[];
   categories: Category[];
   featuredMenuItems: (MenuItem & { restaurantName?: string })[];
+  /** Data-driven discovery rows (empty when the API has too little data). */
+  sections: ExploreSection[];
   isLoading: boolean;
   error: string | null;
 
@@ -31,6 +33,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   recentlyOrdered: [],
   categories: [],
   featuredMenuItems: [],
+  sections: [],
   isLoading: false,
   error: null,
 
@@ -42,6 +45,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       recentlyOrdered: data.recentlyOrdered,
       categories: data.categories,
       featuredMenuItems: (data as any).featuredMenuItems || [],
+      sections: (data as any).sections || [],
     }),
 
   setPopularRestaurants: (restaurants) => set({ popularRestaurants: restaurants }),
@@ -59,6 +63,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       recentlyOrdered: [],
       categories: [],
       featuredMenuItems: [],
+      sections: [],
       isLoading: false,
       error: null,
     }),

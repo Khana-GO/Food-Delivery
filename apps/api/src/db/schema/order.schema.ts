@@ -120,6 +120,12 @@ export const ordersTable = pgTable(
     index('orders_status_idx').on(table.orderStatus),
     index('orders_created_at_idx').on(table.createdAt),
     index('orders_address_id_idx').on(table.addressId),
+    // Serves the "trending restaurants" aggregation (orders per restaurant over
+    // a recent time window).
+    index('orders_restaurant_created_at_idx').on(
+      table.restaurantId,
+      table.createdAt,
+    ),
     uniqueIndex('orders_payment_id_unique')
       .on(table.paymentId)
       .where(sql`${table.paymentId} IS NOT NULL`),

@@ -24,7 +24,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed:butwal": "tsx -r dotenv/config src/scripts/seed-butwal-full.ts",
-    "db:verify:butwal": "tsx -r dotenv/config src/scripts/verify-butwal-e2e.ts"
+    "db:verify:butwal": "tsx -r dotenv/config src/scripts/verify-butwal-e2e.ts",
+    "db:verify:search": "tsx -r dotenv/config src/scripts/verify-search-e2e.ts"
   },
   "dependencies": {
     "@food_delivery/types": "workspace:*",

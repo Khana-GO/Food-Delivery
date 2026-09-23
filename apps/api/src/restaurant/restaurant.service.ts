@@ -8,7 +8,18 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { eq, and, sql, desc, asc, count, ilike, or } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  sql,
+  desc,
+  asc,
+  count,
+  ilike,
+  or,
+  exists,
+  inArray,
+} from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import {
@@ -25,6 +36,17 @@ import { UserRole } from '@food_delivery/types';
 import { CacheService } from '../redis/cache.service';
 import { RestaurantStatsDto } from './dto/restaurant-stats.dto';
 import { NotificationsService } from '../notification/notification.service';
+import { menuCategoriesTable, menuItemsTable } from '../db/schema';
+import {
+  buildSearchPlan,
+  compareRelevance,
+  ilikePattern,
+  scoreField,
+  scoreRestaurant,
+  toNumber,
+  type SearchPlan,
+} from '../common/search/search.utils';
+import { FOOD_VOCABULARY_UNIQUE } from '../common/search/search.vocabulary';
 
 @Injectable()
 export class RestaurantsService {
@@ -59,6 +81,13 @@ export class RestaurantsService {
   private keyStats() {
     return `restaurant:stats:overview`;
   }
+
+  /**
+   * Maximum number of candidate rows pulled for in-memory relevance ranking.
+   * The SQL prefilter stays index-friendly and bounded; ranking then happens on
+   * this capped set so no query can ever scan the whole catalogue.
+   */
+  private static readonly SEARCH_CANDIDATE_LIMIT = 200;
 
   private async invalidateRestaurant(opts: {
     id?: string;
@@ -234,6 +263,9 @@ export class RestaurantsService {
       isActive?: boolean;
       sortBy?: string;
       sortOrder?: 'ASC' | 'DESC';
+      /** Optional caller location — only affects *search* relevance ordering. */
+      lat?: number;
+      lng?: number;
     } = {},
   ): Promise<{
     data: RestaurantResponseDto[];
@@ -242,6 +274,18 @@ export class RestaurantsService {
     limit: number;
     totalPages: number;
   }> {
+    // Rounded to ~100m so the cache key space stays bounded.
+    const origin =
+      typeof options.lat === 'number' &&
+      typeof options.lng === 'number' &&
+      Number.isFinite(options.lat) &&
+      Number.isFinite(options.lng)
+        ? {
+            lat: Math.round(options.lat * 1000) / 1000,
+            lng: Math.round(options.lng * 1000) / 1000,
+          }
+        : null;
+
     // Normalize for deterministic cache key
     const normalized = {
       page: options.page ?? 1,
@@ -253,6 +297,8 @@ export class RestaurantsService {
       isActive: options.isActive,
       sortBy: options.sortBy ?? 'createdAt',
       sortOrder: options.sortOrder ?? 'DESC',
+      lat: origin?.lat ?? null,
+      lng: origin?.lng ?? null,
     };
     const hash = CacheService.hashOptions(normalized);
     const cacheKey = this.keyList(hash);
@@ -288,18 +334,6 @@ export class RestaurantsService {
 
         const conditions: any[] = [sql`${restaurantsTable.deletedAt} IS NULL`];
 
-        if (search && search.trim()) {
-          const term = `%${search.trim()}%`;
-          conditions.push(
-            or(
-              ilike(restaurantsTable.name, term),
-              ilike(restaurantsTable.cuisineType, term),
-              ilike(restaurantsTable.description, term),
-              ilike(restaurantsTable.address, term),
-              ilike(restaurantsTable.slug, term),
-            ),
-          );
-        }
         if (cuisineType)
           conditions.push(eq(restaurantsTable.cuisineType, cuisineType));
         if (isOpen !== undefined)
@@ -308,6 +342,27 @@ export class RestaurantsService {
           conditions.push(eq(restaurantsTable.isVerified, isVerified));
         if (isActive !== undefined)
           conditions.push(eq(restaurantsTable.isActive, isActive));
+
+        // ─── Relevance-ranked search path ───
+        // Users should not have to spell a dish or venue the way the database
+        // does, and results must never come back in insertion order. When a
+        // search term is present we expand it (synonyms / plurals / typos),
+        // prefilter with bounded indexed ILIKEs, then rank by real relevance.
+        const plan =
+          search && search.trim()
+            ? buildSearchPlan(search, FOOD_VOCABULARY_UNIQUE)
+            : null;
+
+        if (plan && plan.allVariants.length) {
+          return await this.searchByRelevance({
+            plan,
+            filters: conditions,
+            page,
+            limit,
+            origin,
+            explicitOpenFilter: isOpen !== undefined,
+          });
+        }
 
         const whereClause =
           conditions.length > 0 ? and(...conditions) : undefined;
@@ -338,6 +393,171 @@ export class RestaurantsService {
         };
       });
     }, 'findAll');
+  }
+
+  // ─── RELEVANCE-RANKED SEARCH ───
+  /**
+   * Expands the query, prefilters with bounded indexed ILIKEs (restaurant fields
+   * OR "this restaurant actually serves a matching dish"), then scores every
+   * candidate so ordering reflects relevance instead of insertion order.
+   *
+   * Availability: results are ordered with open venues first, but closed venues
+   * are only deprioritized (not hidden) unless the caller asked for `isOpen`.
+   * Pagination applies to the ranked list, so "relevance" is consistent across pages.
+   */
+  private async searchByRelevance(params: {
+    plan: SearchPlan;
+    filters: any[];
+    page: number;
+    limit: number;
+    origin: { lat: number; lng: number } | null;
+    explicitOpenFilter: boolean;
+  }): Promise<{
+    data: RestaurantResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const { plan, filters, page, limit, origin, explicitOpenFilter } = params;
+
+    const patterns = plan.allVariants.map((v) => ilikePattern(v));
+
+    // Restaurant columns matched by the expanded query.
+    const fieldMatches = patterns.flatMap((pattern) => [
+      ilike(restaurantsTable.name, pattern),
+      ilike(restaurantsTable.cuisineType, pattern),
+      ilike(restaurantsTable.description, pattern),
+      ilike(restaurantsTable.address, pattern),
+    ]);
+
+    // Menu matches: "momo" must find kitchens that serve momo even when the word
+    // never appears in the restaurant's own text fields. Dish *descriptions*
+    // count too, so "spicy chicken" finds a dish described that way.
+    const menuPatternMatches = patterns.flatMap((pattern) => [
+      ilike(menuItemsTable.name, pattern),
+      ilike(menuItemsTable.description, pattern),
+      ilike(menuCategoriesTable.name, pattern),
+    ]);
+
+    const servesMatchingDish = exists(
+      this.db
+        .select({ one: sql`1` })
+        .from(menuItemsTable)
+        .innerJoin(
+          menuCategoriesTable,
+          eq(menuItemsTable.categoryId, menuCategoriesTable.id),
+        )
+        .where(
+          and(
+            eq(menuItemsTable.restaurantId, restaurantsTable.id),
+            or(...menuPatternMatches),
+          ),
+        ),
+    );
+
+    const whereClause = and(
+      ...filters,
+      or(...fieldMatches, servesMatchingDish),
+    );
+
+    const candidates = await this.db
+      .select()
+      .from(restaurantsTable)
+      .where(whereClause)
+      // Deterministic truncation order when more candidates exist than we rank.
+      .orderBy(desc(restaurantsTable.averageRating))
+      .limit(RestaurantsService.SEARCH_CANDIDATE_LIMIT);
+
+    if (candidates.length === 0) {
+      return { data: [], total: 0, page, limit, totalPages: 0 };
+    }
+
+    // How many query tokens each restaurant's menu actually satisfies. This is
+    // what lifts a momo kitchen above a venue that merely mentions "momo".
+    const menuMatches = await this.db
+      .select({
+        restaurantId: menuItemsTable.restaurantId,
+        itemName: menuItemsTable.name,
+        categoryName: menuCategoriesTable.name,
+      })
+      .from(menuItemsTable)
+      .innerJoin(
+        menuCategoriesTable,
+        eq(menuItemsTable.categoryId, menuCategoriesTable.id),
+      )
+      .where(
+        and(
+          inArray(
+            menuItemsTable.restaurantId,
+            candidates.map((c) => c.id),
+          ),
+          or(...menuPatternMatches),
+        ),
+      );
+
+    const matchedTermsByRestaurant = new Map<string, number>();
+    for (const row of menuMatches) {
+      const current = matchedTermsByRestaurant.get(row.restaurantId) ?? 0;
+      let matchedTokens = 0;
+      for (const variants of plan.tokenVariants) {
+        if (
+          scoreField(row.itemName, variants) > 0 ||
+          scoreField(row.categoryName, variants) > 0
+        ) {
+          matchedTokens += 1;
+        }
+      }
+      matchedTermsByRestaurant.set(
+        row.restaurantId,
+        Math.max(current, matchedTokens),
+      );
+    }
+
+    const ranked = candidates
+      .map((restaurant) => ({
+        restaurant,
+        score: scoreRestaurant(
+          {
+            ...restaurant,
+            matchedMenuTerms: matchedTermsByRestaurant.get(restaurant.id) ?? 0,
+          },
+          plan,
+          { openFirst: !explicitOpenFilter, origin },
+        ),
+      }))
+      .sort((a, b) =>
+        compareRelevance(
+          {
+            score: a.score,
+            secondary: toNumber(a.restaurant.averageRating, 0),
+            tertiary: toNumber(a.restaurant.totalReviews, 0),
+            label: a.restaurant.name,
+          },
+          {
+            score: b.score,
+            secondary: toNumber(b.restaurant.averageRating, 0),
+            tertiary: toNumber(b.restaurant.totalReviews, 0),
+            label: b.restaurant.name,
+          },
+        ),
+      )
+      .map((r) => r.restaurant);
+
+    const total = ranked.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const offset = (page - 1) * limit;
+
+    return {
+      data: ranked.slice(
+        offset,
+        offset + limit,
+      ) as unknown as RestaurantResponseDto[],
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   // ─── FIND BY ID ─── (cached)

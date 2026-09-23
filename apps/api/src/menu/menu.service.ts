@@ -8,7 +8,18 @@ import {
   ConflictException,
   Inject,
 } from '@nestjs/common';
-import { eq, and, or, ilike, desc, asc, sql, isNull, count } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  or,
+  ilike,
+  desc,
+  asc,
+  sql,
+  isNull,
+  count,
+  inArray,
+} from 'drizzle-orm';
 import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 import { DATABASE } from '../db/database.constants';
 import { MenuItemResponseDto } from './dto/menu-item-response.dto';
@@ -26,8 +37,42 @@ import { CreateMenuItemDto } from './dto/create-menu.dto';
 import { UpdateMenuItemDto } from './dto/update-menu.dto';
 import { NotificationsService } from '../notification/notification.service';
 import { CacheService } from '../redis/cache.service';
+import { MenuItemSearchResultDto } from './dto/menu-item-search-result.dto';
+import {
+  buildSearchPlan,
+  compareRelevance,
+  didYouMean,
+  ilikePattern,
+  scoreDish,
+  toNumber,
+  type SearchPlan,
+} from '../common/search/search.utils';
+import { FOOD_VOCABULARY_UNIQUE } from '../common/search/search.vocabulary';
 
 const SORTABLE_COLUMNS = ['createdAt', 'updatedAt', 'name', 'price'] as const;
+
+/** Options accepted by the public dish search. */
+export interface DishSearchOptions {
+  q?: string;
+  page?: number;
+  limit?: number;
+  lat?: number;
+  lng?: number;
+  /** Restrict to a single restaurant (used by the restaurant page search box). */
+  restaurantId?: string;
+  /** Defaults to true — search should only surface orderable dishes. */
+  onlyAvailable?: boolean;
+}
+
+export interface DishSearchResponse {
+  data: MenuItemSearchResultDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  query: string;
+  didYouMean: string[];
+}
 
 @Injectable()
 export class MenuItemsService {
@@ -35,6 +80,12 @@ export class MenuItemsService {
   private readonly LIST_TTL = 60;
   private readonly ENTITY_TTL = 300;
   private readonly GROUPED_TTL = 60;
+
+  /**
+   * Cap on rows pulled for in-memory relevance ranking — keeps the query
+   * bounded and index-friendly while still ranking by real relevance.
+   */
+  private static readonly SEARCH_CANDIDATE_LIMIT = 200;
 
   constructor(
     @Inject(DATABASE)
@@ -755,6 +806,247 @@ export class MenuItemsService {
         deleted: deletedCount,
       };
     }, 'bulkDelete');
+  }
+
+  // ─── PUBLIC DISH SEARCH (ranked, typo tolerant) ───
+  /**
+   * Searches dishes across every approved restaurant.
+   *
+   * - Expands the query with synonyms/plurals/typos, prefilters with bounded
+   *   indexed ILIKEs, then scores & ranks so results are never insertion-ordered.
+   * - Only available dishes from active, verified, non-deleted restaurants are
+   *   returned, so every result is orderable and its restaurant page is valid.
+   * - Closed restaurants are deprioritized rather than hidden.
+   * - Suggests "did you mean" corrections when nothing conclusive matches.
+   */
+  async search(options: DishSearchOptions): Promise<DishSearchResponse> {
+    const page = Math.max(1, Math.floor(options.page ?? 1));
+    const limit = Math.min(Math.max(1, Math.floor(options.limit ?? 20)), 50);
+    const plan = buildSearchPlan(options.q, FOOD_VOCABULARY_UNIQUE);
+
+    const empty: DishSearchResponse = {
+      data: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+      query: plan.query,
+      didYouMean: [],
+    };
+    if (!plan.allVariants.length) return empty;
+
+    const cacheKey = `menu:search:${CacheService.hashOptions({
+      q: plan.query,
+      page,
+      limit,
+      lat: options.lat ?? null,
+      lng: options.lng ?? null,
+      restaurantId: options.restaurantId ?? null,
+      onlyAvailable: options.onlyAvailable ?? true,
+    })}`;
+
+    return this.handleDbOperation(async () => {
+      return this.cache.wrap(cacheKey, this.LIST_TTL, async () => {
+        const result = await this.rankDishSearch({
+          plan,
+          page,
+          limit,
+          origin:
+            typeof options.lat === 'number' && typeof options.lng === 'number'
+              ? { lat: options.lat, lng: options.lng }
+              : null,
+          restaurantId: options.restaurantId,
+          onlyAvailable: options.onlyAvailable ?? true,
+        });
+        return result;
+      });
+    }, 'search');
+  }
+
+  private async rankDishSearch(params: {
+    plan: SearchPlan;
+    page: number;
+    limit: number;
+    origin: { lat: number; lng: number } | null;
+    restaurantId?: string;
+    onlyAvailable: boolean;
+  }): Promise<DishSearchResponse> {
+    const { plan, page, limit, origin, restaurantId, onlyAvailable } = params;
+    const patterns = plan.allVariants.map((v) => ilikePattern(v));
+
+    const filters: any[] = [
+      eq(restaurantsTable.isVerified, true),
+      eq(restaurantsTable.isActive, true),
+      isNull(restaurantsTable.deletedAt),
+    ];
+    if (onlyAvailable) filters.push(eq(menuItemsTable.isAvailable, true));
+    if (restaurantId)
+      filters.push(eq(menuItemsTable.restaurantId, restaurantId));
+
+    const matchConditions = patterns.flatMap((pattern) => [
+      ilike(menuItemsTable.name, pattern),
+      ilike(menuItemsTable.description, pattern),
+      ilike(menuCategoriesTable.name, pattern),
+      ilike(restaurantsTable.name, pattern),
+      ilike(restaurantsTable.cuisineType, pattern),
+    ]);
+
+    const rows = await this.db
+      .select({
+        item: menuItemsTable,
+        categoryName: menuCategoriesTable.name,
+        restaurantName: restaurantsTable.name,
+        restaurantSlug: restaurantsTable.slug,
+        restaurantLogoUrl: restaurantsTable.logoUrl,
+        restaurantCoverImageUrl: restaurantsTable.coverImageUrl,
+        restaurantCuisineType: restaurantsTable.cuisineType,
+        restaurantIsOpen: restaurantsTable.isOpen,
+        restaurantRating: restaurantsTable.averageRating,
+        restaurantTotalReviews: restaurantsTable.totalReviews,
+        restaurantDeliveryFee: restaurantsTable.deliveryFee,
+        restaurantEta: restaurantsTable.estimatedDeliveryTime,
+        restaurantAddress: restaurantsTable.address,
+        restaurantLatitude: restaurantsTable.latitude,
+        restaurantLongitude: restaurantsTable.longitude,
+      })
+      .from(menuItemsTable)
+      .innerJoin(
+        menuCategoriesTable,
+        eq(menuItemsTable.categoryId, menuCategoriesTable.id),
+      )
+      .innerJoin(
+        restaurantsTable,
+        eq(menuItemsTable.restaurantId, restaurantsTable.id),
+      )
+      .where(and(...filters, or(...matchConditions)))
+      .orderBy(desc(restaurantsTable.averageRating))
+      .limit(MenuItemsService.SEARCH_CANDIDATE_LIMIT);
+
+    if (rows.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+        query: plan.query,
+        didYouMean: didYouMean(plan.query, FOOD_VOCABULARY_UNIQUE),
+      };
+    }
+
+    // Real popularity signal: how often each candidate dish has been ordered.
+    const popularityByItem = await this.getOrderCounts(
+      rows.map((row) => row.item.id),
+    );
+
+    const ranked = rows
+      .map((row) => {
+        const popularity = popularityByItem.get(row.item.id) ?? 0;
+        const score =
+          scoreDish(
+            {
+              name: row.item.name,
+              description: row.item.description,
+              categoryName: row.categoryName,
+              restaurantName: row.restaurantName,
+              restaurantCuisineType: row.restaurantCuisineType,
+              restaurantIsOpen: row.restaurantIsOpen,
+              restaurantRating: row.restaurantRating,
+              restaurantEstimatedDeliveryTime: row.restaurantEta,
+              restaurantLatitude: row.restaurantLatitude,
+              restaurantLongitude: row.restaurantLongitude,
+            },
+            plan,
+            { origin },
+          ) + Math.min(40, Math.log10(popularity + 1) * 30);
+
+        return {
+          row,
+          popularity,
+          score: Math.round(score * 100) / 100,
+        };
+      })
+      .sort((a, b) =>
+        compareRelevance(
+          {
+            score: a.score,
+            secondary: toNumber(a.row.restaurantRating, 0),
+            tertiary: a.popularity,
+            label: a.row.item.name,
+          },
+          {
+            score: b.score,
+            secondary: toNumber(b.row.restaurantRating, 0),
+            tertiary: b.popularity,
+            label: b.row.item.name,
+          },
+        ),
+      );
+
+    const total = ranked.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const offset = (page - 1) * limit;
+
+    const data = ranked.slice(offset, offset + limit).map(
+      ({ row, score, popularity }) =>
+        new MenuItemSearchResultDto(
+          row.item,
+          {
+            id: row.item.restaurantId,
+            name: row.restaurantName,
+            slug: row.restaurantSlug,
+            logoUrl: row.restaurantLogoUrl,
+            coverImageUrl: row.restaurantCoverImageUrl,
+            cuisineType: row.restaurantCuisineType,
+            isOpen: row.restaurantIsOpen,
+            averageRating: row.restaurantRating,
+            totalReviews: row.restaurantTotalReviews,
+            deliveryFee: row.restaurantDeliveryFee,
+            estimatedDeliveryTime: row.restaurantEta,
+            address: row.restaurantAddress,
+          },
+          {
+            categoryName: row.categoryName,
+            relevanceScore: score,
+            popularity,
+          },
+        ),
+    );
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages,
+      query: plan.query,
+      // Only offer a correction when the search actually came up short.
+      didYouMean:
+        total === 0 ? didYouMean(plan.query, FOOD_VOCABULARY_UNIQUE) : [],
+    };
+  }
+
+  /** Order counts per menu item for a bounded id set (single grouped query). */
+  private async getOrderCounts(
+    itemIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (itemIds.length === 0) return counts;
+    try {
+      const rows = await this.db
+        .select({
+          menuItemId: orderItemsTable.menuItemId,
+          total: count(),
+        })
+        .from(orderItemsTable)
+        .where(inArray(orderItemsTable.menuItemId, itemIds))
+        .groupBy(orderItemsTable.menuItemId);
+      for (const row of rows)
+        counts.set(row.menuItemId, Number(row.total ?? 0));
+    } catch (error: any) {
+      this.logger.debug(`Order-count lookup skipped: ${error?.message}`);
+    }
+    return counts;
   }
 
   // ─── GET FEATURED (public – only from approved restaurants) ───
