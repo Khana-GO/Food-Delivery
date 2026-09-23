@@ -1,74 +1,142 @@
 # 🍔 KhanaGo – Full-Stack Food Delivery Platform
 
-A production-ready, full-stack Food Delivery monorepo application built with a modern TypeScript stack, featuring a cross-platform mobile client, robust NestJS backend API, PostgreSQL with Drizzle ORM, real-time tracking, and role-based workflows.
+<p align="center">
+  <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80" alt="KhanaGo Banner" width="100%" style="border-radius: 12px;" />
+</p>
+
+<p align="center">
+  <strong>A modern, production-ready, full-stack food delivery monorepo application.</strong><br />
+  Built with React Native (Expo Router), NestJS, Neon PostgreSQL (Drizzle ORM), LangGraph AI, and real-time WebSockets.
+</p>
+
+<p align="center">
+  <a href="#-recent-updates--whats-new">What's New</a> •
+  <a href="#-architecture--structure">Architecture</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-core-features">Features</a> •
+  <a href="#-getting-started">Getting Started</a> •
+  <a href="#-butwal-dataset--seeding">Butwal Dataset</a> •
+  <a href="#-demo-credentials">Demo Accounts</a> •
+  <a href="#-scripts">Scripts</a>
+</p>
 
 ---
 
-## 🏗️ Architecture & Monorepo Structure
+## 🚀 Recent Updates & What's New
 
-This project is managed as a high-performance **pnpm monorepo**:
+### 🏙️ Realistic Butwal, Nepal Restaurant & Cafe Dataset
+- **24 Active Dining Venues**: Curated authentic spots across key Butwal hubs including **Golpark, Traffic Chowk, Milanchowk, Kalikanagar, Devinagar, Amarpath, Puspalal Park, and Horizon Chowk**.
+  - Highlights: *The Village Cafe, Roadhouse Cafe (D-Village), Cafe de Flamingo, Nanglo Restaurant, Gaule Chulo Thakali, Hamro Momo Hub, Himalayan Artisan Bakery, Pizza World, Mughal Darbar*, and more.
+- **128+ Categorized Menus & 475 Menu Items**: Fully categorized offerings (Momo, Chowmein, Sekuwa, Thakali Thali, Sizzlers, Italian Wood-fired Pizza, Tandoori, Patisserie, Specialty Teas).
+- **Accurate NPR Pricing & High-Res Images**: Realistic pricing in Nepali Rupees (Rs.) and verified food photography across all items with client-side fallback handling.
+- **Idempotent CLI Seeding & E2E Verification**:
+  - `pnpm --filter api db:seed:butwal` — Seed or update restaurants and menus safely.
+  - `pnpm --filter api db:verify:butwal` — Automated E2E verification of active restaurants, categories, items, and pricing.
+
+### 🤖 KhanaGo Conversational AI Agent
+- **Two-Way Conversational Assistant**: Integrated AI powered by LangChain/LangGraph and OpenRouter.
+- **Context-Aware Tooling**: Agent can query restaurants, check live menus, inspect customer cart items, and review past orders to provide personalized meal recommendations and answer general questions.
+
+### 🎨 Enhanced Customer Discovery & Navigation
+- **Visual Category Badges**: Category chips now feature dynamic food iconography (`🥟 Momo`, `🍕 Pizza`, `☕ Coffee`, `🍔 Fast Food`, `🍛 Thakali`) and item count indicators.
+- **Resilient Image Fallback**: `MenuItemCard` gracefully handles slow or failed external image loads with fallback placeholders.
+- **Public Menu Browsing**: Unauthenticated guests can freely discover restaurants, browse categorized menus, and search food items without mandatory initial sign-in.
+
+---
+
+## 🏗️ Architecture & Structure
+
+This project is organized as a high-performance **pnpm monorepo**:
 
 ```text
 Food-Delivery/
 ├── apps/
-│   ├── api/          # NestJS Backend API (REST, WebSockets, Drizzle ORM, Neon PostgreSQL)
-│   └── mobile/       # Expo / React Native App (Expo Router, NativeWind/Tailwind)
+│   ├── api/                   # NestJS Backend API
+│   │   ├── src/
+│   │   │   ├── agents/        # KhanaGo LangGraph AI Agent & conversational tools
+│   │   │   ├── auth/          # JWT, Google OAuth & RBAC guards
+│   │   │   ├── cart/          # Cart management & pricing calculation
+│   │   │   ├── dasboard/      # Aggregated customer discovery feeds
+│   │   │   ├── db/            # Drizzle ORM schemas & Neon PostgreSQL connection
+│   │   │   ├── menu/          # Menu items & category controllers
+│   │   │   ├── order/         # Order processing & lifecycle
+│   │   │   ├── restaurant/    # Restaurant management & discovery
+│   │   │   ├── scripts/       # Butwal dataset seed & E2E verification scripts
+│   │   │   └── tracking/      # Socket.IO live GPS & order tracking gateway
+│   │   └── drizzle/           # Database migration journals
+│   │
+│   └── mobile/                # Cross-Platform Client (iOS, Android, Web)
+│       └── src/
+│           ├── app/           # Expo Router file-based screens & navigation
+│           │   ├── (auth)/    # Login, registration, forgot password
+│           │   ├── (customer)/# Customer home, explore, cart, orders, profile
+│           │   └── (owner)/   # Restaurant owner dashboard & order management
+│           ├── components/    # Reusable atomic UI & domain components
+│           ├── hooks/         # Custom React hooks (auth, cart, location, orders)
+│           ├── services/      # Typed API client services
+│           └── stores/        # Zustand global state (cart, auth, address)
 │
 ├── packages/
-│   └── types/        # Shared TypeScript interfaces & types across apps
+│   └── types/                 # Shared TypeScript domain models & DTOs
 │
-├── package.json      # Workspace root configuration & scripts
-├── pnpm-workspace.yaml
-└── tsconfig.json
+├── pnpm-workspace.yaml        # Workspace package definitions
+└── package.json               # Root scripts & orchestrations
 ```
 
 ---
 
 ## ⚡ Tech Stack
 
-| Layer | Technologies |
+| Domain | Technologies |
 | :--- | :--- |
 | **Mobile Client** | React Native, Expo SDK 52, Expo Router v4, TypeScript, NativeWind / TailwindCSS, TanStack React Query, Axios, Zustand |
-| **Backend API** | NestJS, TypeScript, Passport.js, JWT, LangChain/LangGraph, Socket.IO WebSockets, Swagger |
+| **Backend API** | NestJS, TypeScript, Passport.js, JWT, LangChain/LangGraph, OpenRouter, Socket.IO WebSockets, Swagger |
 | **Database & ORM** | Neon PostgreSQL (Serverless), Drizzle ORM, Drizzle Kit Studio |
-| **Storage & Media** | Cloudinary |
-| **Caching** | Redis / In-Memory Redis fallback |
-| **Tooling** | pnpm Workspaces, Jest, ESLint, Prettier |
+| **Media & Storage** | Cloudinary |
+| **Caching** | Redis with automatic in-memory fallback for local development |
+| **Tooling & Monorepo** | pnpm Workspaces, Jest, ESLint, Prettier, tsx |
 
 ---
 
-## ✨ Features
+## ✨ Core Features
 
-- **Multi-Role Experience**: Dedicated portals and workflows for:
-  - 🛒 **Customer**: Explore restaurants, search menus, customize orders, real-time delivery tracking.
-  - 🍳 **Restaurant Owner**: Manage restaurant profiles, menu categories, menu items, and incoming orders.
-  - 🛵 **Driver**: Live location broadcasting, order pickup & delivery routing.
-  - 🛡️ **Admin**: Global platform management, verification, and analytics.
-- **Real-Time WebSockets**: Live driver GPS tracking and order status updates using Socket.IO.
-- **Database & Drizzle Studio**: Strongly-typed schema migrations with interactive visual database management via Drizzle Studio.
-- **Secure Authentication**: JWT with rotating refresh tokens, Bcrypt password hashing, email verification, and Google OAuth.
-- **Interactive API Documentation**: Auto-generated Swagger documentation at `/docs`.
-- **Cross-Platform**: Seamless support for iOS, Android, and Web browsers.
+### 🛒 Customer Experience
+- **Location-Based Discovery**: Browse restaurants and cafes across Butwal's major hubs.
+- **Categorized Menu Filtering**: Search and filter by cuisine, category, price, and dietary preferences.
+- **Real-Time Cart & Checkout**: Live quantity adjustments, delivery fee calculation, and order placement.
+- **Live Order Tracking**: Visual order status progression and real-time delivery driver updates.
+- **Interactive AI Assistant**: Ask KhanaGo AI for recommendations, order lookups, and food pairings.
+
+### 🍳 Restaurant Owner Hub
+- **Menu Management**: Create, edit, toggle availability, and categorize menu items with custom pricing and images.
+- **Order Processing**: Real-time incoming order dashboard to accept, prepare, and dispatch orders.
+- **Multi-Restaurant Support**: Switch between multiple owned restaurant branches.
+
+### 🛵 Driver & Delivery Flow
+- **Order Dispatch**: Real-time pickup notifications and destination routing.
+- **GPS Broadcasting**: Continuous location streaming via WebSockets to customer tracking screens.
+
+### 🛡️ Admin Management
+- **Platform Analytics**: Global order metrics, revenue breakdowns, and user activity monitoring.
+- **Restaurant Approval**: Verification workflow for onboarding new dining establishments.
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - **Node.js**: v20 or later (v22 recommended)
 - **pnpm**: `npm install -g pnpm`
 - **Git**
-- Optional: Android Studio (for Android Emulator) or Expo Go on a physical device.
 
 ---
 
 ### 1. Installation
 
-Clone the repository and install dependencies:
+Clone the repository and install all workspace dependencies:
 
 ```bash
-git clone https://github.com/Shushilbhusal/Food-Delivery.git
+git clone https://github.com/Khana-GO/Food-Delivery.git
 cd Food-Delivery
 pnpm install
 ```
@@ -77,76 +145,92 @@ pnpm install
 
 ### 2. Environment Configuration
 
-Create a `.env` file in `apps/api/.env`:
+Create an environment file at `apps/api/.env`:
 
 ```env
 PORT=3000
 NODE_ENV=development
 
-# Database
+# Database (Neon PostgreSQL)
 DATABASE_URL=your_neon_postgresql_connection_string
 
-# JWT Secret Keys
+# Authentication
 JWT_SECRET=your_jwt_secret_key
-JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
+JWT_EXPIRES_IN=30m
+JWT_REFRESH_EXPIRES_IN=15d
+SALT_ROUNDS=10
 
-# Redis (Optional fallback in place)
+# AI Agent (Optional / OpenRouter)
+OPENROUTER_API_KEY=your_openrouter_api_key
+
+# Redis (Defaults to in-memory if false)
 REDIS_ENABLED=false
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# Frontend URLs for CORS
+# CORS Origins
 FRONTEND_URL_WEB=http://localhost:8081
 FRONTEND_URL_IP=http://192.168.1.100:8081
 ```
 
 ---
 
-### 3. Database Setup & Drizzle Studio
+### 3. Database Migration & Studio
 
-Push schema tables to your PostgreSQL database:
+Apply schema changes to your database:
 
 ```bash
 pnpm --filter api db:push
 ```
 
-To launch the interactive **Drizzle Studio** GUI in your browser:
+To inspect your database visually via **Drizzle Studio**:
 
 ```bash
 pnpm --filter api db:studio
 ```
-> Opens at `https://local.drizzle.studio` (reads credentials directly from `.env`, no login required).
+> Opens at `https://local.drizzle.studio`.
 
 ---
 
-### 4. Running the Development Servers
+### 4. Seed the Butwal Restaurant Dataset
 
-#### Start the Backend API:
+Populate the database with the verified Butwal dining dataset (24 restaurants, 128 categories, 475 menu items):
+
 ```bash
-# From workspace root:
-pnpm --filter api start:dev
+pnpm --filter api db:seed:butwal
 ```
-- API Server: `http://localhost:3000/api`
-- Health Check: `http://localhost:3000/api/health`
-- Swagger Documentation: `http://localhost:3000/docs`
 
-#### Start the Mobile App (Expo):
+To run the automated verification suite against your running API:
+
 ```bash
-# From workspace root:
+pnpm --filter api db:verify:butwal
+```
+
+---
+
+### 5. Running Development Servers
+
+Run the entire platform concurrently:
+
+```bash
+# Start backend API (http://localhost:3000/api)
+pnpm --filter api start:dev
+
+# Start Expo mobile/web client (http://localhost:8081)
 pnpm --filter mobile start
 ```
 
-In the Expo terminal, press:
-- `w` – Launch directly in your **Web Browser** (`http://localhost:8081`)
-- `a` – Launch on connected **Android Device** or Emulator
-- `i` – Launch on **iOS Simulator** (macOS)
-- Or scan the terminal QR code with the **Expo Go** mobile app.
+Inside the Expo terminal:
+- Press `w` to open in your **Web Browser**.
+- Press `a` for **Android Emulator** / device.
+- Press `i` for **iOS Simulator**.
+- Scan the QR code with **Expo Go** on a physical phone.
 
 ---
 
-## 🔑 Pre-Configured Demo Accounts
+## 🔑 Demo Credentials
 
-For testing, pre-verified test accounts are available:
+Pre-configured accounts for testing each user role:
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
@@ -154,43 +238,43 @@ For testing, pre-verified test accounts are available:
 | **Restaurant Owner** | `owner@khanago.com` | `Password123!` |
 | **Driver** | `driver@khanago.com` | `Password123!` |
 
-*(You can also click **"Sign Up"** in the mobile app to register any new account).*
+*(You can also sign up with any new email directly from the app).*
 
 ---
 
-## 📋 Available Monorepo Scripts
+## 📋 Useful Monorepo Commands
 
 ### Workspace Root
 | Command | Description |
 | :--- | :--- |
-| `pnpm install` | Install all monorepo dependencies |
-| `pnpm --filter api <command>` | Run a command inside `apps/api` |
-| `pnpm --filter mobile <command>` | Run a command inside `apps/mobile` |
+| `pnpm install` | Install all dependencies across monorepo |
+| `pnpm --filter api <command>` | Run an npm script inside `apps/api` |
+| `pnpm --filter mobile <command>` | Run an npm script inside `apps/mobile` |
 
 ### Backend API (`apps/api`)
 | Command | Description |
 | :--- | :--- |
 | `pnpm start:dev` | Start NestJS in watch mode |
-| `pnpm build` | Compile the NestJS production build |
-| `pnpm test` | Run Jest unit and integration tests |
-| `pnpm db:push` | Push schema changes directly to PostgreSQL |
-| `pnpm db:studio` | Launch Drizzle Studio database UI |
-| `pnpm db:generate` | Generate migration SQL files |
-| `pnpm db:migrate` | Execute pending migrations |
+| `pnpm build` | Compile TypeScript production bundle |
+| `pnpm db:push` | Push schema changes to Neon PostgreSQL |
+| `pnpm db:studio` | Launch Drizzle Studio GUI |
+| `pnpm db:seed:butwal` | Seed authentic Butwal restaurants & menus |
+| `pnpm db:verify:butwal`| Run automated end-to-end dataset verification |
+| `pnpm test` | Run Jest unit & integration tests |
 
 ### Mobile Client (`apps/mobile`)
 | Command | Description |
 | :--- | :--- |
-| `pnpm start` | Start the Expo Metro bundler |
-| `pnpm android` | Run on Android emulator / device |
+| `pnpm start` | Start Expo Metro bundler |
+| `pnpm web` | Launch application on Web (`localhost:8081`) |
+| `pnpm android` | Run on Android device or emulator |
 | `pnpm ios` | Run on iOS simulator |
-| `pnpm web` | Run on local web browser |
+| `pnpm typecheck` | Run TypeScript validation (`tsc --noEmit`) |
 
 ---
 
 ## 👥 Authors & Contributors
 
-Developed with ❤️ by:
 - **Shushil Bhusal**
 - **Ashok Rimal**
 - **Rohit Shrestha**
@@ -198,6 +282,6 @@ Developed with ❤️ by:
 
 ---
 
-## 📄 License
-
-This project is open-source and licensed under the [MIT License](LICENSE).
+<p align="center">
+  Made with ❤️ for food lovers in Nepal.
+</p>
