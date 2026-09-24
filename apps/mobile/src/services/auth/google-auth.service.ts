@@ -75,7 +75,7 @@ export const googleAuthService = {
   ),
 
   useGoogleAuth: () => {
-    return Google.useAuthRequest({
+    return Google.useIdTokenAuthRequest({
       clientId: WEB_CLIENT_ID || DUMMY_CLIENT_ID,
       webClientId: WEB_CLIENT_ID || DUMMY_CLIENT_ID,
       scopes: ['profile', 'email'],

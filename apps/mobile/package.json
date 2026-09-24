@@ -65,6 +65,8 @@
   },
   "scripts": {
     "start": "expo start",
+    "start:go": "expo start --go",
+    "start:go:tunnel": "expo start --go --tunnel",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

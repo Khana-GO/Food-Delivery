@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import {
   googleAuthService,
   GoogleSignInCancelledError,
+  GoogleSignInUnavailableError,
 } from '@/services/auth/google-auth.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveAccessToken, saveRefreshToken } from '@/lib/secure-storage';
@@ -61,8 +62,13 @@ export const useGoogleAuth = () => {
       }
 
       // ─── Only a successful response carries an ID token ───
-      const idToken = response.authentication?.idToken;
+      const idToken =
+        response.params?.id_token ||
+        (response as any).params?.idToken ||
+        response.authentication?.idToken;
+
       if (!idToken) {
+        console.warn('[useGoogleAuth] Google response received without id_token:', response);
         setError('No Google ID token received. Please try again.');
         setIsLoading(false);
         return;
@@ -135,6 +141,14 @@ export const useGoogleAuth = () => {
     } catch (err: any) {
       // User dismissed the prompt — exit quietly, no error alert.
       if (err instanceof GoogleSignInCancelledError) return;
+      if (err instanceof GoogleSignInUnavailableError && request) {
+        try {
+          await promptAsync();
+          return;
+        } catch {
+          // Fall through to error display
+        }
+      }
       const message = err?.message || 'Google login failed';
       setError(message);
       Alert.alert('Login Error', message);

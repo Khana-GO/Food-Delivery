@@ -75,7 +75,7 @@ export const searchService = {
     const response = await api.get<UnifiedSearchResponse>('/search', {
       params: {
         q,
-        limit: params.limit ?? 20,
+        limit: params.limit ?? 40,
         ...(params.lat !== undefined && params.lng !== undefined
           ? { lat: params.lat, lng: params.lng }
           : {}),

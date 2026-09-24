@@ -7,6 +7,8 @@
   "scripts": {
     "dev:api": "pnpm --filter api run start:dev",
     "dev:mobile": "pnpm --filter mobile run start",
+    "dev:mobile:go": "pnpm --filter mobile run start:go",
+    "dev:mobile:go:tunnel": "pnpm --filter mobile run start:go:tunnel",
     "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:mobile\"",
     "test": "pnpm -r test",
     "typecheck": "pnpm --filter api exec tsc --noEmit -p tsconfig.json && pnpm --filter mobile typecheck",

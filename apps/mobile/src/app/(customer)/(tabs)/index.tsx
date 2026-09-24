@@ -283,48 +283,43 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Search — responsive & optimized */}
-            <View
+            {/* Search — launches full Explore Discovery */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => {
+                router.push({
+                  pathname: '/(customer)/(tabs)/explore' as any,
+                  params: { focus: 'true' },
+                });
+              }}
               style={[
                 styles.searchWrap,
                 isVeryCompact && ({ height: 44, paddingHorizontal: 12 } as any),
-                { borderColor: isSearchFocused ? Colors.primary : '#E2E8F0' },
               ]}
             >
-              <Feather name="search" size={isVeryCompact ? 16 : 18} color={isSearchFocused ? Colors.primary : '#94A3B8'} />
-              <TextInput
-                selectionColor="rgba(15,23,42,0.16)"
-                cursorColor="#334155"
-                style={[styles.searchInput, isVeryCompact && ({ fontSize: 13 } as any)]}
-                placeholder={isVeryCompact ? 'Search...' : 'Search restaurants, dishes…'}
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
-                onSubmitEditing={() => {
-                  if (searchQuery.trim()) {
-                    router.push({
-                      pathname: '/(customer)/(tabs)/explore' as any,
-                      params: { q: searchQuery.trim() },
-                    });
-                  }
+              <Feather name="search" size={isVeryCompact ? 16 : 18} color={Colors.primary} />
+              <Text
+                style={[
+                  styles.searchInput,
+                  { color: '#94A3B8', paddingTop: 12 },
+                  isVeryCompact && ({ fontSize: 13 } as any),
+                ]}
+              >
+                {isVeryCompact ? 'Search food or restaurants…' : 'Search dishes, restaurants, cuisines…'}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: '#FFF7ED',
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: Radius.full,
+                  borderWidth: 1,
+                  borderColor: '#FFEDD5',
                 }}
-                allowFontScaling={false}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchQuery('');
-                    setDebouncedQuery('');
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Feather name="x-circle" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
+              >
+                <Feather name="arrow-right" size={12} color={Colors.primary} />
+              </View>
+            </TouchableOpacity>
 
             {/* Active filter pill */}
             {activeFilterLabel || q ? (
