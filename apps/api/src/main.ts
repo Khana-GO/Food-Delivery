@@ -73,6 +73,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api'); // app.setGlobalPrefix('api') tells NestJS to add the same prefix to every route in your application.
 
+  // Root welcome / health ping for browser inspection
+  expressInstance?.get?.('/', (_req: any, res: any) => {
+    res.json({
+      name: 'KhanaGo Food Delivery API',
+      status: 'online',
+      docs: '/docs',
+      health: '/api/health',
+    });
+  });
+
   // Swagger is opt-in: local development only, or explicitly via ENABLE_SWAGGER.
   // Previously any non-"production" value (e.g. a stale or misspelled NODE_ENV on
   // a deployed environment) exposed the whole API map.
