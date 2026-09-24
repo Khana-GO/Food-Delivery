@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: khanago-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm --filter api build
+    startCommand: node apps/api/dist/main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: ALLOW_IN_MEMORY_SESSIONS
+        value: "true"
+      - key: REDIS_ENABLED
+        value: "false"
+      - key: ENABLE_SWAGGER
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false

@@ -56,7 +56,7 @@ async function bootstrap() {
     configService.get<string>('FRONTEND_URL_IP'),
   ].filter((origin): origin is string => Boolean(origin));
   app.enableCors({
-    origin: allowedOrigins,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });

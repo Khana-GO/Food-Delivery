@@ -10,8 +10,9 @@ import {
 } from "./secure-storage";
 
 export const getBaseUrl = (): string => {
-  const webUrl = process.env.EXPO_PUBLIC_API_URL_WEB;
-  const mobileUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE;
+  const universalUrl = process.env.EXPO_PUBLIC_API_URL;
+  const webUrl = process.env.EXPO_PUBLIC_API_URL_WEB || universalUrl;
+  const mobileUrl = process.env.EXPO_PUBLIC_API_URL_MOBILE || universalUrl;
 
   if (Platform.OS === "web") {
     return webUrl || "http://localhost:3000/api";
