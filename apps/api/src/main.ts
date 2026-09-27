@@ -51,12 +51,16 @@ async function bootstrap() {
     expressInstance.set('trust proxy', value);
   }
 
-  const allowedOrigins = [
-    configService.get<string>('FRONTEND_URL_WEB'),
-    configService.get<string>('FRONTEND_URL_IP'),
-  ].filter((origin): origin is string => Boolean(origin));
+  // CORS: accept requests from any frontend origin.
+  //
+  // `origin: true` reflects the caller's Origin header back rather than sending a
+  // literal `*`. A wildcard is not valid for credentialed requests, and this app
+  // enables `credentials`, so reflecting is what actually lets arbitrary
+  // frontends call the API. Auth is JWT-in-Authorization-header, which browsers
+  // never attach automatically, so a third-party page cannot ride the user's
+  // session the way it could with cookie auth.
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
