@@ -7,7 +7,13 @@ export const aiService = {
     message: string,
     sessionId?: string,
     context?: ChatContext,
-  ): Promise<{ response: string; quickReplies?: string[]; intent?: string; sessionId: string }> => {
+  ): Promise<{
+    response: string;
+    quickReplies?: string[];
+    intent?: string;
+    data?: any;
+    sessionId: string;
+  }> => {
     const payload: Record<string, any> = { message };
     if (sessionId) payload.sessionId = sessionId;
     if (context && (context.restaurantId || context.orderId || context.location)) {

@@ -9,7 +9,7 @@ interface ChatState {
 
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
-  updateLastMessage: (content: string, quickReplies?: string[]) => void;
+  updateLastMessage: (content: string, quickReplies?: string[], data?: any) => void;
   setIsTyping: (isTyping: boolean) => void;
   setError: (error: string | null) => void;
   clearMessages: () => void;
@@ -27,7 +27,7 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       messages: [...state.messages, message],
     })),
-  updateLastMessage: (content, quickReplies) =>
+  updateLastMessage: (content, quickReplies, data) =>
     set((state) => {
       const lastIndex = state.messages.length - 1;
       if (lastIndex < 0) return state;
@@ -36,6 +36,7 @@ export const useChatStore = create<ChatState>((set) => ({
         ...updatedMessages[lastIndex],
         content,
         quickReplies,
+        data,
         isLoading: false,
         error: false as any,
       };

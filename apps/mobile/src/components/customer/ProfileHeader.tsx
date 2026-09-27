@@ -12,10 +12,12 @@ interface Props {
   onEditPress: () => void;
   onImagePress: () => void;
   onDeleteImage?: () => void;
+  /** Shown as a chip when the account has no phone number (Google sign-ups). */
+  onAddPhonePress?: () => void;
   isUploading?: boolean;
 }
 
-export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, isUploading }: Props) => {
+export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, onAddPhonePress, isUploading }: Props) => {
   const hasImage = !!user.imageUrl;
   const insets = useSafeAreaInsets();
   return (
@@ -51,7 +53,19 @@ export const ProfileHeader = ({ user, onEditPress, onImagePress, onDeleteImage, 
         <Text style={styles.email} numberOfLines={1}>
           {user.email}
         </Text>
-        {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
+        {user.phone ? (
+          <Text style={styles.phone}>{user.phone}</Text>
+        ) : (
+          <TouchableOpacity
+            onPress={onAddPhonePress}
+            activeOpacity={0.85}
+            style={styles.phoneMissing}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Feather name="phone" size={11} color="#FFFFFF" />
+            <Text style={styles.phoneMissingText}>Add phone number</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ProfileActionsMenu
@@ -124,4 +138,17 @@ const styles = StyleSheet.create({
   name: { fontSize: 17, fontWeight: '800', color: Colors.white, marginTop: 10, letterSpacing: -0.3 },
   email: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 3, fontWeight: '500' },
   phone: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 1, fontWeight: '500' },
+  phoneMissing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+  },
+  phoneMissingText: { fontSize: 11, color: '#FFFFFF', fontWeight: '700' },
 });

@@ -45,6 +45,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="invoices/index" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="invoices/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="profile" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="profile/phone" options={{ headerShown: false, animation: 'slide_from_right' }} />
     </Stack>
   );
 }

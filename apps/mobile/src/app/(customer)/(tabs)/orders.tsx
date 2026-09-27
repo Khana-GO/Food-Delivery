@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import EmptyState from '@/components/ui/EmptyState';
 import PremiumCard from '@/components/ui/PremiumCard';
-import { Colors, Radius, Shadow } from '@/constants/theme';
+import { Colors, Radius } from '@/constants/theme';
 import { useOrders } from '@/hooks/customer/useOrders';
 import { useOrderStore } from '@/stores/customer/orderStore';
 import { OrderStatusBadge } from '@/components/order/OrderStatusBadge';
@@ -64,27 +64,27 @@ export default function Orders() {
           <Text style={styles.title}>Orders</Text>
           <Text style={styles.subtitle}>{orders.length} {orders.length === 1 ? 'order' : 'orders'} • Track and reorder</Text>
         </SafeAreaView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 6 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ gap: 5 }}>
           {FILTERS.map((f) => (
             <Pressable
               key={f.key}
               onPress={() => setFilter(f.key)}
               style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
                 borderRadius: Radius.full,
                 backgroundColor: filter === f.key ? Colors.white : 'rgba(255,255,255,0.18)',
                 borderWidth: 1,
                 borderColor: filter === f.key ? Colors.white : 'rgba(255,255,255,0.25)',
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 6,
+                gap: 5,
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: '700', color: filter === f.key ? Colors.primary : Colors.white }}>{f.label}</Text>
+              <Text style={{ fontSize: 10.5, fontWeight: '700', color: filter === f.key ? Colors.primary : Colors.white }}>{f.label}</Text>
               {counts[f.key] > 0 ? (
-                <View style={{ backgroundColor: filter === f.key ? Colors.primaryBg : 'rgba(255,255,255,0.2)', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8 }}>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: filter === f.key ? Colors.primary : Colors.white }}>{counts[f.key]}</Text>
+                <View style={{ backgroundColor: filter === f.key ? Colors.primaryBg : 'rgba(255,255,255,0.2)', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: filter === f.key ? Colors.primary : Colors.white }}>{counts[f.key]}</Text>
                 </View>
               ) : null}
             </Pressable>
@@ -95,20 +95,29 @@ export default function Orders() {
       {orders.length === 0 ? (
         <EmptyState icon="shopping-bag" title="No orders yet" description="Your orders will appear here. Start exploring!" actionLabel="Explore" onAction={() => router.push('/(customer)/(tabs)/explore' as any)} />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={Colors.primary} />}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 14, gap: 10 }} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={Colors.primary} />}>
           {filtered.length === 0 ? (
             <EmptyState icon="inbox" title="No orders here" description={filter === 'active' ? 'No active orders right now.' : filter === 'delivered' ? 'No delivered orders yet.' : 'No cancelled orders.'} />
           ) : (
             filtered.map((o: any) => {
               const itemsText = Array.isArray(o.items) ? o.items.map((i: any) => `${i.name} x${i.quantity}`).join(', ') : '';
               const time = o.createdAt ? new Date(o.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+              const logoUrl = o.restaurantLogoUrl;
+              const initial = (o.restaurantName || 'R').charAt(0).toUpperCase();
               return (
                 <PremiumCard key={o.id} style={{ padding: 0, overflow: 'hidden' } as any}>
-                  <View style={{ padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ flex: 1, paddingRight: 12 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textDark }}>{o.restaurantName || 'Restaurant'}</Text>
-                      <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }} numberOfLines={1}>{itemsText || `${o.totalAmount ? `Rs. ${o.totalAmount}` : ''}`}</Text>
-                      <Text style={{ fontSize: 11, color: Colors.textTertiary, marginTop: 6 }}>{time} • Rs. {o.totalAmount}</Text>
+                  <View style={{ padding: 11, flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={styles.logoWrap}>
+                      {logoUrl ? (
+                        <Image source={{ uri: logoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+                      ) : (
+                        <Text style={styles.logoInitial}>{initial}</Text>
+                      )}
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 9 }}>
+                      <Text style={{ fontSize: 13.5, fontWeight: '700', color: Colors.textDark }} numberOfLines={1}>{o.restaurantName || 'Restaurant'}</Text>
+                      <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 1 }} numberOfLines={1}>{itemsText || `${o.totalAmount ? `Rs. ${o.totalAmount}` : ''}`}</Text>
+                      <Text style={{ fontSize: 10, color: Colors.textTertiary, marginTop: 4 }}>{time} • Rs. {o.totalAmount}</Text>
                     </View>
                     <OrderStatusBadge status={o.orderStatus} />
                   </View>
@@ -125,12 +134,6 @@ export default function Orders() {
               );
             })
           )}
-          {orders.some((o: any) => ['PICKED_UP'].includes(o.orderStatus)) && (
-            <TouchableOpacity onPress={() => { const active = orders.find((o: any) => ['PICKED_UP'].includes(o.orderStatus)); if (active) router.push(`/(customer)/order-tracking/${active.id}` as any); }} style={styles.trackBtn}>
-              <Feather name="map-pin" size={16} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Track Live Order</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       )}
     </View>
@@ -138,20 +141,21 @@ export default function Orders() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
-  action: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12 },
-  actionText: { fontSize: 13, fontWeight: '600', color: Colors.textMedium },
-  trackBtn: {
-    flexDirection: 'row',
+  header: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
+  title: { fontSize: 18, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
+  subtitle: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 1, fontWeight: '500' },
+  logoWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primaryBg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: Radius.xl,
-    marginTop: 4,
-    ...Shadow.primary,
+    overflow: 'hidden',
   },
+  logoInitial: { fontSize: 14, fontWeight: '800', color: Colors.primary },
+  action: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 9 },
+  actionText: { fontSize: 12, fontWeight: '600', color: Colors.textMedium },
 });

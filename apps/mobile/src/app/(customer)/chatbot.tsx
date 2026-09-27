@@ -85,7 +85,7 @@ export default function ChatbotScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => goBack('/(customer)/(tabs)')} style={styles.backBtn} activeOpacity={0.85}>
-            <Feather name="arrow-left" size={18} color={Colors.textDark} />
+            <Feather name="arrow-left" size={16} color={Colors.textDark} />
           </TouchableOpacity>
           <View>
             <View style={styles.titleRow}>
@@ -106,7 +106,7 @@ export default function ChatbotScreen() {
         >
           <Feather
             name="trash-2"
-            size={18}
+            size={16}
             color={messages.length > 0 ? '#EF4444' : Colors.textTertiary}
           />
         </TouchableOpacity>
@@ -125,7 +125,7 @@ export default function ChatbotScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <View style={styles.emptyIcon}>
-              <Feather name="message-circle" size={32} color={Colors.primary} />
+              <Feather name="message-circle" size={26} color={Colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>Ask me anything!</Text>
             <Text style={styles.emptyDesc}>I can help you find restaurants, check menus, track orders, and more.</Text>
@@ -196,17 +196,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 52,
-    paddingBottom: 14,
+    paddingTop: 44,
+    paddingBottom: 10,
     backgroundColor: Colors.white,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
     ...Shadow.xs,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: {
-    width: 38,
-    height: 38,
+    width: 32,
+    height: 32,
     borderRadius: Radius.full,
     backgroundColor: Colors.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -215,21 +215,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.xs,
   },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontSize: 18, fontWeight: '800' as const, color: Colors.textDark, letterSpacing: -0.3 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  title: { fontSize: 16, fontWeight: '800' as const, color: Colors.textDark, letterSpacing: -0.3 },
   betaBadge: {
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
     borderColor: '#FECACA',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
     borderRadius: Radius.full,
   },
-  betaText: { fontSize: 10, fontWeight: '700' as const, color: Colors.primary, letterSpacing: 0.5 },
-  subtitle: { fontSize: 11, color: Colors.textTertiary, marginTop: 2, fontWeight: '500' as const },
+  betaText: { fontSize: 9, fontWeight: '700' as const, color: Colors.primary, letterSpacing: 0.5 },
+  subtitle: { fontSize: 10.5, color: Colors.textTertiary, marginTop: 1, fontWeight: '500' as const },
   trashBtn: {
-    width: 38,
-    height: 38,
+    width: 32,
+    height: 32,
     borderRadius: Radius.full,
     backgroundColor: Colors.background,
     alignItems: 'center',
@@ -238,42 +238,42 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   list: { flex: 1 },
-  listContent: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
-  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 64, paddingHorizontal: 24 },
+  listContent: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12 },
+  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 56, paddingHorizontal: 20 },
   emptyIcon: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
     borderColor: '#FECACA',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyTitle: { marginTop: 16, fontSize: 18, fontWeight: '700' as const, color: Colors.textDark },
-  emptyDesc: { marginTop: 6, fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18, paddingHorizontal: 8 },
-  emptyChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 18, justifyContent: 'center' },
+  emptyTitle: { marginTop: 12, fontSize: 15, fontWeight: '700' as const, color: Colors.textDark },
+  emptyDesc: { marginTop: 4, fontSize: 12, color: Colors.textSecondary, textAlign: 'center', lineHeight: 17, paddingHorizontal: 8 },
+  emptyChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 14, justifyContent: 'center' },
   emptyChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: Radius.full,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadow.xs,
   },
-  emptyChipText: { fontSize: 12, fontWeight: '600' as const, color: Colors.textDark },
-  quickWrap: { paddingHorizontal: 16, paddingBottom: 8, backgroundColor: Colors.background },
-  typingWrap: { alignItems: 'flex-start', marginBottom: 12 },
+  emptyChipText: { fontSize: 11, fontWeight: '600' as const, color: Colors.textDark },
+  quickWrap: { paddingHorizontal: 14, paddingBottom: 6, backgroundColor: Colors.background },
+  typingWrap: { alignItems: 'flex-start', marginBottom: 10 },
   typingBubble: {
     backgroundColor: Colors.white,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
     borderRadius: Radius.xl,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     ...Shadow.xs,
   },
-  dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.textTertiary },
+  dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.textTertiary },
 });

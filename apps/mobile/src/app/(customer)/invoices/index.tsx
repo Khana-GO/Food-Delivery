@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '800',
     color: Colors.white,
     letterSpacing: -0.3,
   },
   headerSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
     fontWeight: '500',
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
@@ -227,13 +227,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: Colors.textDark,
     marginBottom: 6,
   },
   emptySub: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 18,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   exploreBtnText: {
     color: Colors.white,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
   listContent: {
     padding: 16,
@@ -286,13 +286,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderMedium,
   },
   invoiceNumber: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: Colors.textDark,
     letterSpacing: -0.2,
   },
   restaurantName: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '500',
     marginTop: 2,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   cardDivider: {
@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textTertiary,
     fontWeight: '500',
   },
   totalAmount: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: Colors.primary,
     letterSpacing: -0.3,

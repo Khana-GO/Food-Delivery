@@ -34,11 +34,11 @@ export const QuickReplies = ({ replies, onSelect, isDisabled }: QuickRepliesProp
 };
 
 const styles = StyleSheet.create({
-  scroll: { marginTop: 8 },
-  content: { gap: 8, paddingRight: 8 },
+  scroll: { marginTop: 4 },
+  content: { gap: 6, paddingRight: 8 },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: Radius.full,
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
@@ -46,5 +46,5 @@ const styles = StyleSheet.create({
     ...Shadow.xs,
   },
   chipDisabled: { opacity: 0.5 },
-  chipText: { fontSize: 13, fontWeight: '600' as const, color: Colors.primary, letterSpacing: 0.1 },
+  chipText: { fontSize: 11.5, fontWeight: '600' as const, color: Colors.primary, letterSpacing: 0.1 },
 });

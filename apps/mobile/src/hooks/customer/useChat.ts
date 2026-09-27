@@ -43,7 +43,7 @@ export const useChat = () => {
         );
 
         // Update loading message with response
-        updateLastMessage(response.response, response.quickReplies);
+        updateLastMessage(response.response, response.quickReplies, response.data);
 
         // Save session ID
         if (response.sessionId) {

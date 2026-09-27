@@ -392,6 +392,7 @@ export interface Order {
   customerPhone: string;
   restaurantId: string;
   restaurantName: string;
+  restaurantLogoUrl?: string;
   restaurantAddress: string;
   driverId?: string;
   driverName?: string;
@@ -559,6 +560,7 @@ export interface ChatMessage {
   quickReplies?: string[];
   isLoading?: boolean;
   error?: boolean;
+  data?: any;
 }
 
 export interface ChatRequest {

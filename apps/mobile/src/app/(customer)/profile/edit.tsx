@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { goBack } from '@/lib/navigation';
+import { sanitizePhone, validatePhone } from '@/lib/phone';
 
 const profileSchema = z.object({
   firstName: z.string().trim().min(2, 'At least 2 characters').max(50),
@@ -19,7 +20,9 @@ const profileSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || /^[0-9]{10}$/.test(v), 'Phone must be 10 digits'),
+    .refine((v) => !v || validatePhone(v) === null, {
+      message: 'Enter a valid 10-digit mobile number',
+    }),
 });
 
 type FormData = z.infer<typeof profileSchema>;
@@ -101,7 +104,7 @@ export default function EditProfileScreen() {
               <Field label="First Name *" error={errors.firstName} value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} placeholder="Enter first name" icon="user" />
               <Field label="Last Name *" error={errors.lastName} value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} placeholder="Enter last name" icon="user" />
               <Field label="Email" error={undefined} value={form.email ?? ''} onChange={() => {}} placeholder="you@example.com" icon="mail" keyboardType="email-address" autoCapitalize="none" editable={false} hint="Email cannot be changed" />
-              <Field label="Phone" error={errors.phone} value={form.phone ?? ''} onChange={(v) => setForm({ ...form, phone: v.replace(/[^0-9]/g, '').slice(0, 10) })} placeholder="98XXXXXXXX" icon="phone" keyboardType="phone-pad" />
+              <Field label="Phone" error={errors.phone} value={form.phone ?? ''} onChange={(v) => setForm({ ...form, phone: sanitizePhone(v) })} placeholder="98XXXXXXXX" icon="phone" keyboardType="phone-pad" hint={user?.phone ? undefined : 'Required to place an order'} />
             </PremiumCard>
 
             <View style={{ marginTop: 16 }}>

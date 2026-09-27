@@ -9,16 +9,35 @@ import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import AnimatedPage from '@/components/ui/AnimatedPage';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  PhoneRequiredModal,
+  PhoneRequiredBanner,
+} from '@/components/customer/PhoneRequiredModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPhone } from '@/lib/phone';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { goBack } from '@/lib/navigation';
 
 export default function CartScreen() {
+  const { user } = useAuth();
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart, restaurantId } = useCartStore();
   const deliveryFee = 50;
   const grandTotal = totalPrice + deliveryFee;
   const [confirmClear, setConfirmClear] = useState(false);
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+
+  // Google sign-ups have no phone number, and the API rejects orders without one.
+  const missingPhone = !hasPhone(user);
 
   const handleClear = () => setConfirmClear(true);
+
+  const handleCheckout = () => {
+    if (missingPhone) {
+      setPhoneModalOpen(true);
+      return;
+    }
+    router.push('/(customer)/checkout' as any);
+  };
 
   if (items.length === 0) {
     return (
@@ -73,6 +92,10 @@ export default function CartScreen() {
               <Text style={styles.secureDesc}>Only from verified restaurants • Fresh & hygienic</Text>
             </View>
           </View>
+
+          {missingPhone ? (
+            <PhoneRequiredBanner onPress={() => setPhoneModalOpen(true)} />
+          ) : null}
 
           {items.map((item) => (
             <PremiumCard key={item.menuItemId} style={styles.itemCard as any}>
@@ -136,13 +159,32 @@ export default function CartScreen() {
 
       {/* Sticky checkout – premium */}
       <View style={styles.checkoutBar}>
-        <View>
-          <Text style={styles.totalLabel}>TOTAL</Text>
-          <Text style={styles.totalValue}>Rs. {grandTotal}</Text>
-          <Text style={styles.totalSub}>{totalItems} items • Free packaging</Text>
+        {missingPhone ? (
+          <TouchableOpacity
+            onPress={() => setPhoneModalOpen(true)}
+            activeOpacity={0.85}
+            style={styles.phoneNotice}
+          >
+            <Feather name="phone" size={12} color="#B45309" />
+            <Text style={styles.phoneNoticeText}>Add a phone number to check out</Text>
+          </TouchableOpacity>
+        ) : null}
+        <View style={styles.checkoutRow}>
+          <View>
+            <Text style={styles.totalLabel}>TOTAL</Text>
+            <Text style={styles.totalValue}>Rs. {grandTotal}</Text>
+            <Text style={styles.totalSub}>{totalItems} items • Free packaging</Text>
+          </View>
+          <Button label="Checkout" onPress={handleCheckout} style={{ paddingHorizontal: 28, borderRadius: Radius.full }} />
         </View>
-        <Button label="Checkout" onPress={() => router.push('/(customer)/checkout' as any)} style={{ paddingHorizontal: 28, borderRadius: Radius.full }} />
       </View>
+
+      <PhoneRequiredModal
+        visible={phoneModalOpen}
+        onClose={() => setPhoneModalOpen(false)}
+        dismissLabel="Continue browsing"
+        source="cart"
+      />
 
       <ConfirmDialog
         visible={confirmClear}
@@ -259,18 +301,29 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 10,
     paddingBottom: 18,
     backgroundColor: 'rgba(255,255,255,0.98)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E2E8F0',
     ...Shadow.lg,
   },
+  checkoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+  },
   totalLabel: { fontSize: 10, color: Colors.textTertiary, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
   totalValue: { fontSize: 18, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 },
   totalSub: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginTop: 1 },
+  phoneNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+  },
+  phoneNoticeText: { fontSize: 12, fontWeight: '600', color: '#B45309' },
 });

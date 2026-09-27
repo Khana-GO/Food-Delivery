@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "KhanaGo",
-    "slug": "khanago",
+    "slug": "khanaGo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo/logo.png",
@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.khanago.app",
+      "bundleIdentifier": "com.khanaGo.foodDelivery",
       "supportsTablet": true
     },
     "android": {
@@ -20,7 +20,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.khanago.app"
+      "package": "com.khanago.app",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -56,6 +63,12 @@
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6d033769-b825-42da-a9de-43ccb3548b9b"
+      }
     }
   }
 }

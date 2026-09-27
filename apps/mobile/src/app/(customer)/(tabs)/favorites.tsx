@@ -22,7 +22,7 @@ export default function FavoritesScreen() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={{ color: Colors.textSecondary, marginTop: 10, fontSize: 13, fontWeight: '500' }}>Loading favorites...</Text>
+        <Text style={{ color: Colors.textSecondary, marginTop: 10, fontSize: 12, fontWeight: '500' }}>Loading favorites...</Text>
       </View>
     );
   }
@@ -53,10 +53,10 @@ export default function FavoritesScreen() {
           if (!restaurant) {
             return (
               <PremiumCard>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.textDark }}>Restaurant unavailable</Text>
-                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>ID: {item.restaurantId}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.textDark }}>Restaurant unavailable</Text>
+                <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 4 }}>ID: {item.restaurantId}</Text>
                 <TouchableOpacity onPress={() => handleRemove(item.restaurantId)} style={{ marginTop: 12, alignSelf: 'flex-start', backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>Remove</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>Remove</Text>
                 </TouchableOpacity>
               </PremiumCard>
             );
@@ -81,8 +81,8 @@ export default function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, backgroundColor: Colors.primary, borderBottomLeftRadius: Radius['3xl'], borderBottomRightRadius: Radius['3xl'] },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
+  title: { fontSize: 20, fontWeight: '800', color: Colors.white, letterSpacing: -0.4 },
+  subtitle: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   errorBox: { marginHorizontal: 16, marginTop: 12, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 12, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'center' },
-  errorText: { flex: 1, fontSize: 13, color: '#991B1B', fontWeight: '500' },
+  errorText: { flex: 1, fontSize: 12, color: '#991B1B', fontWeight: '500' },
 });

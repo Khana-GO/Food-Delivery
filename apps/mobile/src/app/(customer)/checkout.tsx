@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -16,6 +16,11 @@ import { getApiErrorMessage } from '@/lib/api-error';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  PhoneRequiredModal,
+  PhoneRequiredBanner,
+} from '@/components/customer/PhoneRequiredModal';
+import { hasPhone } from '@/lib/phone';
 import { goBack } from '@/lib/navigation';
 
 export default function CheckoutScreen() {
@@ -24,13 +29,19 @@ export default function CheckoutScreen() {
   const { addresses } = useAddressStore();
   const { setSelectedAddress } = useAddressStore();
   const { selectedAddressId, paymentMethod, notes, setSelectedAddressId, setPaymentMethod, setNotes, setProcessing, isProcessing } = useCheckoutStore();
-  const { mutate: createOrder, isPending: isCreating } = useCreateOrder();
+  const { mutate: createOrder, isPending: isCreating } = useCreateOrder({
+    onPhoneRequired: () => setPhoneModalOpen(true),
+  });
   const { refetch: refetchAddresses } = useAddresses();
 
   const [isValidating, setIsValidating] = useState(false);
   const [isPlacingOnline, setIsPlacingOnline] = useState(false);
   const [backendCart, setBackendCart] = useState<any>(null);
   const [deleteAddressId, setDeleteAddressId] = useState<string | null>(null);
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+
+  // Google sign-ups have no phone number, and the API rejects orders without one.
+  const missingPhone = !hasPhone(user);
 
   // Add this state
 const [promoCode, setPromoCode] = useState('');
@@ -64,7 +75,7 @@ const [promoError, setPromoError] = useState('');
     }
   }, [addresses, selectedAddressId]);
 
-  const validateCart = useCallback(async (): Promise<boolean> => {
+  const validateCart = async (): Promise<boolean> => {
     setIsValidating(true);
     try {
       const cartItems = items.map((item) => ({
@@ -92,18 +103,15 @@ const [promoError, setPromoError] = useState('');
     } finally {
       setIsValidating(false);
     }
-  }, [items]);
+  };
 
   const handlePlaceOrder = async () => {
     if (!user) {
       Alert.alert('Sign In Required', 'Please sign in to place an order');
       return;
     }
-    if (!user.phone) {
-      Alert.alert(
-        'Phone Number Required',
-        'Please add your phone number in your profile before placing an order.',
-      );
+    if (missingPhone) {
+      setPhoneModalOpen(true);
       return;
     }
     if (!selectedAddressId) {
@@ -231,6 +239,23 @@ const [promoError, setPromoError] = useState('');
 
 
       <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+        {/* Contact number — ordering is blocked until this is filled in */}
+        {missingPhone ? (
+          <View className="mb-4">
+            <PhoneRequiredBanner onPress={() => setPhoneModalOpen(true)} />
+          </View>
+        ) : (
+          <View className="flex-row items-center gap-2 mb-4 px-3 py-2.5 border border-gray-200 bg-white rounded-xl">
+            <Feather name="phone" size={13} color="#16A34A" />
+            <Text className="flex-1 text-xs text-gray-500" numberOfLines={1}>
+              {user?.phone} — the rider will call this number on delivery
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/(customer)/profile/edit' as any)}>
+              <Text className="text-xs font-semibold text-primary">Edit</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Address Section */}
         <View className="mb-4">
           <View className="flex-row items-center justify-between mb-3">
@@ -355,7 +380,18 @@ const [promoError, setPromoError] = useState('');
         </TouchableOpacity>
         {addresses.length === 0 ? <Text className="mt-2 text-xs text-center text-red-500">Please add a delivery address</Text> : null}
         {belowMinimum ? <Text className="mt-2 text-xs text-center text-red-500">Add more items to meet minimum</Text> : null}
+        {missingPhone && (
+          <TouchableOpacity onPress={() => setPhoneModalOpen(true)} className="mt-2 flex-row items-center justify-center gap-1.5">
+            <Feather name="phone" size={12} color="#B45309" />
+            <Text className="text-xs text-center font-semibold text-amber-700">Add a phone number to place this order</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      <PhoneRequiredModal
+        visible={phoneModalOpen}
+        onClose={() => setPhoneModalOpen(false)}
+      />
 
       <ConfirmDialog
         visible={!!deleteAddressId}

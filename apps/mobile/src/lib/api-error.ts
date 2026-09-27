@@ -31,3 +31,24 @@ export const getApiErrorMessage = (
 
   return fallback;
 };
+
+/**
+ * The API rejects order creation with a `PHONE_REQUIRED` error code when the
+ * account has no phone number (e.g. a Google sign-up). Callers use this to send
+ * the customer to the "add phone number" flow instead of a generic error alert.
+ */
+export const isPhoneRequiredError = (error: unknown): boolean => {
+  const data = (error as AxiosError)?.response?.data as
+    | { errorCode?: string; message?: string | string[] }
+    | undefined;
+
+  if (data?.errorCode === 'PHONE_REQUIRED') return true;
+
+  // Fall back to matching the message in case a proxy strips the error code.
+  const messages = Array.isArray(data?.message)
+    ? data!.message as string[]
+    : typeof data?.message === 'string'
+      ? [data!.message as string]
+      : [];
+  return messages.some((m) => /phone number is required/i.test(m));
+};

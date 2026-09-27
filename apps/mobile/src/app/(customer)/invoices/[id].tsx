@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '500',
     textAlign: 'center',
@@ -318,13 +318,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: Colors.textDark,
     marginBottom: 6,
   },
   errorSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 18,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   exploreBtnText: {
     color: Colors.white,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
   headerSafe: {
     backgroundColor: Colors.primary,
@@ -368,13 +368,13 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '800',
     color: Colors.white,
     letterSpacing: -0.3,
   },
   headerSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
     fontWeight: '500',
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   orderBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 11,
   },
   scrollContent: {
     padding: 16,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statusLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '600',
     marginBottom: 6,
@@ -433,18 +433,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   statusBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   totalLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textTertiary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   totalValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: Colors.primary,
     letterSpacing: -0.5,
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#F1F5F9',
   },
   orderStatusLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   orderStatusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   card: {
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: Colors.textDark,
     marginBottom: 12,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
   },
   infoLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textTertiary,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   infoValue: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textDark,
     fontWeight: '600',
   },
@@ -534,13 +534,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textTertiary,
     fontWeight: '600',
     marginBottom: 2,
   },
   timelineValue: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textDark,
     fontWeight: '600',
   },
@@ -551,12 +551,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   billLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
   billValue: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textDark,
     fontWeight: '600',
   },
@@ -572,12 +572,12 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   billTotalLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: Colors.textDark,
   },
   billTotalValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: Colors.primary,
     letterSpacing: -0.3,
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     borderColor: '#FEE2E2',
   },
   restLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textTertiary,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   restName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.textDark,
   },

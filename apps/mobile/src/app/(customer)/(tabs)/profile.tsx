@@ -63,6 +63,11 @@ export default function CustomerProfile() {
 
   const handleEditProfile = useCallback(() => router.push('/(customer)/profile/edit' as any), []);
 
+  const handleAddPhone = useCallback(
+    () => router.push('/(customer)/profile/phone?source=profile' as any),
+    [],
+  );
+
   const handlePickImage = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -125,6 +130,7 @@ export default function CustomerProfile() {
           onEditPress={handleEditProfile}
           onImagePress={handlePickImage}
           onDeleteImage={handleDeleteImage}
+          onAddPhonePress={handleAddPhone}
           isUploading={isUploading || isDeleting}
         />
 

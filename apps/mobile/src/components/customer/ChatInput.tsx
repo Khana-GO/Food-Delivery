@@ -45,7 +45,7 @@ export const ChatInput = ({ onSend, isSending }: ChatInputProps) => {
         {isSending ? (
           <ActivityIndicator size="small" color="#FFF" />
         ) : (
-          <Feather name="send" size={18} color={canSend ? '#FFF' : Colors.textTertiary} />
+          <Feather name="send" size={16} color={canSend ? '#FFF' : Colors.textTertiary} />
         )}
       </TouchableOpacity>
     </View>
@@ -56,9 +56,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     backgroundColor: Colors.white,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.border,
@@ -69,22 +69,22 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 2,
-    minHeight: 48,
+    minHeight: 40,
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textDark,
     fontWeight: '500' as const,
-    maxHeight: 96,
-    paddingVertical: 10,
+    maxHeight: 80,
+    paddingVertical: 8,
   },
   sendBtn: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

@@ -4,8 +4,18 @@ import { WebView } from 'react-native-webview';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { api } from '@/lib/axios';
+import { isPhoneRequiredError } from '@/lib/api-error';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { goBack } from '@/lib/navigation';
+
+/** The API refuses to charge when the account has no phone number on file. */
+const handlePhoneRequired = () => {
+  Alert.alert(
+    'Phone Number Required',
+    'Add your mobile number before paying so the restaurant and rider can reach you about this order.',
+  );
+  router.replace('/(customer)/profile/phone?source=checkout' as any);
+};
 
 /**
  * eSewa WebView – pre-payment flow
@@ -84,6 +94,10 @@ export default function EsewaWebView() {
       setHtml(formHtml);
     } catch (e: any) {
       console.error('[eSewa] init failed', e?.response?.data || e.message);
+      if (isPhoneRequiredError(e)) {
+        handlePhoneRequired();
+        return;
+      }
       Alert.alert('Payment Error', e?.response?.data?.message || 'Failed to initialize eSewa');
       setIsError(true);
     }
@@ -163,6 +177,10 @@ export default function EsewaWebView() {
       }
     } catch (e: any) {
       console.error('[eSewa] verify failed', e?.response?.data || e.message);
+      if (isPhoneRequiredError(e)) {
+        handlePhoneRequired();
+        return;
+      }
       Alert.alert('Verification Error', e?.response?.data?.message || 'Failed to verify payment. Contact support.');
       router.replace('/(customer)/checkout/failure' as any);
     } finally {
@@ -200,6 +218,10 @@ export default function EsewaWebView() {
       }
     } catch (e: any) {
       console.error('[eSewa] verifyWithStatus failed', e?.response?.data || e.message);
+      if (isPhoneRequiredError(e)) {
+        handlePhoneRequired();
+        return;
+      }
       Alert.alert('Verification Error', 'Failed to verify payment. Contact support.');
       router.replace('/(customer)/checkout/failure' as any);
     } finally {

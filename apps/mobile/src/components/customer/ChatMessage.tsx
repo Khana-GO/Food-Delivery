@@ -6,6 +6,7 @@ import {
 } from '@/types/chat.types';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 import { Feather } from '@expo/vector-icons';
+import { ChatCards } from '@/components/customer/ChatCards';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -79,20 +80,26 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
           )}
         </View>
       </View>
+      {!isUser && !message.isLoading && !message.error && message.data ? (
+        <View style={styles.cardsRow}>
+          <ChatCards data={message.data} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { marginBottom: 14, width: '100%' },
+  container: { marginBottom: 10, width: '100%' },
   alignEnd: { alignItems: 'flex-end' },
   alignStart: { alignItems: 'flex-start' },
-  messageRow: { flexDirection: 'row', alignItems: 'flex-end', maxWidth: '88%', gap: 8 },
+  messageRow: { flexDirection: 'row', alignItems: 'flex-end', maxWidth: '86%', gap: 6 },
   rowUser: { justifyContent: 'flex-end' },
   rowAssistant: { justifyContent: 'flex-start' },
+  cardsRow: { marginTop: 6, width: '86%', paddingLeft: 28 },
   avatarWrap: {
-    width: 26,
-    height: 26,
+    width: 22,
+    height: 22,
     borderRadius: Radius.full,
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
@@ -103,9 +110,9 @@ const styles = StyleSheet.create({
   },
   bubble: {
     flexShrink: 1,
-    borderRadius: Radius.xl,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    borderRadius: Radius.lg,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
     borderWidth: StyleSheet.hairlineWidth,
   },
   bubbleUser: {
@@ -126,13 +133,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
-  loadingText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' as const },
-  content: { fontSize: 13.5, lineHeight: 21, fontWeight: '400' as const },
+  loadingText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' as const },
+  content: { fontSize: 12.5, lineHeight: 18, fontWeight: '400' as const },
   contentUser: { color: '#FFF', fontWeight: '500' as const },
   contentAssistant: { color: Colors.textDark },
   boldText: { fontWeight: '700' as const, color: Colors.textDark },
   contentError: { color: Colors.error },
-  time: { fontSize: 10, marginTop: 6, fontWeight: '500' as const },
+  time: { fontSize: 9, marginTop: 4, fontWeight: '500' as const },
   timeUser: { color: 'rgba(255,255,255,0.75)', textAlign: 'right' },
   timeAssistant: { color: Colors.textTertiary },
 });

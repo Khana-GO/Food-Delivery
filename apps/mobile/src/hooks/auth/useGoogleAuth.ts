@@ -9,6 +9,7 @@ import {
 } from '@/services/auth/google-auth.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveAccessToken, saveRefreshToken } from '@/lib/secure-storage';
+import { hasPhone } from '@/lib/phone';
 
 import { getHomeRoute } from '@/lib/roles';
 import { toast } from '@/components/ui/toast';
@@ -32,6 +33,17 @@ export const useGoogleAuth = () => {
 
       // ─── Update AuthContext ───
       setUser(authResult.user);
+
+      // ─── Google accounts are created without a phone number, and ordering is
+      //    gated on having one. Ask for it right away so the customer is not
+      //    surprised at checkout. Skippable — they can keep browsing. ───
+      if (authResult.user?.role === 'CUSTOMER' && !hasPhone(authResult.user)) {
+        router.replace({
+          pathname: '/(customer)/profile/phone',
+          params: { source: 'google' },
+        } as any);
+        return;
+      }
 
       // ─── Navigate to role-based home route ───
       const homeRoute = getHomeRoute(authResult.user.role);
