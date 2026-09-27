@@ -1886,7 +1886,8 @@ export const BUTWAL_RESTAURANTS: RestaurantSeed[] = [
           },
           {
             name: 'Mango Lassi Special',
-            description: 'Sweet yoghurt blended with fresh Alphonso mango pulp.',
+            description:
+              'Sweet yoghurt blended with fresh Alphonso mango pulp.',
             price: '130.00',
             imageUrl:
               'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80',
@@ -4037,7 +4038,7 @@ async function seed() {
     console.log(`\nProcessing restaurant: ${r.name} (${r.slug})`);
 
     // Check if restaurant exists by slug or name
-    let existing = await sql`
+    const existing = await sql`
       SELECT id FROM restaurants WHERE slug = ${r.slug} OR name = ${r.name} LIMIT 1
     `;
 
@@ -4101,7 +4102,7 @@ async function seed() {
 
     // Seed categories and items
     for (const cat of r.categories) {
-      let existingCat = await sql`
+      const existingCat = await sql`
         SELECT id FROM menu_categories
         WHERE restaurant_id = ${restId} AND name = ${cat.name}
         LIMIT 1

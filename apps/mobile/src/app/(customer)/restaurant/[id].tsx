@@ -142,13 +142,13 @@ export default function RestaurantDetailScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 17, fontWeight: '800', color: Colors.textDark, flex: 1, marginRight: 8, letterSpacing: -0.3 }} numberOfLines={1}>{restaurant.name}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textDark, flex: 1, marginRight: 8, letterSpacing: -0.3 }} numberOfLines={1}>{restaurant.name}</Text>
                   <View style={[styles.badge, restaurant.isOpen ? styles.badgeOpen : styles.badgeClosed]}>
                     <View style={[styles.dot, restaurant.isOpen ? { backgroundColor: '#15803D' } : { backgroundColor: '#B91C1C' }]} />
                     <Text style={[styles.badgeText, restaurant.isOpen ? { color: '#15803D' } : { color: '#B91C1C' }]}>{restaurant.isOpen ? 'Open' : 'Closed'}</Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' }}>{restaurant.cuisineType}</Text>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2, fontWeight: '500' }}>{restaurant.cuisineType}</Text>
               </View>
             </View>
 
@@ -162,7 +162,7 @@ export default function RestaurantDetailScreen() {
               <Stat label="Min order" value={`${restaurant.minimumOrderAmount || 0}`} sub="Minimum" />
             </View>
 
-            {restaurant.description ? <Text style={{ marginTop: 12, fontSize: 13, color: Colors.textSecondary, lineHeight: 19 }}>{restaurant.description}</Text> : null}
+            {restaurant.description ? <Text style={{ marginTop: 10, fontSize: 12, color: Colors.textSecondary, lineHeight: 18 }}>{restaurant.description}</Text> : null}
           </View>
 
           {/* Search by categories / dishes */}
@@ -187,13 +187,12 @@ export default function RestaurantDetailScreen() {
 
           {/* Categories – chips with search integration */}
           {menuData && menuData.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingTop: 14 }} bounces={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 6, paddingTop: 10 }} bounces={false}>
               {menuData.map((group) => (
                 <CategoryChip
                   key={group.categoryId}
                   label={group.categoryName || 'Category'}
-                  icon={getCategoryIcon(group.categoryName)}
-                  count={group.items.length}
+                  size="sm"
                   isSelected={activeCategoryId === group.categoryId}
                   onPress={() => handleCategoryPress(group.categoryId)}
                 />
@@ -210,10 +209,10 @@ export default function RestaurantDetailScreen() {
           {/* Menu Items */}
           {currentCategory ? (
             <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 }}>{currentCategory.categoryName || 'Menu'}</Text>
-                <View style={{ backgroundColor: Colors.textDark, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full }}>
-                  <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '700' }}>{filteredItems.length} items</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textDark, letterSpacing: -0.3 }}>{currentCategory.categoryName || 'Menu'}</Text>
+                <View style={{ backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full }}>
+                  <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '700' }}>{filteredItems.length} items</Text>
                 </View>
               </View>
 
@@ -241,15 +240,15 @@ export default function RestaurantDetailScreen() {
           ) : null}
 
           {/* Reviews Section */}
-            <View className="mt-6">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-lg font-bold text-black">Reviews</Text>
+            <View className="mt-4">
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-base font-bold text-black">Reviews</Text>
                 <TouchableOpacity
                   className="flex-row items-center gap-1"
                   onPress={() => router.push(`/(customer)/review/create?restaurantId=${restaurantId}` as any)}
                 >
-                  <Feather name="edit-2" size={16} color="#E23744" />
-                  <Text className="text-sm font-semibold text-primary">Write a Review</Text>
+                  <Feather name="edit-2" size={14} color="#E23744" />
+                  <Text className="text-xs font-semibold text-primary">Write a Review</Text>
                 </TouchableOpacity>
               </View>
 
@@ -261,10 +260,10 @@ export default function RestaurantDetailScreen() {
 
               {reviewsData && reviewsData.total > 3 ? (
                 <TouchableOpacity
-                  className="items-center py-3 mt-2 bg-primary/10 rounded-xl"
+                  className="items-center py-2 mt-1 bg-primary/10 rounded-lg"
                   onPress={() => router.push(`/(customer)/reviews/${restaurantId}` as any)}
                 >
-                  <Text className="font-semibold text-primary">View All Reviews</Text>
+                  <Text className="font-semibold text-primary text-sm">View All Reviews</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -323,9 +322,9 @@ export default function RestaurantDetailScreen() {
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', minWidth: 0, paddingHorizontal: 2 }}>
-      <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textDark }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 2, fontWeight: '700', letterSpacing: 0.3, textTransform: 'uppercase' }} numberOfLines={1}>{label}</Text>
-      <Text style={{ fontSize: 10, color: Colors.textTertiary }} numberOfLines={1}>{sub}</Text>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.textDark }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={{ fontSize: 9, color: Colors.textSecondary, marginTop: 1, fontWeight: '700', letterSpacing: 0.3, textTransform: 'uppercase' }} numberOfLines={1}>{label}</Text>
+      <Text style={{ fontSize: 9, color: Colors.textTertiary }} numberOfLines={1}>{sub}</Text>
     </View>
   );
 }
@@ -371,16 +370,16 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
-    paddingHorizontal: 14,
+    height: 44,
+    paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: Radius.xl,
+    borderRadius: Radius.lg,
     borderWidth: 1.2,
     borderColor: '#E2E8F0',
-    gap: 10,
+    gap: 8,
     ...Shadow.xs,
   },
-  searchInput: { flex: 1, minWidth: 0 as any, fontSize: 14, color: Colors.textDark, paddingVertical: 0, fontWeight: '500' },
+  searchInput: { flex: 1, minWidth: 0 as any, fontSize: 13, color: Colors.textDark, paddingVertical: 0, fontWeight: '500' },
   heroBtnLeft: {
     position: 'absolute',
     top: 52,

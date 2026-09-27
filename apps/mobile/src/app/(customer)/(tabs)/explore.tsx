@@ -420,12 +420,12 @@ export default function Explore() {
       ) : null}
 
       {/* ─── Category Scroll Bar (when not searching or in All mode) ─── */}
-      {categories.length ? (
-        <View style={{ paddingVertical: 10, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }} bounces={false}>
+      {categories.length && !hasSearchQuery ? (
+        <View style={{ paddingVertical: 6, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }} bounces={false}>
             <CategoryChip
               label="All"
-              icon="🍽️"
+              size="sm"
               isSelected={cat === null}
               onPress={() => setCat(null)}
             />
@@ -433,7 +433,7 @@ export default function Explore() {
               <CategoryChip
                 key={c.id}
                 label={c.name}
-                icon={getCategoryIcon(c.name)}
+                size="sm"
                 isSelected={cat === c.id}
                 onPress={() => setCat(cat === c.id ? null : c.id)}
               />
@@ -729,20 +729,20 @@ const styles = StyleSheet.create({
   search: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
-    paddingHorizontal: 12,
-    marginTop: 10,
-    borderRadius: Radius.xl,
+    height: 40,
+    paddingHorizontal: 10,
+    marginTop: 8,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.white,
     borderWidth: 1.5,
     borderColor: 'transparent',
-    gap: 10,
-    ...Shadow.sm,
+    gap: 8,
+    ...Shadow.xs,
   },
   searchFocused: {
-    borderColor: '#FED7AA',
+    borderColor: Colors.primary,
   },
-  input: { flex: 1, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
+  input: { flex: 1, fontSize: 13, color: Colors.textDark, paddingVertical: 0 },
   filterPill: {
     flexDirection: 'row',
     alignItems: 'center',

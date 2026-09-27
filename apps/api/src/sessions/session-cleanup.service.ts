@@ -19,19 +19,23 @@ export class SessionCleanupService implements OnModuleInit {
 
   /** Run once shortly after boot so long-idle databases get cleaned too. */
   async onModuleInit() {
-    await this.runCleanup({ retries: 5, delayMs: 2000 });
+    await this.runCleanup({ retries: 5, baseDelayMs: 2000, maxDelayMs: 30000 });
   }
 
   // Every day at 03:00
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async handleDailyCleanup() {
-    await this.runCleanup();
+    await this.runCleanup({ retries: 3, baseDelayMs: 5000, maxDelayMs: 60000 });
   }
 
   private async runCleanup(
-    options: { retries?: number; delayMs?: number } = {},
+    options: {
+      retries?: number;
+      baseDelayMs?: number;
+      maxDelayMs?: number;
+    } = {},
   ) {
-    const { retries = 0, delayMs = 2000 } = options;
+    const { retries = 0, baseDelayMs = 2000, maxDelayMs = 30000 } = options;
     let attempt = 0;
 
     while (true) {
@@ -43,20 +47,60 @@ export class SessionCleanupService implements OnModuleInit {
         return;
       } catch (error) {
         attempt++;
-        if (attempt > retries) {
-          this.logger.error('Session cleanup failed', error as Error);
+        const isTransient = this.isTransientError(error);
+
+        if (attempt > retries || !isTransient) {
+          if (isTransient) {
+            this.logger.warn(
+              `Session cleanup failed after ${attempt} attempts (transient errors). Will retry on next scheduled run.`,
+            );
+          } else {
+            this.logger.error(
+              'Session cleanup failed with non-transient error',
+              error as Error,
+            );
+          }
           return;
         }
-        this.logger.warn(
-          `Session cleanup attempt ${attempt} failed, retrying in ${delayMs}ms`,
+
+        const delay = Math.min(
+          baseDelayMs * Math.pow(2, attempt - 1),
+          maxDelayMs,
         );
-        await sleepWithJitter(delayMs);
+        this.logger.warn(
+          `Session cleanup attempt ${attempt} failed (${(error as Error).message}), retrying in ${delay}ms`,
+        );
+        await sleepWithJitter(delay);
       }
     }
+  }
+
+  private isTransientError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+
+    const transientCodes = [
+      'EAI_AGAIN',
+      'ETIMEDOUT',
+      'ECONNRESET',
+      'ENOTFOUND',
+      'ENETUNREACH',
+    ];
+    const transientMessages = [
+      'getaddrinfo',
+      'connection timeout',
+      'socket hang up',
+      'network is unreachable',
+      'temporary failure',
+    ];
+
+    return (
+      transientCodes.some((code) => error.message.includes(code)) ||
+      transientMessages.some((msg) => error.message.toLowerCase().includes(msg))
+    );
   }
 }
 
 function sleepWithJitter(baseMs: number): Promise<void> {
-  const jitter = Math.floor(Math.random() * baseMs);
+  const jitter = Math.floor(Math.random() * baseMs * 0.3);
   return new Promise((resolve) => setTimeout(resolve, baseMs + jitter));
 }

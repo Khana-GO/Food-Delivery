@@ -104,7 +104,8 @@ export class AIService {
 
       // 1. User Profile
       if (user) {
-        const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+        const name =
+          `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
         parts.push(`User Name: ${name}`);
         if (user.phone) parts.push(`User Phone: ${user.phone}`);
       }
@@ -112,7 +113,9 @@ export class AIService {
       // 2. Saved Addresses
       if (addresses && addresses.length > 0) {
         const addrList = addresses
-          .map((a) => `${a.label || 'Home'}: ${a.addressLine || ''}, ${a.city || 'Kathmandu'}`.trim())
+          .map((a) =>
+            `${a.label || 'Home'}: ${a.addressLine || ''}, ${a.city || 'Kathmandu'}`.trim(),
+          )
           .join(' | ');
         parts.push(`Saved Delivery Addresses: ${addrList}`);
       }
@@ -120,7 +123,10 @@ export class AIService {
       // 3. Active Shopping Cart
       if (cart && cart.items && cart.items.length > 0) {
         const itemsStr = cart.items
-          .map((i) => `${i.quantity}x ${i.name} (Rs. ${i.totalPrice || i.unitPrice * i.quantity})`)
+          .map(
+            (i) =>
+              `${i.quantity}x ${i.name} (Rs. ${i.totalPrice || i.unitPrice * i.quantity})`,
+          )
           .join(', ');
         const estTotal = (cart.subtotal || 0) + (cart.deliveryFee || 0);
         parts.push(

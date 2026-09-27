@@ -1,4 +1,3 @@
-/* eslint-disable no-empty */
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { Injectable } from '@nestjs/common';
@@ -60,8 +59,7 @@ export class CartTools {
         } catch (error: any) {
           return JSON.stringify({
             error:
-              'Failed to retrieve cart: ' +
-              (error?.message || 'unknown error'),
+              'Failed to retrieve cart: ' + (error?.message || 'unknown error'),
           });
         }
       },
@@ -72,8 +70,7 @@ export class CartTools {
   getClearCartTool() {
     return new DynamicStructuredTool({
       name: 'clear_user_cart',
-      description:
-        "Clear all items from the user's active shopping cart.",
+      description: "Clear all items from the user's active shopping cart.",
       schema: z.object({}),
       func: async () => {
         try {
@@ -92,8 +89,7 @@ export class CartTools {
         } catch (error: any) {
           return JSON.stringify({
             error:
-              'Failed to clear cart: ' +
-              (error?.message || 'unknown error'),
+              'Failed to clear cart: ' + (error?.message || 'unknown error'),
           });
         }
       },

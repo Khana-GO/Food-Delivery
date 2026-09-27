@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, useWindowDimensions, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, useWindowDimensions, ActivityIndicator, StyleSheet, Keyboard } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { width } = useWindowDimensions();
   const isVeryCompact = width < 360;
+  const searchInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -41,6 +42,20 @@ export default function HomeScreen() {
     }, 200);
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  const handleSearchSubmit = useCallback(() => {
+    if (searchQuery.trim()) {
+      setIsSearchFocused(false);
+      Keyboard.dismiss();
+    }
+  }, [searchQuery]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setDebouncedQuery('');
+    setIsSearchFocused(false);
+    Keyboard.dismiss();
+  }, []);
 
   const { refetch: refetchDashboard, isRefetching: isDashboardRefetching } = useDashboard();
   const { refetch: refetchFavorites, isRefetching: isFavoritesRefetching } = useFavorites();
@@ -205,12 +220,6 @@ export default function HomeScreen() {
 
   const activeFilterLabel = selectedCategoryObj ? selectedCategoryObj.name : null;
 
-  const clearFilters = () => {
-    setSelectedCategory(null);
-    setSearchQuery('');
-    setDebouncedQuery('');
-  };
-
   if (isLoading && !recommendations.length && !featuredMenuItems.length) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -283,68 +292,55 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Search — launches full Explore Discovery */}
-            <TouchableOpacity
-              activeOpacity={0.88}
-              onPress={() => {
-                router.push({
-                  pathname: '/(customer)/(tabs)/explore' as any,
-                  params: { focus: 'true' },
-                });
-              }}
+            {/* Search — inline search with live filtering on Home */}
+            <View
               style={[
                 styles.searchWrap,
+                isSearchFocused && styles.searchFocused,
                 isVeryCompact && ({ height: 44, paddingHorizontal: 12 } as any),
               ]}
             >
-              <Feather name="search" size={isVeryCompact ? 16 : 18} color={Colors.primary} />
-              <Text
+              <Feather
+                name="search"
+                size={isVeryCompact ? 16 : 18}
+                color={isSearchFocused ? Colors.primary : '#94A3B8'}
+              />
+              <TextInput
+                ref={searchInputRef}
+                selectionColor="rgba(15,23,42,0.16)"
+                cursorColor="#334155"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                placeholder={isVeryCompact ? 'Search food or restaurants…' : 'Search dishes, restaurants, cuisines…'}
+                placeholderTextColor="#94A3B8"
                 style={[
                   styles.searchInput,
-                  { color: '#94A3B8', paddingTop: 12 },
+                  { color: Colors.textDark, lineHeight: isVeryCompact ? 16 : 18 },
                   isVeryCompact && ({ fontSize: 13 } as any),
                 ]}
-              >
-                {isVeryCompact ? 'Search food or restaurants…' : 'Search dishes, restaurants, cuisines…'}
-              </Text>
-              <View
-                style={{
-                  backgroundColor: '#FFF7ED',
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: Radius.full,
-                  borderWidth: 1,
-                  borderColor: '#FFEDD5',
-                }}
-              >
-                <Feather name="arrow-right" size={12} color={Colors.primary} />
-              </View>
-            </TouchableOpacity>
-
-            {/* Active filter pill */}
-            {activeFilterLabel || q ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                {activeFilterLabel ? (
-                  <View style={styles.activeFilterPill}>
-                    <Feather name="filter" size={12} color="#FFF" />
-                    <Text style={styles.activeFilterText}>{activeFilterLabel}</Text>
-                    <TouchableOpacity onPress={() => setSelectedCategory(null)} hitSlop={6} style={styles.activeFilterX}>
-                      <Feather name="x" size={12} color="#FFF" />
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-                {q ? (
-                  <View style={styles.activeFilterPillLight}>
-                    <Feather name="search" size={12} color={Colors.textDark} />
-                    <Text style={styles.activeFilterTextLight}>"{q}"</Text>
-                    <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={6}>
-                      <Feather name="x" size={12} color={Colors.textDark} />
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-                <TouchableOpacity onPress={clearFilters} style={styles.clearFilterBtn}>
-                  <Text style={styles.clearFilterText}>Clear all</Text>
+                allowFontScaling={false}
+                returnKeyType="search"
+                onSubmitEditing={handleSearchSubmit}
+              />
+              {searchQuery.length > 0 ? (
+                <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Feather name="x-circle" size={isVeryCompact ? 16 : 18} color="#94A3B8" />
                 </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Active filter pill for search only */}
+            {q ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                <View style={styles.activeFilterPillLight}>
+                  <Feather name="search" size={12} color={Colors.textDark} />
+                  <Text style={styles.activeFilterTextLight}>"{q}"</Text>
+                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={6}>
+                    <Feather name="x" size={12} color={Colors.textDark} />
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : null}
           </SafeAreaView>
@@ -355,20 +351,11 @@ export default function HomeScreen() {
           {categories.length > 0 ? (
             <View style={styles.categoriesSection}>
               <View style={styles.categoriesHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.categoriesTitle}>What's on your mind?</Text>
+                <View style={styles.categoriesHeaderLead}>
+                  <Text style={styles.categoriesTitle} numberOfLines={1}>What's on your mind?</Text>
                 </View>
-                {selectedCategory ? (
-                  <TouchableOpacity
-                    onPress={() => setSelectedCategory(null)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={styles.resetCatBtn}
-                  >
-                    <Feather name="rotate-ccw" size={12} color={Colors.primary} />
-                    <Text style={styles.resetCatText}>View all food</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={styles.categoriesSub}>{categories.length} categories</Text>
+                {selectedCategory ? null : (
+                  <Text style={styles.categoriesSub} numberOfLines={1}>Categories</Text>
                 )}
               </View>
 
@@ -380,7 +367,7 @@ export default function HomeScreen() {
               >
                 <CategoryChip
                   label="All"
-                  icon="🍽️"
+                  size="sm"
                   isSelected={selectedCategory === null}
                   onPress={() => setSelectedCategory(null)}
                 />
@@ -388,8 +375,7 @@ export default function HomeScreen() {
                   <CategoryChip
                     key={category.id}
                     label={category.name}
-                    icon={getCategoryIcon(category.name)}
-                    count={categoryCounts[category.id]}
+                    size="sm"
                     isSelected={selectedCategory === category.id}
                     onPress={() =>
                       setSelectedCategory(selectedCategory === category.id ? null : category.id)
@@ -401,36 +387,7 @@ export default function HomeScreen() {
           ) : null}
 
           {/* ─── Category Spotlight Banner (shown when a category is tapped) ─── */}
-          {selectedCategory && selectedCategoryObj ? (
-            <View style={{ paddingHorizontal: 16, marginTop: 4, marginBottom: 8 }}>
-              <View style={styles.categorySpotlightCard}>
-                <View style={styles.categorySpotlightLeft}>
-                  <View style={styles.categorySpotlightIconWrap}>
-                    <Text style={{ fontSize: 26 }}>{getCategoryIcon(selectedCategoryObj.name)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.categorySpotlightTitle}>{selectedCategoryObj.name} specials</Text>
-                      <View style={styles.categorySpotlightBadge}>
-                        <Text style={styles.categorySpotlightBadgeText}>Filtered</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.categorySpotlightSub}>
-                      {filteredMenus.length} dishes · {filteredRecommendations.length} kitchens ready
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => setSelectedCategory(null)}
-                  style={styles.categorySpotlightClearBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Feather name="x" size={13} color="#EF4444" />
-                  <Text style={styles.categorySpotlightClearText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
+          
 
           {/* ═══════════════════════════════════════════════════════════════ */}
           {/* SCENARIO 1: A Category IS Selected -> Spotlight Dishes & Kitchens */}
@@ -441,16 +398,13 @@ export default function HomeScreen() {
               {filteredMenus.length > 0 ? (
                 <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
                   <View style={styles.sectionHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECACA' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FECACA', flexShrink: 0 }}>
                         <Text style={{ fontSize: 15 }}>{getCategoryIcon(selectedCategoryObj.name)}</Text>
                       </View>
-                      <Text style={styles.sectionTitle}>Must-Try {selectedCategoryObj.name}</Text>
-                      <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary }}>{filteredMenus.length} items</Text>
-                      </View>
+<Text style={styles.sectionTitle} numberOfLines={1}>Must-Try {selectedCategoryObj.name}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
+                    <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)} style={{ flexShrink: 0 }}>
                       <Text style={styles.sectionAction}>See all</Text>
                     </TouchableOpacity>
                   </View>
@@ -499,7 +453,7 @@ export default function HomeScreen() {
                 </View>
               ) : null}
 
-              {/* Kitchens serving this category */}
+{/* Kitchens serving this category */}
               {filteredRecommendations.length > 0 ? (
                 <View style={{ paddingHorizontal: 16, marginTop: 22 }}>
                   <View style={styles.sectionHeader}>
@@ -508,9 +462,6 @@ export default function HomeScreen() {
                         <Feather name="map-pin" size={14} color="#2563EB" />
                       </View>
                       <Text style={styles.sectionTitle}>Kitchens for {selectedCategoryObj.name}</Text>
-                      <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#BFDBFE' }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#2563EB' }}>{filteredRecommendations.length} kitchens</Text>
-                      </View>
                     </View>
                     <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
                       <Text style={styles.sectionAction}>See all</Text>
@@ -622,7 +573,7 @@ export default function HomeScreen() {
                     <Text style={styles.emptyInlineTitle}>No recommendations yet</Text>
                     <Text style={styles.emptyInlineSub}>{q ? `No kitchens match "${q}"` : 'Order more to get personalized picks'}</Text>
                     {q ? (
-                      <TouchableOpacity onPress={clearFilters} style={styles.emptyInlineBtn}>
+                      <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.emptyInlineBtn}>
                         <Text style={styles.emptyInlineBtnText}>Clear search</Text>
                       </TouchableOpacity>
                     ) : (
@@ -644,14 +595,11 @@ export default function HomeScreen() {
               {filteredMenus.length > 0 ? (
                 <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
                   <View style={styles.sectionHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FDBA74' }}>
                         <Feather name="grid" size={14} color="#EA580C" />
                       </View>
                       <Text style={styles.sectionTitle}>Trending Dishes</Text>
-                      <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: '#FECACA' }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary }}>{filteredMenus.length} items</Text>
-                      </View>
                     </View>
                     <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/explore' as any)}>
                       <Text style={styles.sectionAction}>See all</Text>
@@ -709,7 +657,7 @@ export default function HomeScreen() {
                   title={q ? 'No matches' : 'Welcome to KhanaGo!'}
                   description={q ? `Try clearing filters or search differently.` : 'Start exploring restaurants and discover delicious food near you.'}
                   actionLabel={q ? 'Clear filters' : 'Explore Restaurants'}
-                  onAction={() => (q ? clearFilters() : router.push('/(customer)/(tabs)/explore' as any))}
+                  onAction={() => (q ? setSearchQuery('') : router.push('/(customer)/(tabs)/explore' as any))}
                 />
               ) : null}
             </>
@@ -779,7 +727,12 @@ const styles = StyleSheet.create({
     gap: 10,
     ...Shadow.sm,
   },
-  searchInput: { flex: 1, minWidth: 0 as any, fontSize: 14, color: Colors.textDark, paddingVertical: 0 },
+  searchFocused: {
+    borderColor: Colors.primary,
+    borderWidth: 1.5,
+    ...Shadow.md,
+  },
+  searchInput: { flex: 1, minWidth: 0 as any, fontSize: 11, color: Colors.textDark, paddingVertical: 0 },
   activeFilterPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -831,9 +784,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     ...Shadow.sm,
   },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.3 },
-  sectionAction: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textDark, letterSpacing: -0.3, flexShrink: 1 },
+  sectionAction: { fontSize: 12, fontWeight: '700', color: Colors.primary, flexShrink: 0 },
   iconSkeleton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   emptyInline: {
     backgroundColor: '#FFFFFF',
@@ -861,17 +814,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  // The lead takes the slack so the trailing count/reset control keeps its full
+  // width, and minWidth:0 lets the title actually shrink instead of overflowing.
+  categoriesHeaderLead: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   categoriesTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: Colors.textDark,
     letterSpacing: -0.3,
+    flexShrink: 1,
   },
   categoriesSub: {
     fontSize: 11,
     color: Colors.textTertiary,
     fontWeight: '600',
+    flexShrink: 0,
   },
   categoriesScrollContent: {
     paddingHorizontal: 16,
@@ -887,11 +852,13 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: '#FECACA',
+    flexShrink: 0,
   },
   resetCatText: {
     fontSize: 11,
     fontWeight: '700',
     color: Colors.primary,
+    flexShrink: 1,
   },
   categorySpotlightCard: {
     flexDirection: 'row',
@@ -910,6 +877,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    minWidth: 0,
+  },
+  categorySpotlightBody: {
+    flex: 1,
+    minWidth: 0,
   },
   categorySpotlightIconWrap: {
     width: 44,
@@ -926,6 +898,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.textDark,
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
   categorySpotlightBadge: {
     backgroundColor: '#FEF2F2',
@@ -934,6 +907,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#FECACA',
+    flexShrink: 0,
   },
   categorySpotlightBadgeText: {
     fontSize: 9,
@@ -947,6 +921,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
     fontWeight: '500',
+    flexShrink: 1,
   },
   categorySpotlightClearBtn: {
     flexDirection: 'row',
@@ -959,6 +934,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FECACA',
     marginLeft: 8,
+    flexShrink: 0,
   },
   categorySpotlightClearText: {
     fontSize: 11,
@@ -997,7 +973,8 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
-    maxWidth: 280,
+    alignSelf: 'stretch',
+    maxWidth: 360,
   },
   quickPillRow: {
     flexDirection: 'row',

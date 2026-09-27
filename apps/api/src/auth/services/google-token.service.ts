@@ -31,7 +31,7 @@ export class GoogleTokenService {
         aud: 'mock-client-id',
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
-      } as TokenPayload;
+      };
     }
 
     try {
