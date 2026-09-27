@@ -90,6 +90,12 @@ export class EsewaService {
       this.configService.get<string>('FRONTEND_URL_WEB') ||
       'http://localhost:8081';
     const cleanApp = appUrl.replace(/\/$/, '');
+    // eSewa requires callback URLs to have http:// or https:// protocol
+    if (!/^https?:\/\//i.test(cleanApp)) {
+      throw new Error(
+        `Invalid FRONTEND_URL/APP_URL: "${cleanApp}". Must start with http:// or https://. Set FRONTEND_URL_WEB or APP_URL in env.`,
+      );
+    }
     this.SUCCESS_URL = `${cleanApp}/payment/success`;
     this.FAILURE_URL = `${cleanApp}/payment/failure`;
   }
