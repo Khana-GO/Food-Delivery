@@ -68,12 +68,107 @@ export const DishSearchCard: React.FC<DishSearchCardProps> = ({ item, variant = 
 
   if (variant === 'card') {
     return (
+      <View style={styles.gridCardWrapper}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
+          style={styles.gridCard}
+        >
+          <View style={styles.gridImageContainer}>
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.imageFull}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }}
+              />
+            ) : (
+              <Text style={{ fontSize: 32 }}>{getCategoryIcon(item.categoryName || item.name)}</Text>
+            )}
+
+            {isClosedOrUnavailable ? (
+              <View style={styles.badgeClosed}>
+                <Text style={styles.badgeClosedText}>
+                  {!item.restaurantIsOpen ? 'Closed' : 'Sold Out'}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.priceTag}>
+              <Text style={styles.priceText}>Rs. {item.price}</Text>
+            </View>
+          </View>
+
+          <View style={{ padding: 12 }}>
+            <Text numberOfLines={1} style={styles.dishName}>
+              {item.name}
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (item.restaurantId) {
+                  router.push(`/(customer)/restaurant/${item.restaurantId}` as any);
+                }
+              }}
+              style={styles.restaurantRow}
+            >
+              <Feather name="map-pin" size={10} color={Colors.textTertiary} />
+              <Text numberOfLines={1} style={styles.restaurantName}>
+                {item.restaurantName}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.cardFooter}>
+              <View style={styles.metaRow}>
+                {item.restaurantRating > 0 ? (
+                  <View style={styles.ratingBadge}>
+                    <Feather name="star" size={10} color="#D97706" />
+                    <Text style={styles.ratingText}>{Number(item.restaurantRating).toFixed(1)}</Text>
+                  </View>
+                ) : null}
+                {item.restaurantEstimatedDeliveryTime ? (
+                  <Text style={styles.etaText}>{item.restaurantEstimatedDeliveryTime} min</Text>
+                ) : null}
+              </View>
+
+              {/* Add / Stepper Button */}
+              {!isClosedOrUnavailable ? (
+                quantity > 0 ? (
+                  <View style={styles.stepperContainerSmall}>
+                    <TouchableOpacity onPress={handleRemove} hitSlop={4} style={styles.stepperBtnSmall}>
+                      <Feather name="minus" size={12} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.stepperCountSmall}>{quantity}</Text>
+                    <TouchableOpacity onPress={handleAdd} hitSlop={4} style={styles.stepperBtnSmall}>
+                      <Feather name="plus" size={12} color={Colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity onPress={handleAdd} activeOpacity={0.8} style={styles.addBtnSmall}>
+                    <Text style={styles.addBtnTextSmall}>+ ADD</Text>
+                  </TouchableOpacity>
+                )
+              ) : null}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Row layout (Default)
+  return (
+    <View style={styles.rowCardWrapper}>
       <TouchableOpacity
         activeOpacity={0.88}
         onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
-        style={styles.gridCard}
+        style={styles.rowCard}
       >
-        <View style={styles.gridImageContainer}>
+        <View style={styles.rowImageContainer}>
           {item.imageUrl ? (
             <Image
               source={{ uri: item.imageUrl }}
@@ -84,44 +179,39 @@ export const DishSearchCard: React.FC<DishSearchCardProps> = ({ item, variant = 
               placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }}
             />
           ) : (
-            <Text style={{ fontSize: 32 }}>{getCategoryIcon(item.categoryName || item.name)}</Text>
+            <Text style={{ fontSize: 28 }}>{getCategoryIcon(item.categoryName || item.name)}</Text>
           )}
-
           {isClosedOrUnavailable ? (
-            <View style={styles.badgeClosed}>
-              <Text style={styles.badgeClosedText}>
+            <View style={styles.badgeClosedRow}>
+              <Text style={styles.badgeClosedRowText}>
                 {!item.restaurantIsOpen ? 'Closed' : 'Sold Out'}
               </Text>
             </View>
           ) : null}
-
-          <View style={styles.priceTag}>
-            <Text style={styles.priceText}>Rs. {item.price}</Text>
-          </View>
         </View>
 
-        <View style={{ padding: 12 }}>
-          <Text numberOfLines={1} style={styles.dishName}>
-            {item.name}
-          </Text>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={(e) => {
-              e.stopPropagation();
-              if (item.restaurantId) {
-                router.push(`/(customer)/restaurant/${item.restaurantId}` as any);
-              }
-            }}
-            style={styles.restaurantRow}
-          >
-            <Feather name="map-pin" size={10} color={Colors.textTertiary} />
-            <Text numberOfLines={1} style={styles.restaurantName}>
-              {item.restaurantName}
+        <View style={styles.rowInfo}>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={styles.dishName}>
+              {item.name}
             </Text>
-          </TouchableOpacity>
 
-          <View style={styles.cardFooter}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (item.restaurantId) {
+                  router.push(`/(customer)/restaurant/${item.restaurantId}` as any);
+                }
+              }}
+              style={styles.restaurantRow}
+            >
+              <Feather name="map-pin" size={11} color={Colors.textTertiary} />
+              <Text numberOfLines={1} style={styles.restaurantName}>
+                {item.restaurantName}
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.metaRow}>
               {item.restaurantRating > 0 ? (
                 <View style={styles.ratingBadge}>
@@ -130,136 +220,50 @@ export const DishSearchCard: React.FC<DishSearchCardProps> = ({ item, variant = 
                 </View>
               ) : null}
               {item.restaurantEstimatedDeliveryTime ? (
-                <Text style={styles.etaText}>{item.restaurantEstimatedDeliveryTime} min</Text>
+                <Text style={styles.etaText}>{item.restaurantEstimatedDeliveryTime} min delivery</Text>
+              ) : null}
+              {item.categoryName ? (
+                <Text style={styles.categoryPill} numberOfLines={1}>
+                  {item.categoryName}
+                </Text>
               ) : null}
             </View>
+          </View>
 
-            {/* Add / Stepper Button */}
+          <View style={styles.rowRight}>
+            <Text style={styles.priceRow}>Rs. {item.price}</Text>
+
             {!isClosedOrUnavailable ? (
               quantity > 0 ? (
-                <View style={styles.stepperContainerSmall}>
-                  <TouchableOpacity onPress={handleRemove} hitSlop={4} style={styles.stepperBtnSmall}>
-                    <Feather name="minus" size={12} color={Colors.primary} />
+                <View style={styles.stepperContainer}>
+                  <TouchableOpacity onPress={handleRemove} hitSlop={6} style={styles.stepperBtn}>
+                    <Feather name="minus" size={13} color={Colors.primary} />
                   </TouchableOpacity>
-                  <Text style={styles.stepperCountSmall}>{quantity}</Text>
-                  <TouchableOpacity onPress={handleAdd} hitSlop={4} style={styles.stepperBtnSmall}>
-                    <Feather name="plus" size={12} color={Colors.primary} />
+                  <Text style={styles.stepperCount}>{quantity}</Text>
+                  <TouchableOpacity onPress={handleAdd} hitSlop={6} style={styles.stepperBtn}>
+                    <Feather name="plus" size={13} color={Colors.primary} />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity onPress={handleAdd} activeOpacity={0.8} style={styles.addBtnSmall}>
-                  <Text style={styles.addBtnTextSmall}>+ ADD</Text>
+                <TouchableOpacity onPress={handleAdd} activeOpacity={0.8} style={styles.addBtn}>
+                  <Feather name="plus" size={13} color={Colors.primary} />
+                  <Text style={styles.addBtnText}>ADD</Text>
                 </TouchableOpacity>
               )
-            ) : null}
+            ) : (
+              <View style={styles.disabledBtn}>
+                <Text style={styles.disabledBtnText}>Unavailable</Text>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
-    );
-  }
-
-  // Row layout (Default)
-  return (
-    <TouchableOpacity
-      activeOpacity={0.88}
-      onPress={() => router.push(`/(customer)/menu/${item.id}` as any)}
-      style={styles.rowCard}
-    >
-      <View style={styles.rowImageContainer}>
-        {item.imageUrl ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.imageFull}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7Rj~qofM{WB' }}
-          />
-        ) : (
-          <Text style={{ fontSize: 28 }}>{getCategoryIcon(item.categoryName || item.name)}</Text>
-        )}
-        {isClosedOrUnavailable ? (
-          <View style={styles.badgeClosedRow}>
-            <Text style={styles.badgeClosedRowText}>
-              {!item.restaurantIsOpen ? 'Closed' : 'Sold Out'}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.rowInfo}>
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={styles.dishName}>
-            {item.name}
-          </Text>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={(e) => {
-              e.stopPropagation();
-              if (item.restaurantId) {
-                router.push(`/(customer)/restaurant/${item.restaurantId}` as any);
-              }
-            }}
-            style={styles.restaurantRow}
-          >
-            <Feather name="map-pin" size={11} color={Colors.textTertiary} />
-            <Text numberOfLines={1} style={styles.restaurantName}>
-              {item.restaurantName}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.metaRow}>
-            {item.restaurantRating > 0 ? (
-              <View style={styles.ratingBadge}>
-                <Feather name="star" size={10} color="#D97706" />
-                <Text style={styles.ratingText}>{Number(item.restaurantRating).toFixed(1)}</Text>
-              </View>
-            ) : null}
-            {item.restaurantEstimatedDeliveryTime ? (
-              <Text style={styles.etaText}>{item.restaurantEstimatedDeliveryTime} min delivery</Text>
-            ) : null}
-            {item.categoryName ? (
-              <Text style={styles.categoryPill} numberOfLines={1}>
-                {item.categoryName}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.rowRight}>
-          <Text style={styles.priceRow}>Rs. {item.price}</Text>
-
-          {!isClosedOrUnavailable ? (
-            quantity > 0 ? (
-              <View style={styles.stepperContainer}>
-                <TouchableOpacity onPress={handleRemove} hitSlop={6} style={styles.stepperBtn}>
-                  <Feather name="minus" size={13} color={Colors.primary} />
-                </TouchableOpacity>
-                <Text style={styles.stepperCount}>{quantity}</Text>
-                <TouchableOpacity onPress={handleAdd} hitSlop={6} style={styles.stepperBtn}>
-                  <Feather name="plus" size={13} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity onPress={handleAdd} activeOpacity={0.8} style={styles.addBtn}>
-                <Feather name="plus" size={13} color={Colors.primary} />
-                <Text style={styles.addBtnText}>ADD</Text>
-              </TouchableOpacity>
-            )
-          ) : (
-            <View style={styles.disabledBtn}>
-              <Text style={styles.disabledBtnText}>Unavailable</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  gridCard: {
+  gridCardWrapper: {
     width: 172,
     backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
@@ -268,6 +272,9 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     ...Shadow.sm,
   },
+  gridCard: {
+    flex: 1,
+  },
   gridImageContainer: {
     height: 120,
     backgroundColor: '#FFF7ED',
@@ -275,7 +282,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  rowCard: {
+  rowCardWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
@@ -285,6 +292,11 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     gap: 12,
     ...Shadow.sm,
+  },
+  rowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   rowImageContainer: {
     width: 90,
