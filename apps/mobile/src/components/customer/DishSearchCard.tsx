@@ -40,6 +40,11 @@ export const DishSearchCard: React.FC<DishSearchCardProps> = ({ item, variant = 
                   imageUrl: item.imageUrl,
                   isAvailable: item.isAvailable,
                   restaurantId: item.restaurantId || null,
+                }).catch((error: any) => {
+                  const msg = error?.response?.data?.message || error?.message || '';
+                  if (msg.includes('different restaurant') || msg.includes('Clear your cart')) {
+                    Alert.alert('Unable to switch', 'Please try again. If the issue persists, clear your cart manually and re-add items.');
+                  }
                 });
               });
             },
@@ -56,6 +61,15 @@ export const DishSearchCard: React.FC<DishSearchCardProps> = ({ item, variant = 
       imageUrl: item.imageUrl,
       isAvailable: item.isAvailable,
       restaurantId: item.restaurantId || null,
+    }).catch((error: any) => {
+      const msg = error?.response?.data?.message || error?.message || '';
+      if (msg.includes('different restaurant') || msg.includes('Clear your cart')) {
+        Alert.alert('Cart conflict', 'Your cart has items from another restaurant. Please clear your cart first, then add this item.');
+      } else if (msg.includes('not available') || msg.includes('closed')) {
+        Alert.alert('Unavailable', 'This item is no longer available.');
+      } else if (msg.includes('Max 10')) {
+        Alert.alert('Limit reached', 'Maximum 10 units per item.');
+      }
     });
   };
 

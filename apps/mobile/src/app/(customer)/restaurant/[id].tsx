@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, StyleSheet, useWindowDimensions, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -61,9 +61,43 @@ export default function RestaurantDetailScreen() {
   const getItemQuantity = (itemId: string) => cartItems.find((i) => i.menuItemId === itemId)?.quantity || 0;
 
   const handleAddItem = (item: MenuItem) => {
-    if (restaurantId && restaurantId !== restaurant?.id) {
-      useCartStore.getState().clearCart();
+    const currentCartRestaurantId = useCartStore.getState().restaurantId;
+    if (currentCartRestaurantId && currentCartRestaurantId !== restaurant?.id) {
+      Alert.alert(
+        'Replace cart items?',
+        `Your cart contains items from another restaurant. Do you want to reset your cart to add items from ${restaurant?.name}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Yes, Replace',
+            style: 'destructive',
+            onPress: () => {
+              useCartStore.getState().clearCart().then(() => {
+                addItem({
+                  menuItemId: item.id,
+                  name: item.name,
+                  price: Number(item.price),
+                  imageUrl: item.imageUrl,
+                  isAvailable: item.isAvailable,
+                  restaurantId: restaurant?.id || null,
+                }).catch((error: any) => {
+                  const msg = error?.response?.data?.message || error?.message || '';
+                  if (msg.includes('different restaurant') || msg.includes('Clear your cart')) {
+                    Alert.alert('Cart conflict', 'Your cart has items from another restaurant. Please clear your cart first, then add this item.');
+                  } else if (msg.includes('not available') || msg.includes('closed')) {
+                    Alert.alert('Unavailable', 'This item is no longer available.');
+                  } else if (msg.includes('Max 10')) {
+                    Alert.alert('Limit reached', 'Maximum 10 units per item.');
+                  }
+                });
+              });
+            },
+          },
+        ]
+      );
+      return;
     }
+
     addItem({
       menuItemId: item.id,
       name: item.name,
@@ -71,6 +105,15 @@ export default function RestaurantDetailScreen() {
       imageUrl: item.imageUrl,
       isAvailable: item.isAvailable,
       restaurantId: restaurant?.id || null,
+    }).catch((error: any) => {
+      const msg = error?.response?.data?.message || error?.message || '';
+      if (msg.includes('different restaurant') || msg.includes('Clear your cart')) {
+        Alert.alert('Cart conflict', 'Your cart has items from another restaurant. Please clear your cart first, then add this item.');
+      } else if (msg.includes('not available') || msg.includes('closed')) {
+        Alert.alert('Unavailable', 'This item is no longer available.');
+      } else if (msg.includes('Max 10')) {
+        Alert.alert('Limit reached', 'Maximum 10 units per item.');
+      }
     });
   };
 

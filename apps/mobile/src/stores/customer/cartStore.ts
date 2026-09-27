@@ -92,14 +92,17 @@ export const useCartStore = create<CartState>()(
       addItem: async (item) => {
         const { items, restaurantId } = get();
         const prev = { items: [...items], restaurantId, ...calc(items) };
+        const isDifferentRestaurant = restaurantId && restaurantId !== item.restaurantId;
 
         // Different restaurant -> clear first (user confirmed by caller UI if needed)
-        if (restaurantId && restaurantId !== item.restaurantId) {
-          // Optimistically clear
+        if (isDifferentRestaurant) {
+          // Optimistically clear local state
           set({ items: [], restaurantId: null, totalItems: 0, totalPrice: 0 });
           try {
             await cartService.clearCart();
-          } catch {}
+          } catch (clearError) {
+            console.warn('[cart] clearCart before cross-restaurant add failed', clearError);
+          }
         }
 
         // Optimistic local update
@@ -127,13 +130,33 @@ export const useCartStore = create<CartState>()(
           }
         } catch (error: any) {
           console.warn('[cart] addItem backend failed', error?.message);
-          // Rollback on 400 with message? Keep optimistic but mark unsynced
-          // If error is "Restaurant not available" or closed, rollback
+          const status = error?.response?.status;
           const msg = error?.response?.data?.message || '';
-          if (msg.includes('not available') || msg.includes('closed') || msg.includes('Max 10')) {
-            // rollback
+
+          // 409 Conflict: cart has items from different restaurant (shouldn't happen if clear worked, but race possible)
+          if (status === 409 || msg.includes('different restaurant') || msg.includes('Clear your cart')) {
+            // Force clear and retry once
+            try {
+              await cartService.clearCart();
+              const retry = await cartService.addItem(item.menuItemId, 1);
+              if (retry && retry.items) {
+                const synced = toLocalItems(retry.items);
+                const c = calc(synced);
+                set({ items: synced, restaurantId: retry.restaurantId ?? item.restaurantId, ...c, isSynced: true });
+                return;
+              }
+            } catch (retryError) {
+              console.warn('[cart] retry after 409 failed', retryError);
+            }
+            // Rollback to previous state
             set({ items: prev.items, restaurantId: prev.restaurantId, totalItems: prev.totalItems, totalPrice: prev.totalPrice });
             throw error; // let UI show Alert
+          }
+
+          // Rollback on specific errors
+          if (msg.includes('not available') || msg.includes('closed') || msg.includes('Max 10')) {
+            set({ items: prev.items, restaurantId: prev.restaurantId, totalItems: prev.totalItems, totalPrice: prev.totalPrice });
+            throw error;
           }
           set({ isSynced: false });
         }
