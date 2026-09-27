@@ -259,6 +259,7 @@ export class AIService {
         response: result.response,
         quickReplies: result.quickReplies,
         intent: result.intent,
+        data: result.data,
         sessionId: session.id,
       };
     } catch (error: any) {

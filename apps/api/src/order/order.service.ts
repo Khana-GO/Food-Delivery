@@ -151,6 +151,36 @@ export class OrdersService {
     }
   }
 
+  /**
+   * Customers created through social login (Google) start without a phone
+   * number, so ordering is gated on having one. The `errorCode` lets the
+   * client react by sending the user to the "add phone number" flow instead
+   * of showing a generic failure alert.
+   */
+  private phoneRequiredException(): BadRequestException {
+    return new BadRequestException({
+      statusCode: 400,
+      error: 'Bad Request',
+      errorCode: 'PHONE_REQUIRED',
+      message:
+        'A phone number is required to place an order. Please add your phone number to continue.',
+    });
+  }
+
+  /**
+   * Returns the customer's phone number, throwing a `PHONE_REQUIRED` 400 when
+   * the account has none. Call this *before* starting a payment so the customer
+   * is never charged for an order that cannot be created.
+   */
+  async assertCustomerHasPhone(customerId: string): Promise<string> {
+    const customer = await this.db.query.usersTable.findFirst({
+      where: and(eq(usersTable.id, customerId), isNull(usersTable.deletedAt)),
+    });
+    const phone = customer?.phone?.trim();
+    if (!phone) throw this.phoneRequiredException();
+    return phone;
+  }
+
   private buildFullAddress(
     address: typeof addressesTable.$inferSelect | undefined,
   ): string {
@@ -203,6 +233,7 @@ export class OrdersService {
       customerPhone: customer?.phone || '',
       restaurantId: order.restaurantId,
       restaurantName: restaurant?.name || 'Unknown',
+      restaurantLogoUrl: restaurant?.logoUrl || undefined,
       restaurantAddress: restaurant?.address || '',
       driverId: order.driverId || undefined,
       driverName: driver ? `${driver.firstName} ${driver.lastName}` : undefined,
@@ -288,11 +319,7 @@ export class OrdersService {
       where: eq(usersTable.id, customerId),
     });
     const customerPhone = orderingCustomer?.phone?.trim();
-    if (!customerPhone) {
-      throw new BadRequestException(
-        'A phone number is required to place an order. Please add your phone number in your profile first.',
-      );
-    }
+    if (!customerPhone) throw this.phoneRequiredException();
 
     // 1. Validate restaurant
     const restaurant = await this.db.query.restaurantsTable.findFirst({

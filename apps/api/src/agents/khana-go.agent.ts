@@ -4,7 +4,10 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 
-import { ChatOpenRouter } from '@langchain/openrouter';
+import {
+  ChatOpenRouter,
+  OpenRouterAuthError,
+} from '@langchain/openrouter';
 
 import {
   HumanMessage,
@@ -27,6 +30,28 @@ const MAX_HISTORY_PER_SESSION = 20;
 const MAX_MESSAGE_LENGTH = 1000;
 
 const MAX_RESPONSE_LENGTH = 1200;
+
+// If OpenRouter rejects auth (e.g. expired/invalid key → HTTP 401 "User not
+// found."), avoid hammering the API on every message: keep the LLM disabled
+// for this window, then allow one fresh attempt to see if the key was fixed.
+const AUTH_FAIL_COOLDOWN_MS = 10 * 60 * 1000;
+
+// Hard latency budget for a single LLM round-trip. Congested free-tier queues
+// routinely sit for tens of seconds, so we abandon the request and answer from
+// the rule-based engine instead of leaving the chat bubble spinning.
+const LLM_TIMEOUT_MS = 7000;
+
+/**
+ * Raised when an LLM call blows the latency budget. Distinguished from a model
+ * error because timing out must NOT trigger a model switch – retrying only
+ * makes the user wait longer.
+ */
+class LlmTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`LLM call timed out after ${timeoutMs}ms`);
+    this.name = 'LlmTimeoutError';
+  }
+}
 
 function isValidUUID(v: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -88,6 +113,10 @@ export class KhanaGoAgent {
 
   private lastModelSwitchAt = 0;
 
+  private authFailCooldownUntil = 0;
+
+  private authFailWarned = false;
+
   private sessionHistories: Map<string, any[]> = new Map();
 
   private initializationWarned = false;
@@ -120,6 +149,8 @@ export class KhanaGoAgent {
   // ─── Initialize Agent (OpenRouter + LangGraph) ───
   async initializeAgent(): Promise<void> {
     if (this.agent) return;
+
+    if (Date.now() < this.authFailCooldownUntil) return;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
 
@@ -212,7 +243,12 @@ export class KhanaGoAgent {
     },
     sessionId?: string,
     userContext?: string,
-  ): Promise<{ response: string; quickReplies?: string[]; intent?: string }> {
+  ): Promise<{
+    response: string;
+    quickReplies?: string[];
+    intent?: string;
+    data?: any;
+  }> {
     const sanitizedMessage = sanitizeForPrompt(message);
 
     if (!sanitizedMessage) {
@@ -265,31 +301,51 @@ export class KhanaGoAgent {
 
           try {
             let output: string | null = null;
+            let toolData: any = undefined;
             try {
-              // Cap LLM latency to 7 seconds so users never wait indefinitely on congested free-tier queues
-              const timeoutPromise = new Promise<null>((_, reject) =>
-                setTimeout(
-                  () => reject(new Error('LLM call timed out after 7000ms')),
-                  7000,
-                ),
-              );
-
-              output = await Promise.race([
+              const invoked = await this.invokeWithinBudget(() =>
                 this.invokeAgent(
                   safeContextString,
                   sanitizedMessage,
                   history,
                   userContext,
                 ),
-                timeoutPromise,
-              ]);
-            } catch (invokeError: any) {
-              this.logger.warn(
-                `Agent LLM latency or error (${invokeError?.message}) – falling back to high-speed response`,
               );
+              output = invoked?.output ?? null;
+              toolData = invoked?.data;
+            } catch (invokeError: any) {
+              if (invokeError instanceof LlmTimeoutError) {
+                // Congested free-tier queue: the rule-based assistant answers
+                // instantly, which beats leaving the user on a spinner.
+                this.logger.warn(
+                  `Agent LLM exceeded the ${LLM_TIMEOUT_MS}ms budget – falling back to high-speed response`,
+                );
+              } else {
+                // Model reported unusable (retired free-tier slug, auth
+                // failure, ...). Switch to the slug OpenRouter recommends and
+                // retry once before dropping to the rule-based assistant.
+                try {
+                  const invoked = await this.invokeWithinBudget(() =>
+                    this.retryWithRecommendedModel(
+                      invokeError,
+                      safeContextString,
+                      sanitizedMessage,
+                      history,
+                      userContext,
+                    ),
+                  );
+                  output = invoked?.output ?? null;
+                  toolData = invoked?.data;
+                } catch (retryError: any) {
+                  this.logger.warn(
+                    `Model recovery failed (${retryError?.message}) – falling back to high-speed response`,
+                  );
+                }
+              }
             }
 
-            // If the model leaked raw function call tags instead of executing them, fall back cleanly
+            // If the model leaked raw function call tags instead of executing
+            // them, fall back cleanly
             if (
               output &&
               (output.includes('<dots_function_call>') ||
@@ -297,6 +353,7 @@ export class KhanaGoAgent {
                 output.includes('</invoke>'))
             ) {
               output = null;
+              toolData = undefined;
             }
 
             if (!output) {
@@ -329,6 +386,7 @@ export class KhanaGoAgent {
               response: output,
               quickReplies: this.generateQuickReplies(output, safeContext),
               intent: this.detectIntent(sanitizedMessage),
+              data: toolData,
             };
           } catch (error: any) {
             // Don't leak internal error details to client
@@ -357,12 +415,45 @@ export class KhanaGoAgent {
   }
 
   // ─── Invoke the LangGraph agent and return the final text reply ───
+  /**
+   * Runs an LLM call under a hard latency budget.
+   *
+   * Resolves with the call's value (or `null` if the agent produced nothing),
+   * throws {@link LlmTimeoutError} when the budget is blown, and re-throws any
+   * genuine model error so the caller can attempt recovery (e.g. switching to
+   * the model slug OpenRouter recommends). A request still in flight when the
+   * deadline fires cannot be cancelled, so a rejection handler stays attached
+   * to keep late failures from escalating to unhandled rejections.
+   */
+  private async invokeWithinBudget<T>(
+    call: () => Promise<T | null>,
+  ): Promise<T | null> {
+    const inFlight = call();
+    inFlight.catch((err: any) => {
+      this.logger.debug(`Abandoned LLM call failed: ${err?.message}`);
+    });
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new LlmTimeoutError(LLM_TIMEOUT_MS)),
+        LLM_TIMEOUT_MS,
+      );
+    });
+
+    try {
+      return (await Promise.race([inFlight, deadline])) as T | null;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   private async invokeAgent(
     safeContextString: string,
     sanitizedMessage: string,
     history: any[],
     userContext?: string,
-  ): Promise<string | null> {
+  ): Promise<{ output: string | null; data?: any } | null> {
     if (!this.agent) return null;
     const cleanUserContext = userContext ? sanitizeForPrompt(userContext) : '';
     const systemContent = `
@@ -420,7 +511,112 @@ Instructions & Rules:
       output = "I'm here to help! Could you rephrase?";
     }
 
-    return sanitizeOutput(output);
+    return {
+      output: sanitizeOutput(output),
+      data: this.extractToolData(result.messages),
+    };
+  }
+
+  // ─── Pull structured restaurant / menu / order payloads from tool output ───
+  private extractToolData(messages: any[]): any {
+    const data: any = {};
+    const seenRestaurants = new Set<string>();
+    const seenItems = new Set<string>();
+    const seenOrders = new Set<string>();
+
+    for (const msg of messages || []) {
+      if (msg?._type !== 'tool' && msg?.role !== 'tool') continue;
+      const content = typeof msg?.content === 'string' ? msg.content : '';
+      if (!content) continue;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        continue;
+      }
+      if (!parsed || typeof parsed !== 'object' || parsed.error) continue;
+
+      // Restaurants (search / popular)
+      if (Array.isArray(parsed.restaurants)) {
+        for (const r of parsed.restaurants.slice(0, 5)) {
+          if (!r?.id || seenRestaurants.has(r.id)) continue;
+          seenRestaurants.add(r.id);
+          (data.restaurants ??= []).push(r);
+        }
+      }
+
+      // Menu items (dish search)
+      if (
+        Array.isArray(parsed.results) &&
+        parsed.results.every((i: any) => i?.name || i?.id)
+      ) {
+        for (const i of parsed.results.slice(0, 6)) {
+          if (!i?.id || seenItems.has(i.id)) continue;
+          seenItems.add(i.id);
+          (data.menuItems ??= []).push({
+            id: i.id,
+            name: i.name,
+            description: i.description,
+            price: i.price,
+            isAvailable: i.isAvailable,
+            restaurantId: i.restaurantId,
+            restaurantName: i.restaurantName,
+            restaurantLogoUrl: i.restaurantLogoUrl,
+            isOpen: i.isOpen,
+          });
+        }
+      }
+
+      // Restaurant menu (grouped by category)
+      if (Array.isArray(parsed.categories)) {
+        data.menu = {
+          restaurantId: parsed.restaurantId,
+          restaurantName: parsed.restaurantName,
+          restaurantLogoUrl: parsed.restaurantLogoUrl,
+          isOpen: parsed.isOpen,
+          categories: parsed.categories.map((c: any) => ({
+            categoryName: c.categoryName || c.categoryId || 'Menu',
+            items: (c.items || []).map((i: any) => ({
+              id: i.id,
+              name: i.name,
+              description: i.description,
+              price: i.price,
+              isAvailable: i.isAvailable,
+            })),
+          })),
+        };
+      }
+
+      // Single order (status / details)
+      if (parsed.id && parsed.status && !Array.isArray(parsed.orders)) {
+        data.order = {
+          id: parsed.id,
+          status: parsed.status,
+          estimatedDelivery: parsed.estimatedDelivery,
+          totalAmount: parsed.totalAmount,
+          restaurantName: parsed.restaurantName,
+          items: parsed.items,
+        };
+      }
+
+      // Order history
+      if (Array.isArray(parsed.orders)) {
+        for (const o of parsed.orders.slice(0, 5)) {
+          if (!o?.id || seenOrders.has(o.id)) continue;
+          seenOrders.add(o.id);
+          (data.orders ??= []).push({
+            id: o.id,
+            status: o.status,
+            totalAmount: o.totalAmount,
+            restaurantName: o.restaurantName,
+            createdAt: o.createdAt,
+          });
+        }
+      }
+    }
+
+    return Object.keys(data).length ? data : undefined;
   }
 
   // ─── Handle "use this slug instead: X" from OpenRouter (free model churn) ───
@@ -429,8 +625,33 @@ Instructions & Rules:
     safeContextString: string,
     sanitizedMessage: string,
     history: any[],
-  ): Promise<string | null> {
+    userContext?: string,
+  ): Promise<{ output: string | null; data?: any } | null> {
     try {
+      // ─── Authentication failures (e.g. expired/invalid OPENROUTER_API_KEY
+      // → HTTP 401 "User not found.") CANNOT be fixed by switching models.
+      // Disable the LLM for a cooldown window and fail fast to the rule-based
+      // assistant rather than logging the same error on every message. ───
+      const errorText = `${invokeError?.message ?? ''}`;
+      if (
+        OpenRouterAuthError.isInstance(invokeError as any) ||
+        /(user not found|invalid api key|incorrect api key|missing api key|authentication failed|unauthorized|"code".*401|401.*user not found)/i.test(
+          errorText,
+        )
+      ) {
+        this.authFailCooldownUntil = Date.now() + AUTH_FAIL_COOLDOWN_MS;
+        this.agent = null;
+        this.agentType = null;
+        if (!this.authFailWarned) {
+          this.authFailWarned = true;
+          this.logger.warn(
+            `OpenRouter authentication failed: ${errorText} – check OPENROUTER_API_KEY. ` +
+              `Disabling LLM mode for ${AUTH_FAIL_COOLDOWN_MS / 60_000}min and using the rule-based assistant.`,
+          );
+        }
+        return null;
+      }
+
       const match = /use this slug instead:\s*([/\w.:-]+)/.exec(
         invokeError?.message || '',
       );
@@ -455,6 +676,7 @@ Instructions & Rules:
           safeContextString,
           sanitizedMessage,
           history,
+          userContext,
         );
       } catch (retryError: any) {
         this.logger.warn(
@@ -497,7 +719,12 @@ Instructions & Rules:
     historyKey: string,
     history: any[],
     userContext?: string,
-  ): Promise<{ response: string; quickReplies?: string[]; intent?: string }> {
+  ): Promise<{
+    response: string;
+    quickReplies?: string[];
+    intent?: string;
+    data?: any;
+  }> {
     const intent = this.detectIntent(message);
     const lower = message.toLowerCase().trim();
 
@@ -616,6 +843,7 @@ Instructions & Rules:
             'Show popular restaurants',
           ],
           intent,
+          data: { restaurants: list.slice(0, 5) },
         };
       }
 
@@ -743,6 +971,10 @@ Instructions & Rules:
             'Show popular restaurants',
           ],
           intent,
+          data: {
+            restaurants: openRests.slice(0, 2),
+            menuItems: dishes,
+          },
         };
       }
 
@@ -788,6 +1020,7 @@ Instructions & Rules:
           response,
           quickReplies: ['What restaurants are open?', 'Find momo', 'Help'],
           intent,
+          data: { restaurants: list },
         };
       }
 
@@ -830,6 +1063,16 @@ Instructions & Rules:
                 'Show popular restaurants',
               ],
               intent,
+              data: {
+                restaurants: [
+                  {
+                    id: data.id,
+                    name: data.name,
+                    logoUrl: data.logoUrl,
+                    isOpen: data.isOpen,
+                  },
+                ],
+              },
             };
           }
         }
@@ -916,6 +1159,15 @@ Instructions & Rules:
                   'Help',
                 ],
                 intent,
+                data: {
+                  menu: {
+                    restaurantId: data.restaurantId,
+                    restaurantName: data.restaurantName,
+                    restaurantLogoUrl: data.restaurantLogoUrl,
+                    isOpen: data.isOpen,
+                    categories: data.categories,
+                  },
+                },
               };
             }
           }
@@ -975,6 +1227,7 @@ Instructions & Rules:
               'Find chiya',
             ],
             intent,
+            data: { menuItems: results.slice(0, 5) },
           };
         }
 
@@ -1042,6 +1295,7 @@ Instructions & Rules:
           response,
           quickReplies: ['What restaurants are open?', 'Find momo', 'Help'],
           intent,
+          data: { restaurants: list.slice(0, 5) },
         };
       }
 
@@ -1070,6 +1324,20 @@ Instructions & Rules:
                 'Help',
               ],
               intent,
+              data: {
+                restaurants: [
+                  {
+                    id: data.id,
+                    name: data.name,
+                    logoUrl: data.logoUrl,
+                    cuisineType: data.cuisineType,
+                    rating: data.rating,
+                    isOpen: data.isOpen,
+                    deliveryFee: data.deliveryFee,
+                    estimatedDeliveryTime: data.estimatedDeliveryTime,
+                  },
+                ],
+              },
             };
           }
         }
@@ -1139,6 +1407,7 @@ Instructions & Rules:
               'What restaurants are open?',
             ],
             intent,
+            data: { orders: orders.slice(0, 5) },
           };
         }
 
@@ -1183,6 +1452,7 @@ Instructions & Rules:
             'What restaurants are open?',
           ],
           intent,
+          data: { order: data },
         };
       }
 

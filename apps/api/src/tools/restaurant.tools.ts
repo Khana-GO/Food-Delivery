@@ -24,6 +24,8 @@ export class RestaurantTools {
             restaurants: result.data.map((r) => ({
               id: r.id,
               name: r.name,
+              logoUrl: r.logoUrl,
+              coverImageUrl: r.coverImageUrl,
               cuisineType: r.cuisineType,
               rating: r.averageRating,
               isOpen: r.isOpen,
@@ -57,6 +59,8 @@ export class RestaurantTools {
             id: restaurant.id,
             name: restaurant.name,
             description: restaurant.description,
+            logoUrl: restaurant.logoUrl,
+            coverImageUrl: restaurant.coverImageUrl,
             cuisineType: restaurant.cuisineType,
             address: restaurant.address,
             isOpen: restaurant.isOpen,
@@ -94,6 +98,8 @@ export class RestaurantTools {
             restaurants: sorted.map((r) => ({
               id: r.id,
               name: r.name,
+              logoUrl: r.logoUrl,
+              coverImageUrl: r.coverImageUrl,
               cuisineType: r.cuisineType,
               rating: r.averageRating,
               isOpen: r.isOpen,
@@ -123,6 +129,7 @@ export class RestaurantTools {
           return JSON.stringify({
             id: restaurant.id,
             name: restaurant.name,
+            logoUrl: restaurant.logoUrl,
             isOpen: restaurant.isOpen,
             isActive: restaurant.isActive,
             message: restaurant.isOpen

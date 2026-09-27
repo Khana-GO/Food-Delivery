@@ -32,8 +32,32 @@ export class MenuTools {
 
           const grouped: any =
             await this.menuItemsService.getGroupedByCategory(restaurantId);
+
+          let restaurant: {
+            name?: string;
+            logoUrl?: string | null;
+            isOpen?: boolean;
+          } = {};
+          try {
+            const rows = await this.db
+              .select({
+                name: restaurantsTable.name,
+                logoUrl: restaurantsTable.logoUrl,
+                isOpen: restaurantsTable.isOpen,
+              })
+              .from(restaurantsTable)
+              .where(eq(restaurantsTable.id, restaurantId))
+              .limit(1);
+            if (rows.length > 0) restaurant = rows[0];
+          } catch {
+            /* empty */
+          }
+
           return JSON.stringify({
             restaurantId,
+            restaurantName: restaurant.name,
+            restaurantLogoUrl: restaurant.logoUrl,
+            isOpen: restaurant.isOpen,
             categories: grouped.map((group: any) => ({
               categoryId: group.categoryId,
               categoryName:
@@ -116,6 +140,7 @@ export class MenuTools {
               isAvailable: menuItemsTable.isAvailable,
               restaurantId: menuItemsTable.restaurantId,
               restaurantName: restaurantsTable.name,
+              restaurantLogoUrl: restaurantsTable.logoUrl,
               isOpen: restaurantsTable.isOpen,
             })
             .from(menuItemsTable)
@@ -154,6 +179,7 @@ export class MenuTools {
               isAvailable: r.isAvailable,
               restaurantId: r.restaurantId,
               restaurantName: r.restaurantName,
+              restaurantLogoUrl: r.restaurantLogoUrl,
               isOpen: r.isOpen,
             })),
           });

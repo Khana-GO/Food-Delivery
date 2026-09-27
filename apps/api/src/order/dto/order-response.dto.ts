@@ -39,6 +39,9 @@ export class OrderResponseDto {
   @ApiProperty()
   restaurantName!: string;
 
+  @ApiProperty({ required: false })
+  restaurantLogoUrl?: string;
+
   @ApiProperty()
   restaurantAddress!: string;
 

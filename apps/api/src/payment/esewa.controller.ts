@@ -219,6 +219,11 @@ export class EsewaController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: EsewaVerifyAndCreateDto,
   ) {
+    // 0. The customer must have a phone number on file before we charge them.
+    // Google sign-ups land without one, and createPaidOrder() would reject the
+    // order *after* eSewa has taken the money — so fail fast here instead.
+    await this.ordersService.assertCustomerHasPhone(user.sub);
+
     // 1. Verify payment via callback data (authoritative status check is inside)
     let result: any;
     if (dto.data) {
