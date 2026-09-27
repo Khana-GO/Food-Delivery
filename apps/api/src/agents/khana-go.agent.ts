@@ -4,10 +4,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 
-import {
-  ChatOpenRouter,
-  OpenRouterAuthError,
-} from '@langchain/openrouter';
+import { ChatOpenRouter, OpenRouterAuthError } from '@langchain/openrouter';
 
 import {
   HumanMessage,
@@ -442,7 +439,7 @@ export class KhanaGoAgent {
     });
 
     try {
-      return (await Promise.race([inFlight, deadline])) as T | null;
+      return await Promise.race([inFlight, deadline]);
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -634,7 +631,7 @@ Instructions & Rules:
       // assistant rather than logging the same error on every message. ───
       const errorText = `${invokeError?.message ?? ''}`;
       if (
-        OpenRouterAuthError.isInstance(invokeError as any) ||
+        OpenRouterAuthError.isInstance(invokeError) ||
         /(user not found|invalid api key|incorrect api key|missing api key|authentication failed|unauthorized|"code".*401|401.*user not found)/i.test(
           errorText,
         )
@@ -889,11 +886,7 @@ Instructions & Rules:
           this.saveHistory(historyKey, history, message, response);
           return {
             response,
-            quickReplies: [
-              'Proceed to Checkout',
-              'Find momo',
-              'Clear cart',
-            ],
+            quickReplies: ['Proceed to Checkout', 'Find momo', 'Clear cart'],
             intent,
           };
         } else {
@@ -1457,7 +1450,10 @@ Instructions & Rules:
       }
 
       // ─── 12. GENERAL FALLBACK (with quick math evaluator) ───
-      const mathMatch = /^(\s*(?:what\s+is|calculate|evaluate)?\s*)\(?(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)\)?\s*\??$/i.exec(lower);
+      const mathMatch =
+        /^(\s*(?:what\s+is|calculate|evaluate)?\s*)\(?(\d+(?:\.\d+)?)\s*([-+*/])\s*(\d+(?:\.\d+)?)\)?\s*\??$/i.exec(
+          lower,
+        );
       if (mathMatch) {
         const num1 = parseFloat(mathMatch[2]);
         const op = mathMatch[3];
