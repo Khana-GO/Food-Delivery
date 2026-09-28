@@ -19,6 +19,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const FLOW: Array<{ key: OrderStatus; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'pending', label: 'Order Placed', icon: 'inbox' },
+  { key: 'confirmed', label: 'Confirmed', icon: 'check-square' },
   { key: 'preparing', label: 'Preparing', icon: 'cpu' },
   { key: 'ready', label: 'Ready for Pickup', icon: 'package' },
   { key: 'delivered', label: 'Delivered', icon: 'check-circle' },
@@ -61,7 +62,9 @@ export default function OrderDetailsScreen() {
   const nextAction = (() => {
     switch (order.status) {
       case 'pending':
-        return { label: 'Accept & Start Preparing', to: 'preparing' as OrderStatus, variant: 'green' as const };
+        return { label: 'Confirm Order', to: 'confirmed' as OrderStatus, variant: 'green' as const };
+      case 'confirmed':
+        return { label: 'Start Preparing', to: 'preparing' as OrderStatus, variant: 'green' as const };
       case 'preparing':
         return { label: 'Mark as Ready', to: 'ready' as OrderStatus, variant: 'green' as const };
       case 'ready':

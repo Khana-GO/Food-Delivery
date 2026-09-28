@@ -57,7 +57,7 @@ const orderRow = {
   paymentId: 'esewa-pay-1',
   paymentMethod: 'ONLINE',
   paymentStatus: 'PAID',
-  orderStatus: 'CONFIRMED',
+  orderStatus: 'PENDING',
   estimatedDeliveryTime: null,
   estimatedDeliveryMinutes: null,
   deliveredAt: null,

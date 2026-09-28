@@ -592,8 +592,8 @@ export class OrdersService {
 
   // ─── CREATE ORDER ALREADY MARKED AS PAID (eSewa post-payment flow) ───
   // This is called AFTER eSewa payment is verified – the order is created
-  // directly in PAID status so the customer never sees a PENDING/confirmed
-  // order for a failed payment.
+  // with paymentStatus=PAID but orderStatus=PENDING so the owner must
+  // manually confirm it before preparation begins.
   async createPaidOrder(
     customerId: string,
     dto: CreateOrderDto,
@@ -660,7 +660,7 @@ export class OrdersService {
               notes: dto.notes,
               paymentMethod: 'ONLINE',
               paymentStatus: 'PAID',
-              orderStatus: 'CONFIRMED',
+              orderStatus: 'PENDING',
               paymentId: paymentRef,
               createdAt: new Date(),
               updatedAt: new Date(),
