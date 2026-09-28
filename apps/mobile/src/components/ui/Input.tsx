@@ -87,9 +87,9 @@ export default function Input({
   // ── Size configurations ──
   const sizeConfig = useMemo(() => {
     const configs = {
-      small: { height: 40, fontSize: 13, paddingHorizontal: 12, iconSize: 16 },
-      medium: { height: 52, fontSize: 15, paddingHorizontal: 14, iconSize: 20 },
-      large: { height: 60, fontSize: 17, paddingHorizontal: 16, iconSize: 24 },
+      small: { height: 40, fontSize: 13, paddingHorizontal: 12, iconSize: 16, labelFontSize: 12 },
+      medium: { height: 52, fontSize: 15, paddingHorizontal: 14, iconSize: 20, labelFontSize: 14 },
+      large: { height: 60, fontSize: 17, paddingHorizontal: 16, iconSize: 24, labelFontSize: 16 },
     };
     return configs[size] || configs.medium;
   }, [size]);
@@ -347,6 +347,7 @@ export default function Input({
   const inputTextStyle = useMemo(() => {
     const baseStyle: any = {
       flex: 1,
+      minWidth: 0,
       fontSize: sizeConfig.fontSize,
       color: '#1A1A1A',
       paddingVertical: Platform.OS === 'ios' ? 12 : 8,
@@ -457,9 +458,11 @@ export default function Input({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
+    minWidth: 0,
   },
   labelContainer: {
     marginBottom: 4,
+    minWidth: 0,
   },
   label: {
     fontSize: 14,
@@ -482,6 +485,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 36,
     height: '100%',
+    minHeight: 40,
   },
   iconRight: {
     paddingRight: 14,
@@ -490,6 +494,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 36,
     height: '100%',
+    minHeight: 40,
     position: 'relative',
   },
   helperContainer: {
@@ -498,11 +503,13 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 4,
     marginLeft: 2,
+    minWidth: 0,
   },
   helperText: {
     fontSize: 12,
     color: '#666',
     flex: 1,
+    minWidth: 0,
   },
   errorText: {
     color: '#EF4444',

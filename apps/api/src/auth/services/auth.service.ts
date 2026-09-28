@@ -23,6 +23,7 @@ import * as schema from '../../db/schema';
 import { usersTable } from '../../db/schema';
 import { eq } from 'drizzle-orm/sql/expressions/conditions';
 import { NotificationsService } from '../../notification/notification.service';
+import { CacheService } from '../../redis/cache.service';
 import axios from 'axios';
 
 @Injectable()
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly sessionService: SessionsService,
     private readonly notificationsService: NotificationsService,
+    private readonly cacheService: CacheService,
     @Inject(DATABASE) private readonly db: NeonDatabase<typeof schema>,
   ) {}
 
@@ -60,27 +62,109 @@ export class AuthService {
       }
     }
 
-    const otp = this.generateOtp();
-    const user = await this.db.transaction(async (tx) => {
-      const createdUser = await this.usersService.create(
-        {
-          firstName: dto.firstName.trim(),
-          lastName: dto.lastName.trim(),
-          email,
-          password: dto.password,
-          phone: normalizedPhone,
-          verificationToken: this.hashToken(otp),
-          verificationTokenExpiry: this.expiryInMinutes(10),
-          isVerified: false,
-        },
-        tx,
+    // Check if there's already a pending registration for this email
+    const pendingKey = `pending_registration:${email}`;
+    const existingPending = await this.cacheService.get<
+      RegisterUserDto & { otp: string; otpExpiry: Date }
+    >(pendingKey);
+    if (existingPending) {
+      throw new BadRequestException(
+        'A verification code has already been sent. Please check your email or wait for the code to expire.',
       );
+    }
 
-      await this.mailService.sendVerificationCode(createdUser.email, otp);
-      return createdUser;
+    const otp = this.generateOtp();
+    const otpExpiry = this.expiryInMinutes(10);
+
+    // Store pending registration in Redis with OTP (10 minutes TTL)
+    await this.cacheService.set(
+      pendingKey,
+      {
+        ...dto,
+        email,
+        phone: normalizedPhone,
+        otp: this.hashToken(otp),
+        otpExpiry,
+      },
+      600,
+    ); // 10 minutes
+
+    // Send verification email
+    await this.mailService.sendVerificationCode(email, otp);
+
+    return {
+      message: 'Check your email for a verification code',
+      email,
+    };
+  }
+
+  async verifyEmail(dto: VerifyEmailDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    // Get pending registration from Redis
+    const pendingKey = `pending_registration:${email}`;
+    const pendingData = await this.cacheService.get<
+      RegisterUserDto & {
+        otp: string;
+        otpExpiry: Date;
+        verificationLastSentAt?: Date;
+      }
+    >(pendingKey);
+
+    if (!pendingData) {
+      throw new BadRequestException(
+        'Invalid or expired code. Please register again.',
+      );
+    }
+
+    // Check if OTP is expired
+    if (pendingData.otpExpiry && new Date(pendingData.otpExpiry) < new Date()) {
+      await this.cacheService.del(pendingKey);
+      throw new BadRequestException(
+        'Verification code has expired. Please register again.',
+      );
+    }
+
+    // Verify OTP
+    const isValid = pendingData.otp === this.hashToken(dto.code);
+    if (!isValid) {
+      throw new BadRequestException('Invalid or expired code');
+    }
+
+    // Check if user already exists (race condition protection)
+    const existingUser = await this.usersService.findByEmail(email);
+    if (existingUser) {
+      await this.cacheService.del(pendingKey);
+      throw new BadRequestException('Email already registered');
+    }
+
+    // Check phone uniqueness again
+    const normalizedPhone = pendingData.phone?.trim();
+    if (normalizedPhone && this.db?.query?.usersTable) {
+      const existingPhone = await this.db.query.usersTable.findFirst({
+        where: eq(usersTable.phone, normalizedPhone),
+      });
+      if (existingPhone) {
+        await this.cacheService.del(pendingKey);
+        throw new BadRequestException('Phone number already registered');
+      }
+    }
+
+    // Create the user now that email is verified
+    const user = await this.usersService.create({
+      firstName: pendingData.firstName.trim(),
+      lastName: pendingData.lastName.trim(),
+      email,
+      password: pendingData.password,
+      phone: normalizedPhone,
+      isVerified: true,
+      verifiedAt: new Date(),
     });
 
-    // Welcome notification after commit (outside transaction) – FK now valid
+    // Clean up pending registration
+    await this.cacheService.del(pendingKey);
+
+    // Welcome notification
     await this.notificationsService
       .create({
         userId: user.id,
@@ -95,51 +179,57 @@ export class AuthService {
         ),
       );
 
-    return {
-      message: 'Check your email for a verification code',
-      email: user.email,
-    };
-  }
-
-  async verifyEmail(dto: VerifyEmailDto) {
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.usersService.findByEmail(email);
-
-    // don't leak existence; but since register already confirms it, this is fine
-    if (!user || user.isVerified) {
-      throw new BadRequestException('Invalid or expired code');
-    }
-
-    if (user.verificationAttempts >= 5) {
-      throw new BadRequestException('Too many attempts. Request a new code.');
-    }
-
-    const isValid =
-      user.verificationToken === this.hashToken(dto.code) &&
-      user.verificationTokenExpiry &&
-      user.verificationTokenExpiry > new Date();
-
-    if (!isValid) {
-      await this.usersService.incrementVerificationAttempts(user.id);
-      throw new BadRequestException('Invalid or expired code');
-    }
-
-    await this.usersService.markAsVerified(user.id);
-    return { message: 'Email verified successfully' };
+    return { message: 'Email verified successfully. Account created.' };
   }
 
   async resendVerificationCode(email: string) {
-    const user = await this.usersService.findByEmail(
-      email.trim().toLowerCase(),
-    );
-    if (!user || user.isVerified) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if there's a pending registration
+    const pendingKey = `pending_registration:${normalizedEmail}`;
+    const pendingData = await this.cacheService.get<
+      RegisterUserDto & {
+        otp: string;
+        otpExpiry: Date;
+        verificationLastSentAt?: Date;
+      }
+    >(pendingKey);
+
+    // Also check if user already exists and is verified
+    const user = await this.usersService.findByEmail(normalizedEmail);
+    if (user) {
+      if (user.isVerified) {
+        return { message: 'If the account exists, a new code has been sent' };
+      }
+      // User exists but not verified - use the existing user flow
+      if (
+        user.verificationLastSentAt &&
+        Date.now() - user.verificationLastSentAt.getTime() < 60_000
+      ) {
+        throw new BadRequestException(
+          'Please wait before requesting another code',
+        );
+      }
+      const otp = this.generateOtp();
+      await this.usersService.setVerificationToken(
+        user.id,
+        this.hashToken(otp),
+        this.expiryInMinutes(10),
+      );
+      await this.mailService.sendVerificationCode(user.email, otp);
       return { message: 'If the account exists, a new code has been sent' };
     }
 
-    // 60s cooldown
+    if (!pendingData) {
+      // No pending registration and no user - don't reveal this
+      return { message: 'If the account exists, a new code has been sent' };
+    }
+
+    // 60s cooldown for pending registrations
     if (
-      user.verificationLastSentAt &&
-      Date.now() - user.verificationLastSentAt.getTime() < 60_000
+      pendingData.verificationLastSentAt &&
+      Date.now() - new Date(pendingData.verificationLastSentAt).getTime() <
+        60_000
     ) {
       throw new BadRequestException(
         'Please wait before requesting another code',
@@ -147,12 +237,21 @@ export class AuthService {
     }
 
     const otp = this.generateOtp();
-    await this.usersService.setVerificationToken(
-      user.id,
-      this.hashToken(otp),
-      this.expiryInMinutes(10),
-    );
-    await this.mailService.sendVerificationCode(user.email, otp);
+    const otpExpiry = this.expiryInMinutes(10);
+
+    // Update pending registration with new OTP
+    await this.cacheService.set(
+      pendingKey,
+      {
+        ...pendingData,
+        otp: this.hashToken(otp),
+        otpExpiry,
+        verificationLastSentAt: new Date(),
+      },
+      600,
+    ); // 10 minutes
+
+    await this.mailService.sendVerificationCode(normalizedEmail, otp);
     return { message: 'If the account exists, a new code has been sent' };
   }
 

@@ -30,7 +30,7 @@ const loginSchema = z.object({
     .trim()
     .min(1, 'Email is required.')
     .email('Please enter a valid email address.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -110,20 +110,29 @@ const InputField = React.memo(({
   const hasError = !!error;
 
   return (
-    <View className="mb-2.5">
-      <Text className="text-xs font-semibold text-gray-700 mb-1">
+    <View className="mb-2.5" style={{ minWidth: 0 }}>
+      <Text className="mb-1 text-xs font-semibold text-gray-700">
         {label}
       </Text>
       <View
-        className={`flex-row items-center rounded-xl border ${
-          hasError ? 'border-red-500' : 'border-gray-200'
-        } bg-white px-3.5 h-12 ${!editable ? 'opacity-60 bg-gray-50' : ''}`}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: 12,
+          borderWidth: 1.5,
+          borderColor: hasError ? '#EF4444' : '#E8ECF0',
+          backgroundColor: !editable ? '#F5F6FA' : '#FFFFFF',
+          paddingHorizontal: 12,
+          height: 52,
+          opacity: !editable ? 0.6 : 1,
+          minWidth: 0,
+        }}
       >
-        <View className="mr-2.5">{leftIcon}</View>
+        <View style={{ marginRight: 10, minWidth: 24, alignItems: 'center' }}>{leftIcon}</View>
         <TextInput
           selectionColor="rgba(15,23,42,0.16)"
           cursorColor="#334155"
-          className="flex-1 py-2 text-sm text-black"
+          style={{ flex: 1, minWidth: 0, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 }}
           placeholder={placeholder}
           placeholderTextColor="#9CA3AF"
           value={value}
@@ -141,7 +150,7 @@ const InputField = React.memo(({
           <TouchableOpacity
             onPress={onTogglePassword}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="ml-2"
+            style={{ marginLeft: 8, minWidth: 24, alignItems: 'center' }}
           >
             <Feather
               name={secureTextEntry ? 'eye' : 'eye-off'}
@@ -151,7 +160,7 @@ const InputField = React.memo(({
           </TouchableOpacity>
         )}
         {hasError && !isPassword && (
-          <Feather name="alert-circle" size={18} color="#EF4444" />
+          <Feather name="alert-circle" size={18} color="#EF4444" style={{ marginLeft: 8 }} />
         )}
       </View>
       {hasError && (
@@ -324,13 +333,13 @@ export default function LoginScreen() {
             </View>
           </ImageBackground>
 
-          <View className="flex-1 bg-white rounded-t-3xl -mt-6 px-6 pt-6 pb-8 shadow-lg shadow-black/5">
+          <View className="px-6 pt-6 pb-8 -mt-6 bg-white shadow-lg rounded-t-3xl shadow-black/5">
             {/* Header */}
             <View className="mb-6">
-              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black text-center">
+              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-center text-black">
                 Welcome Back
               </Text>
-              <Text className="text-sm tracking-wide text-gray-500 text-center">
+              <Text className="text-sm tracking-wide text-center text-gray-500">
                 Sign in to continue exploring delicious food
               </Text>
             </View>

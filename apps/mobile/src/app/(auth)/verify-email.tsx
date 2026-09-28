@@ -34,7 +34,7 @@ const Logo = React.memo(() => (
         <Text className="text-3xl font-extrabold tracking-tight text-white">
           Khana<Text className="text-primary">Go</Text>
         </Text>
-        <Text className="text-white/80 text-xs font-medium tracking-wide">
+        <Text className="text-xs font-medium tracking-wide text-white/80">
           Delicious Food, Delivered Fast
         </Text>
       </View>
@@ -129,7 +129,7 @@ export default function VerifyEmailScreen() {
         imageStyle={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}
         resizeMode="cover"
       >
-        <View className="flex-1 bg-black/30 justify-center items-center px-6">
+        <View className="items-center justify-center flex-1 px-6 bg-black/30">
           <Logo />
         </View>
       </ImageBackground>
@@ -146,27 +146,40 @@ export default function VerifyEmailScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[480px]">
+          <View className="px-6 pt-8 pb-6 bg-white shadow-lg rounded-t-3xl shadow-black/5">
             <View className="mb-6">
-              <Text className="text-3xl font-extrabold text-black tracking-tight mb-1">
+              <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black">
                 Verify Email
               </Text>
-              <Text className="text-gray-500 text-sm tracking-wide">
+              <Text className="text-sm tracking-wide text-gray-500">
                 We sent a 6-digit verification code to
               </Text>
-              <Text className="text-primary font-semibold text-sm mt-1">
+              <Text className="mt-1 text-sm font-semibold text-primary">
                 {email}
               </Text>
             </View>
 
-            <View className="mb-4">
+            <View className="mb-4" style={{ minWidth: 0 }}>
               <Text className="text-sm font-semibold text-black mb-1.5">
                 Enter Code
               </Text>
-              <View className="flex-row items-center rounded-xl border border-gray-200 bg-white px-4 h-14">
-                <Feather name="mail" size={20} color="#666" />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: error ? '#EF4444' : '#E8ECF0',
+                  backgroundColor: isVerifying ? '#F5F6FA' : '#FFFFFF',
+                  paddingHorizontal: 12,
+                  height: 52,
+                  opacity: isVerifying ? 0.6 : 1,
+                  minWidth: 0,
+                }}
+              >
+                <Feather name="mail" size={20} color="#666" style={{ marginRight: 10, minWidth: 24 }} />
                 <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-                  className="flex-1 ml-3 text-base text-black py-3"
+                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 }}
                   placeholder="Enter 6-digit code"
                   placeholderTextColor="#999"
                   value={code}
@@ -181,15 +194,15 @@ export default function VerifyEmailScreen() {
                   editable={!isVerifying}
                 />
                 {code.length === 6 && (
-                  <Feather name="check-circle" size={20} color="#22C55E" />
+                  <Feather name="check-circle" size={20} color="#22C55E" style={{ marginLeft: 8 }} />
                 )}
               </View>
               {error ? (
-                <Text className="text-red-500 text-xs mt-1 ml-1">{error}</Text>
+                <Text className="mt-1 ml-1 text-xs text-red-500">{error}</Text>
               ) : null}
               {success ? (
-                <Text className="text-green-500 text-xs mt-1 ml-1">
-                  ✅ Verified! Redirecting to login...
+                <Text className="mt-1 ml-1 text-xs text-green-500">
+                  Verified! Redirecting to login...
                 </Text>
               ) : null}
             </View>
@@ -202,13 +215,13 @@ export default function VerifyEmailScreen() {
               disabled={isVerifying || code.length !== 6}
               activeOpacity={0.8}
             >
-              <Text className="text-white text-center font-bold text-base tracking-wide">
+              <Text className="text-base font-bold tracking-wide text-center text-white">
                 {isVerifying ? "Verifying..." : "Verify Email"}
               </Text>
             </TouchableOpacity>
 
-            <View className="flex-row justify-center items-center mt-2">
-              <Text className="text-gray-500 text-sm">
+            <View className="flex-row items-center justify-center mt-2">
+              <Text className="text-sm text-gray-500">
                 Didn't receive the code?{" "}
               </Text>
               <TouchableOpacity
@@ -228,10 +241,10 @@ export default function VerifyEmailScreen() {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-row justify-center items-center mt-6">
-              <Text className="text-gray-500 text-sm">Already verified? </Text>
+            <View className="flex-row items-center justify-center mt-6">
+              <Text className="text-sm text-gray-500">Already verified? </Text>
               <TouchableOpacity onPress={goToLogin} disabled={isVerifying}>
-                <Text className="text-primary font-bold text-sm">Log In</Text>
+                <Text className="text-sm font-bold text-primary">Log In</Text>
               </TouchableOpacity>
             </View>
           </View>

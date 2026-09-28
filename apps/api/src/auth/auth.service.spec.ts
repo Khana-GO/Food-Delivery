@@ -1,6 +1,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { CacheService } from '../redis/cache.service';
+import { NeonDatabase } from 'drizzle-orm/neon-serverless';
 
 import { AuthService } from './services/auth.service';
 import { UsersService } from '../users/users.service';
@@ -9,19 +11,19 @@ import { SessionsService } from '../sessions/sessions.service';
 import { NotificationsService } from '../notification/notification.service';
 
 describe('AuthService', () => {
-  it('creates a user with a hashed verification token and sends only the raw token by email', async () => {
-    const create = jest.fn(async () => ({
-      id: 'user-1',
-      email: 'john@example.com',
-    }));
+  const mockCacheService = {
+    get: jest.fn(async () => undefined),
+    set: jest.fn(async () => undefined),
+    del: jest.fn(async () => undefined),
+  } as unknown as CacheService;
 
+  it('stores pending registration in cache and sends verification email', async () => {
     const sendVerificationEmail = jest.fn(async () => undefined);
-
     const findByEmail = jest.fn(async () => undefined);
 
     const users = {
       findByEmail,
-      create,
+      create: jest.fn(),
     } as unknown as UsersService;
     const mail = {
       sendVerificationCode: sendVerificationEmail,
@@ -29,20 +31,20 @@ describe('AuthService', () => {
     const config = {
       get: jest.fn((key: string) => (key === 'SALT_ROUNDS' ? '10' : undefined)),
     } as unknown as ConfigService;
-    const transaction = jest.fn(
-      async (callback: (tx: unknown) => Promise<unknown>) => callback({}),
-    );
     const service = new AuthService(
       users,
       {} as JwtService,
       mail,
       config,
-      {} as any,
-      { create: jest.fn().mockImplementation(async () => ({})) } as any,
-      { transaction } as any,
+      {} as SessionsService,
+      {
+        create: jest.fn().mockImplementation(async () => ({})),
+      } as unknown as NotificationsService,
+      mockCacheService,
+      {} as unknown as NeonDatabase<typeof schema>,
     );
 
-    await service.register({
+    const result = await service.register({
       firstName: 'John',
       lastName: 'Doe',
       email: 'John@Example.com',
@@ -50,37 +52,45 @@ describe('AuthService', () => {
       phone: '1234567',
     });
 
-    const createCall = create.mock.calls[0] as unknown as
-      [Record<string, unknown>] | undefined;
-    const createdUser = createCall?.[0] as
-      { email: string; verificationToken: string } | undefined;
-    const emailCall = sendVerificationEmail.mock.calls[0] as unknown as
-      [string, string] | undefined;
-
-    expect(createdUser).toEqual(
+    // Verify cache.set was called with pending registration data
+    expect(mockCacheService.set).toHaveBeenCalledWith(
+      expect.stringMatching(/^pending_registration:/),
       expect.objectContaining({
+        firstName: 'John',
+        lastName: 'Doe',
         email: 'john@example.com',
-        verificationToken: expect.stringMatching(/^[a-f0-9]{64}$/),
+        phone: '1234567',
+        otp: expect.stringMatching(/^[a-f0-9]{64}$/),
+        otpExpiry: expect.any(Date),
       }),
+      600,
     );
-    expect(emailCall?.[1]).toEqual(expect.stringMatching(/^\d{6}$/));
-    expect(createdUser?.verificationToken).not.toBe(emailCall?.[1]);
+
+    // Verify email was sent with raw OTP
+    expect(sendVerificationEmail).toHaveBeenCalledWith(
+      'john@example.com',
+      expect.stringMatching(/^\d{6}$/),
+    );
+
+    // Verify user was NOT created yet
+    expect(users.create).not.toHaveBeenCalled();
+
+    // Verify response
+    expect(result).toEqual({
+      message: 'Check your email for a verification code',
+      email: 'john@example.com',
+    });
   });
 
-  it('rejects registration from the transaction when verification email delivery fails', async () => {
-    const create = jest.fn(async () => ({
-      id: 'user-1',
-      email: 'john@example.com',
-    }));
+  it('rejects registration when verification email delivery fails', async () => {
     const sendVerificationCode = jest.fn(async () => {
       throw new Error('mail unavailable');
     });
-    const transaction = jest.fn(
-      async (callback: (tx: unknown) => Promise<unknown>) => callback({}),
-    );
+    const findByEmail = jest.fn(async () => undefined);
+
     const users = {
-      findByEmail: jest.fn(async () => undefined),
-      create,
+      findByEmail,
+      create: jest.fn(),
     } as unknown as UsersService;
     const config = {
       get: jest.fn((key: string) => (key === 'SALT_ROUNDS' ? '10' : undefined)),
@@ -92,7 +102,8 @@ describe('AuthService', () => {
       config,
       {} as SessionsService,
       {} as NotificationsService,
-      { transaction } as any,
+      mockCacheService,
+      {} as unknown as NeonDatabase<typeof schema>,
     );
 
     await expect(
@@ -105,8 +116,10 @@ describe('AuthService', () => {
       }),
     ).rejects.toThrow('mail unavailable');
 
-    expect(transaction).toHaveBeenCalledTimes(1);
-    expect(create).toHaveBeenCalledTimes(1);
+    // Verify cache.set was called before email attempt
+    expect(mockCacheService.set).toHaveBeenCalled();
+    // Verify user was NOT created
+    expect(users.create).not.toHaveBeenCalled();
   });
 
   it('uses the persisted session id for the refresh-token jti so logout can revoke the right session', async () => {

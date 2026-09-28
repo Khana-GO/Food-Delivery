@@ -180,7 +180,7 @@ export default function ResetPasswordScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5 min-h-[520px]">
+          <View className="bg-white rounded-t-3xl px-6 pt-8 pb-6 shadow-lg shadow-black/5">
             <View className="mb-6">
               <Text className="text-3xl font-extrabold text-black tracking-tight mb-1">
                 Reset Password
@@ -195,16 +195,27 @@ export default function ResetPasswordScreen() {
             </View>
 
             {/* OTP Input */}
-            <View className="mb-4">
+            <View className="mb-4" style={{ minWidth: 0 }}>
               <Text className="text-sm font-semibold text-black mb-1.5">
                 Verification Code
               </Text>
               <View
-                className={`flex-row items-center rounded-xl border ${fieldErrors.code ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: fieldErrors.code ? '#EF4444' : '#E8ECF0',
+                  backgroundColor: isSubmitting ? '#F5F6FA' : '#FFFFFF',
+                  paddingHorizontal: 12,
+                  height: 52,
+                  opacity: isSubmitting ? 0.6 : 1,
+                  minWidth: 0,
+                }}
               >
-                <Feather name="mail" size={20} color="#666" />
+                <Feather name="mail" size={20} color="#666" style={{ marginRight: 10, minWidth: 24 }} />
                 <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-                  className="flex-1 ml-3 text-base text-black py-3"
+                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 }}
                   placeholder="Enter 6-digit code"
                   placeholderTextColor="#999"
                   value={code}
@@ -226,16 +237,27 @@ export default function ResetPasswordScreen() {
             </View>
 
             {/* New Password */}
-            <View className="mb-4">
+            <View className="mb-4" style={{ minWidth: 0 }}>
               <Text className="text-sm font-semibold text-black mb-1.5">
                 New Password
               </Text>
               <View
-                className={`flex-row items-center rounded-xl border ${fieldErrors.newPassword ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: fieldErrors.newPassword ? '#EF4444' : '#E8ECF0',
+                  backgroundColor: isSubmitting ? '#F5F6FA' : '#FFFFFF',
+                  paddingHorizontal: 12,
+                  height: 52,
+                  opacity: isSubmitting ? 0.6 : 1,
+                  minWidth: 0,
+                }}
               >
-                <Feather name="lock" size={20} color="#666" />
+                <Feather name="lock" size={20} color="#666" style={{ marginRight: 10, minWidth: 24 }} />
                 <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-                  className="flex-1 ml-3 text-base text-black py-3"
+                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 }}
                   placeholder="Enter new password"
                   placeholderTextColor="#999"
                   value={newPassword}
@@ -253,6 +275,7 @@ export default function ResetPasswordScreen() {
                 <TouchableOpacity
                   onPress={toggleShowNewPassword}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ marginLeft: 8, minWidth: 24, alignItems: 'center' }}
                 >
                   <Feather
                     name={showNewPassword ? "eye-off" : "eye"}
@@ -269,16 +292,27 @@ export default function ResetPasswordScreen() {
             </View>
 
             {/* Confirm Password */}
-            <View className="mb-4">
+            <View className="mb-4" style={{ minWidth: 0 }}>
               <Text className="text-sm font-semibold text-black mb-1.5">
                 Confirm Password
               </Text>
               <View
-                className={`flex-row items-center rounded-xl border ${fieldErrors.confirmPassword ? "border-red-500" : "border-gray-200"} bg-white px-4 h-14`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: fieldErrors.confirmPassword ? '#EF4444' : '#E8ECF0',
+                  backgroundColor: isSubmitting ? '#F5F6FA' : '#FFFFFF',
+                  paddingHorizontal: 12,
+                  height: 52,
+                  opacity: isSubmitting ? 0.6 : 1,
+                  minWidth: 0,
+                }}
               >
-                <Feather name="lock" size={20} color="#666" />
+                <Feather name="lock" size={20} color="#666" style={{ marginRight: 10, minWidth: 24 }} />
                 <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-                  className="flex-1 ml-3 text-base text-black py-3"
+                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 }}
                   placeholder="Confirm your new password"
                   placeholderTextColor="#999"
                   value={confirmPassword}
@@ -297,6 +331,7 @@ export default function ResetPasswordScreen() {
                 <TouchableOpacity
                   onPress={toggleShowConfirmPassword}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ marginLeft: 8, minWidth: 24, alignItems: 'center' }}
                 >
                   <Feather
                     name={showConfirmPassword ? "eye-off" : "eye"}

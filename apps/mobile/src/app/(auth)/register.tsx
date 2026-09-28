@@ -141,19 +141,28 @@ const InputField = React.memo(
     const hasError = !!error;
 
     return (
-      <View className="mb-4">
+      <View className="mb-4" style={{ minWidth: 0 }}>
         <Text className="text-sm font-semibold text-black mb-1.5">
           {label}
           {required && <Text className="text-red-500 ml-0.5"> *</Text>}
         </Text>
         <View
-          className={`flex-row items-center rounded-xl border ${
-            hasError ? "border-red-500" : "border-gray-200"
-          } bg-white px-4 h-14 ${!editable ? "opacity-60 bg-gray-50" : ""}`}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderRadius: 12,
+            borderWidth: 1.5,
+            borderColor: hasError ? '#EF4444' : '#E8ECF0',
+            backgroundColor: !editable ? '#F5F6FA' : '#FFFFFF',
+            paddingHorizontal: 12,
+            height: 52,
+            opacity: !editable ? 0.6 : 1,
+            minWidth: 0,
+          }}
         >
-          <View className="mr-3">{leftIcon}</View>
+          <View style={{ marginRight: 10, minWidth: 24, alignItems: 'center' }}>{leftIcon}</View>
           <TextInput selectionColor="rgba(15,23,42,0.16)" cursorColor="#334155"
-            className="flex-1 py-3 text-base text-black"
+            style={{ flex: 1, minWidth: 0, fontSize: 15, color: '#1A1A1A', paddingVertical: 0 }}
             placeholder={placeholder}
             placeholderTextColor="#999"
             value={value}
@@ -171,7 +180,7 @@ const InputField = React.memo(
             <TouchableOpacity
               onPress={onTogglePassword}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              className="ml-2"
+              style={{ marginLeft: 8, minWidth: 24, alignItems: 'center' }}
             >
               <Feather
                 name={secureTextEntry ? "eye" : "eye-off"}
@@ -181,7 +190,7 @@ const InputField = React.memo(
             </TouchableOpacity>
           )}
           {hasError && !isPassword && (
-            <Feather name="alert-circle" size={20} color="#EF4444" />
+            <Feather name="alert-circle" size={20} color="#EF4444" style={{ marginLeft: 8 }} />
           )}
         </View>
         {hasError && (
@@ -366,7 +375,7 @@ export default function RegisterScreen() {
             </View>
           </ImageBackground>
 
-          <View className="flex-1 bg-white rounded-t-3xl -mt-6 px-6 pt-6 pb-8 shadow-lg shadow-black/5">
+          <View className="bg-white rounded-t-3xl -mt-6 px-6 pt-6 pb-8 shadow-lg shadow-black/5">
             {/* Header */}
             <View className="mb-6">
               <Text className="mb-1 text-3xl font-extrabold tracking-tight text-black">

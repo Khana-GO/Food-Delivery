@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ScrollView, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Feather } from '@expo/vector-icons';
 import { OrderTrackingData } from '@/types/tracking.types';
@@ -10,10 +10,32 @@ interface OrderTrackingMapProps {
   onReady?: () => void;
 }
 
+const generateDirections = (geometry: number[][]): Array<{instruction: string, distance: number, point: number[]}> => {
+  if (!geometry || geometry.length < 2) return [];
+  const directions = [];
+  for (let i = 0; i < geometry.length - 1; i++) {
+    const [lat1, lng1] = geometry[i];
+    const [lat2, lng2] = geometry[i + 1];
+    const dLat = lat2 - lat1;
+    const dLng = lng2 - lng1;
+    const angle = Math.atan2(dLng, dLat) * 180 / Math.PI;
+    let instruction = 'Continue straight';
+    if (angle > 30) instruction = 'Turn right';
+    else if (angle < -30) instruction = 'Turn left';
+    else if (angle > 10) instruction = 'Slight right';
+    else if (angle < -10) instruction = 'Slight left';
+    const distance = Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
+    directions.push({ instruction, distance, point: geometry[i] });
+  }
+  return directions;
+};
+
 export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapProps) => {
   const webViewRef = useRef<WebView>(null);
   const [mapReady, setMapReady] = useState(false);
   const lastDriverPos = useRef<[number, number] | null>(null);
+  const [showDirections, setShowDirections] = useState(false);
+  const directions = useMemo(() => data?.route?.geometry ? generateDirections(data.route.geometry) : [], [data]);
 
   // Generate initial HTML once - uses data at mount for centering
   const initialHTML = useMemo(() => {
@@ -28,11 +50,17 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
         ? [restLat, restLng]
         : delLat && delLng
           ? [delLat, delLng]
-          : [27.7172, 85.324]; // Kathmandu
+          : [27.7172, 85.324];
 
-    // Only initial markers: restaurant + delivery; driver added dynamically
-    const restaurant = restLat && restLng ? { lat: restLat, lng: restLng, name: data?.restaurant?.name } : null;
+    const restaurant = restLat && restLng ? { lat: restLat, lng: restLng, name: data?.restaurant?.name, address: data?.restaurant?.address } : null;
     const delivery = delLat && delLng ? { lat: delLat, lng: delLng, address: data?.delivery?.address } : null;
+
+    const restPopup = restaurant
+      ? `${String(restaurant.name || 'Restaurant').replace(/'/g, "\\'")}<br/><small>Lat: ${restaurant.lat.toFixed(6)}, Lng: ${restaurant.lng.toFixed(6)}</small>`
+      : '';
+    const delPopup = delivery
+      ? `Delivery: ${String(delivery.address || 'Customer').replace(/'/g, "\\'")}<br/><small>Lat: ${delivery.lat.toFixed(6)}, Lng: ${delivery.lng.toFixed(6)}</small>`
+      : '';
 
     return `
 <!DOCTYPE html>
@@ -50,7 +78,9 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
   @keyframes ping { 0% { transform:scale(0.8); opacity:0.9;} 80%,100% { transform:scale(1.4); opacity:0;} }
   .marker-driver-label { position:absolute; top:-16px; left:50%; transform:translateX(-50%); background:#B5122A; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px; white-space:nowrap; }
   .marker-icon { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
-  .leaflet-popup-content { font-size:13px; font-weight:600; }
+  .leaflet-popup-content { font-size:13px; font-weight:600; line-height: 1.4; }
+  .coords-label { font-size: 11px; color: #666; margin-top: 4px; font-family: monospace; }
+  .direction-marker { font-size: 20px; text-align: center; }
 </style>
 </head>
 <body>
@@ -58,7 +88,6 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
 <script>
   var map = L.map('map', { center:[${center[0]}, ${center[1]}], zoom:13, zoomControl:false });
   var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OSM', maxZoom:19 }).addTo(map);
-  // Fallback tiles if OSM is unreachable (common in some devices/regions)
   var cartoAdded = false;
   tileLayer.on('tileerror', function(){
     if(cartoAdded) return;
@@ -72,21 +101,22 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
   var driverMarker = null;
   var routeLine = null;
   var historyLine = null;
+  var directionMarkers = [];
   var fitOnDriverArrival = true;
 
-  // Helpers
   function pinIcon(html){
     return L.divIcon({ className: 'marker-icon', html: html, iconSize:[40,40], iconAnchor:[20,40] });
   }
   function driverIcon(){
     return L.divIcon({ className: 'marker-icon', html:'<span class="marker-driver"> <span class="marker-driver-ring"></span> <span class="marker-driver-label">You</span> 🏍️</span>', iconSize:[40,48], iconAnchor:[20,44] });
   }
+  function directionIcon(icon) {
+    return L.divIcon({ className: 'marker-icon', html: '<span class="direction-marker">' + icon + '</span>', iconSize:[24,24], iconAnchor:[12,24] });
+  }
 
-  // Initial restaurant + delivery
-  ${restaurant ? `restaurantMarker = L.marker([${restaurant.lat}, ${restaurant.lng}], {icon: pinIcon('📍')}).addTo(map).bindPopup('${String(restaurant.name || 'Restaurant').replace(/'/g, "\\'")}');` : ''}
-  ${delivery ? `deliveryMarker = L.marker([${delivery.lat}, ${delivery.lng}], {icon: pinIcon('🏠')}).addTo(map).bindPopup('Delivery: ${String(delivery.address || 'Customer').replace(/'/g, "\\'")}');` : ''}
+  ${restaurant ? `restaurantMarker = L.marker([${restaurant.lat}, ${restaurant.lng}], {icon: pinIcon('📍')}).addTo(map).bindPopup('${restPopup}');` : ''}
+  ${delivery ? `deliveryMarker = L.marker([${delivery.lat}, ${delivery.lng}], {icon: pinIcon('🏠')}).addTo(map).bindPopup('${delPopup}');` : ''}
 
-  // Fit bounds initially
   (function(){
     var points = [];
     ${restaurant ? `points.push([${restaurant.lat}, ${restaurant.lng}]);` : ''}
@@ -97,16 +127,15 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
   window.updateDriverLocation = function(lat,lng, heading, speed, isOnline){
     var pos = [lat,lng];
     if(!driverMarker){
-      driverMarker = L.marker(pos, {icon: driverIcon()}).addTo(map).bindPopup('Driver (You)');
+      driverMarker = L.marker(pos, {icon: driverIcon()}).addTo(map).bindPopup('Driver (You)<br/><span class="coords-label">Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6) + '</span>');
     } else {
       driverMarker.setLatLng(pos);
+      driverMarker.setPopupContent('Driver (You)<br/><span class="coords-label">Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6) + '</span>');
     }
-    // Rotate only the inner emoji so the base transform (Leaflet positioning) stays intact
     if(heading !== null && heading !== undefined && driverMarker.getElement()){
       var emoji = driverMarker.getElement().querySelector('.marker-driver');
       if(emoji){ emoji.style.transform = 'rotate(' + heading + 'deg)'; }
     }
-    // First time driver appears: zoom out so route + destination are visible
     if(fitOnDriverArrival){
       fitOnDriverArrival = false;
       window.fitAll();
@@ -115,9 +144,22 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
 
   window.updateRoute = function(geometry){
     if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+    directionMarkers.forEach(function(m){ map.removeLayer(m); });
+    directionMarkers = [];
     if(geometry && geometry.length>1){
       var latlngs = geometry.map(function(p){ return [p[0], p[1]]; });
       routeLine = L.polyline(latlngs, {color:'#B5122A', weight:5, opacity:0.9, lineJoin:'round'}).addTo(map);
+      
+      // Add direction arrows along route
+      for(var i = 1; i < latlngs.length - 1; i += Math.max(1, Math.floor(latlngs.length / 8))) {
+        var p1 = latlngs[i - 1];
+        var p2 = latlngs[i];
+        var angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+        var arrow = angle > 0 ? '➡️' : '⬅️';
+        if (Math.abs(angle) < 10) arrow = '⬆️';
+        var marker = L.marker(latlngs[i], {icon: directionIcon(arrow), interactive: false}).addTo(map);
+        directionMarkers.push(marker);
+      }
     }
   };
 
@@ -144,6 +186,13 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
   };
   window.zoomIn = function(){ map.zoomIn(1); };
   window.zoomOut = function(){ map.zoomOut(1); };
+
+  window.showDirections = function() {
+    window.ReactNativeWebView.postMessage(JSON.stringify({type: 'showDirections'}));
+  };
+  window.hideDirections = function() {
+    window.ReactNativeWebView.postMessage(JSON.stringify({type: 'hideDirections'}));
+  };
 
   window.ReactNativeWebView.postMessage(JSON.stringify({type:'ready'}));
   document.addEventListener('message', function(e){ handleMsg(e.data); });
@@ -197,6 +246,21 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
 
   const inject = (js: string) => webViewRef.current?.injectJavaScript(js + '; true;');
 
+  const openNavigation = () => {
+    if (!data?.driver || !data?.delivery) return;
+    const driverLat = data.driver.latitude;
+    const driverLng = data.driver.longitude;
+    const destLat = data.delivery.lat;
+    const destLng = data.delivery.lng;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${driverLat},${driverLng}&destination=${destLat},${destLng}&travelmode=driving`;
+    Linking.openURL(url);
+  };
+
+  const formatDistance = (meters: number) => {
+    if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
+    return `${Math.round(meters)} m`;
+  };
+
   if (isLoading || !data) {
     return (
       <View className="items-center justify-center flex-1 bg-gray-50">
@@ -223,7 +287,7 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
         )}
       />
 
-      {/* Controls */}
+      {/* Map Controls */}
       <View className="absolute gap-2 bottom-28 right-4">
         <TouchableOpacity className="items-center justify-center w-12 h-12 bg-white border border-gray-200 rounded-full shadow-md" onPress={() => inject('window.zoomIn()')}>
           <Feather name="plus" size={20} color="#1A1A1A" />
@@ -237,6 +301,39 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
         <TouchableOpacity className="items-center justify-center w-12 h-12 bg-white border border-gray-200 rounded-full shadow-md" onPress={() => inject('window.fitAll()')}>
           <Feather name="maximize-2" size={18} color="#1A1A1A" />
         </TouchableOpacity>
+        <TouchableOpacity className="items-center justify-center w-12 h-12 bg-blue-600 rounded-full shadow-md" onPress={openNavigation}>
+          <Feather name="navigation" size={20} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Coordinates Display */}
+      <View className="absolute top-4 left-4 right-4">
+        <View className="bg-white border border-gray-200 rounded-xl p-3 shadow-md flex-row flex-wrap items-center gap-2">
+          {data.driver && (
+            <View className="flex-row items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5">
+              <Feather name="user" size={12} color="#B5122A" />
+              <Text className="text-xs font-mono text-gray-700">
+                Driver: {data.driver.latitude.toFixed(6)}, {data.driver.longitude.toFixed(6)}
+              </Text>
+            </View>
+          )}
+          {data.restaurant && (
+            <View className="flex-row items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5">
+              <Feather name="map-pin" size={12} color="#2563EB" />
+              <Text className="text-xs font-mono text-gray-700">
+                Restaurant: {data.restaurant.lat.toFixed(6)}, {data.restaurant.lng.toFixed(6)}
+              </Text>
+            </View>
+          )}
+          {data.delivery && (
+            <View className="flex-row items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5">
+              <Feather name="home" size={12} color="#16A34A" />
+              <Text className="text-xs font-mono text-gray-700">
+                Customer: {data.delivery.lat.toFixed(6)}, {data.delivery.lng.toFixed(6)}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Driver Status / ETA */}
@@ -270,6 +367,44 @@ export const OrderTrackingMap = ({ data, isLoading, onReady }: OrderTrackingMapP
           <Text className="text-xs font-medium text-amber-800">Waiting for driver assignment…</Text>
           <Text className="text-xs text-amber-700">Map will update live once driver is on the way.</Text>
         </View>
+      )}
+
+      {/* Turn-by-turn Directions Panel */}
+      {data?.route?.geometry && directions.length > 0 && (
+        <TouchableOpacity
+          onPress={() => setShowDirections(!showDirections)}
+          className="absolute bottom-4 left-4 right-4 z-10"
+        >
+          <View className={`bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden ${showDirections ? 'h-auto' : 'h-16'}`}>
+            <View className="flex-row items-center justify-between p-3 bg-gray-50 border-b border-gray-100">
+              <View className="flex-row items-center gap-2">
+                <Feather name="navigation" size={16} color="#B5122A" />
+                <Text className="text-sm font-semibold text-gray-800">Turn-by-Turn Directions</Text>
+              </View>
+              <Feather name={showDirections ? 'chevron-up' : 'chevron-down'} size={18} color="#666" />
+            </View>
+            {showDirections && (
+              <ScrollView className="max-h-64 px-3 py-2" showsVerticalScrollIndicator={false}>
+                {directions.map((dir, idx) => (
+                  <View key={idx} className="flex-row items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <View className="flex-col items-center justify-center mt-1">
+                      <View className="w-2 h-2 rounded-full bg-red-500" />
+                      {idx < directions.length - 1 && <View className="w-1 h-6 bg-gray-300 mt-1" />}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-medium text-gray-800">{dir.instruction}</Text>
+                      <Text className="text-xs text-gray-500 mt-0.5">{formatDistance(dir.distance)}</Text>
+                    </View>
+                  </View>
+                ))}
+                <View className="flex-row items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                  <View className="w-2 h-2 rounded-full bg-green-500 mt-2" />
+                  <Text className="text-sm font-semibold text-green-600">Arrive at destination</Text>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </TouchableOpacity>
       )}
     </View>
   );

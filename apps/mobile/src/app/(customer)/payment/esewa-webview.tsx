@@ -7,6 +7,7 @@ import { api } from '@/lib/axios';
 import { isPhoneRequiredError } from '@/lib/api-error';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { goBack } from '@/lib/navigation';
+import { useCartStore } from '@/stores/customer/cartStore';
 
 /** The API refuses to charge when the account has no phone number on file. */
 const handlePhoneRequired = () => {
@@ -36,6 +37,7 @@ export default function EsewaWebView() {
     transactionUuid?: string;
   }>();
 
+  const { clearCart } = useCartStore();
   const [html, setHtml] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -163,6 +165,7 @@ export default function EsewaWebView() {
       const status = res.data?.status || res.data?.raw?.status;
       if (status === 'success' || status === 'COMPLETE') {
         const orderId = res.data?.order?.id;
+        await clearCart();
         Alert.alert('Payment Successful', 'Your payment was verified and order confirmed.');
         router.replace({
           pathname: '/(customer)/order-confirmation',
@@ -204,6 +207,7 @@ export default function EsewaWebView() {
       const s = res.data?.status || res.data?.raw?.status;
       if (s === 'success' || s === 'COMPLETE') {
         const orderId = res.data?.order?.id;
+        await clearCart();
         Alert.alert('Payment Successful', 'Your payment was verified and order confirmed.');
         router.replace({
           pathname: '/(customer)/order-confirmation',

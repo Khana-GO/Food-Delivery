@@ -25,9 +25,9 @@ export const useCreateOrder = (options: UseCreateOrderOptions = {}) => {
       setLoading(true);
       return orderService.create(data);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       addOrder(data);
-      clearCart();
+      await clearCart();
       setLoading(false);
       router.push(`/(customer)/order-confirmation?id=${data.id}` as any);
     },
