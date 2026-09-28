@@ -121,7 +121,7 @@ export default function ChatbotScreen() {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <View style={styles.emptyIcon}>
@@ -168,7 +168,11 @@ export default function ChatbotScreen() {
       )}
 
       {/* ─── Input ─── */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        enabled
+      >
         <ChatInput onSend={(t) => sendMessage(t, restaurantId || orderId ? { restaurantId, orderId } as any : undefined)} isSending={isSending} />
       </KeyboardAvoidingView>
 
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   list: { flex: 1 },
-  listContent: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12 },
+  listContent: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 100 },
   emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 56, paddingHorizontal: 20 },
   emptyIcon: {
     width: 64,
